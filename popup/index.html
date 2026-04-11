@@ -12,15 +12,15 @@
     <header class="header">
       <h1 class="header__title">Anime Tracker</h1>
       <nav class="header__nav">
-        <button class="nav-btn active" data-view="watchlist">Watchlist</button>
+        <button class="nav-btn active" data-view="notifications">Notifications</button>
+        <button class="nav-btn" data-view="watchlist">Watchlist</button>
         <button class="nav-btn" data-view="search">Search</button>
-        <button class="nav-btn" data-view="notifications">Notifications</button>
         <button class="nav-btn" data-view="settings">Settings</button>
       </nav>
     </header>
 
     <!-- Watchlist View -->
-    <section id="view-watchlist" class="view active">
+    <section id="view-watchlist" class="view">
       <div id="watchlist-empty" class="empty-state" hidden>
         <p>No anime tracked yet.</p>
         <p>Use the <strong>Search</strong> tab to find and add anime.</p>
@@ -41,7 +41,7 @@
     </section>
 
     <!-- Notifications View -->
-    <section id="view-notifications" class="view">
+    <section id="view-notifications" class="view active">
       <div class="notifications-header">
         <span>Recent notifications</span>
         <button id="notifications-clear" class="btn btn--text btn--small">Clear all</button>

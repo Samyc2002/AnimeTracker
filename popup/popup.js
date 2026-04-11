@@ -11,7 +11,7 @@ import {
   clearNotifications,
 } from '../lib/storage.js';
 
-let currentView = 'watchlist';
+let currentView = 'notifications';
 let displayLanguage = 'english';
 
 // --- DOM refs ---
@@ -308,7 +308,7 @@ importAnilist.addEventListener('click', () => {
 async function start() {
   await init();
   await loadSettings();
-  renderWatchlist();
+  renderNotifications();
 }
 
 start();
