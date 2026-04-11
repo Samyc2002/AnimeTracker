@@ -7,6 +7,7 @@ import {
   setLastPollTimestamp,
   getAiringCache,
   setAiringCache,
+  addNotification,
 } from '../lib/storage.js';
 import { diffAiring } from '../lib/differ.js';
 
@@ -88,6 +89,21 @@ async function poll() {
 
 async function notifyNewEpisodes(newEpisodes, watchlist, settings) {
   const lang = settings.displayLanguage || 'english';
+  const now = Math.floor(Date.now() / 1000);
+
+  for (const ep of newEpisodes) {
+    const entry = watchlist[ep.mediaId];
+    const title = lang === 'english' && entry?.title?.english ? entry.title.english : entry?.title?.romaji || 'Unknown';
+
+    await addNotification({
+      mediaId: ep.mediaId,
+      episode: ep.episode,
+      airingAt: ep.airingAt,
+      title,
+      coverUrl: entry?.coverUrl || '',
+      timestamp: now,
+    });
+  }
 
   if (newEpisodes.length > 3) {
     const titles = newEpisodes
@@ -109,11 +125,10 @@ async function notifyNewEpisodes(newEpisodes, watchlist, settings) {
     for (const ep of newEpisodes) {
       const entry = watchlist[ep.mediaId];
       const title = lang === 'english' && entry?.title?.english ? entry.title.english : entry?.title?.romaji || 'Unknown';
-      const iconUrl = '../icons/icon-128.png';
 
       chrome.notifications.create(`ep-${ep.mediaId}-${ep.episode}`, {
         type: 'basic',
-        iconUrl,
+        iconUrl: '../icons/icon-128.png',
         title: 'New Episode Dropped!',
         message: `${title} — Episode ${ep.episode} is now available`,
         priority: 2,

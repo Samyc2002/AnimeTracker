@@ -14,6 +14,7 @@
       <nav class="header__nav">
         <button class="nav-btn active" data-view="watchlist">Watchlist</button>
         <button class="nav-btn" data-view="search">Search</button>
+        <button class="nav-btn" data-view="notifications">Notifications</button>
         <button class="nav-btn" data-view="settings">Settings</button>
       </nav>
     </header>
@@ -37,6 +38,19 @@
       <div id="search-empty" class="empty-state" hidden>
         <p>No results found.</p>
       </div>
+    </section>
+
+    <!-- Notifications View -->
+    <section id="view-notifications" class="view">
+      <div class="notifications-header">
+        <span>Recent notifications</span>
+        <button id="notifications-clear" class="btn btn--text btn--small">Clear all</button>
+      </div>
+      <div id="notifications-empty" class="empty-state" hidden>
+        <p>No notifications yet.</p>
+        <p>You'll see new episode alerts here.</p>
+      </div>
+      <div id="notifications-cards" class="card-list"></div>
     </section>
 
     <!-- Episode Detail View -->

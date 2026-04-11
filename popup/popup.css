@@ -300,6 +300,21 @@ body {
   background: #6d28d9;
 }
 
+/* Notifications */
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #888;
+}
+
+.anime-card__timestamp {
+  font-size: 11px;
+  color: #666;
+}
+
 /* Settings */
 .settings-group {
   margin-bottom: 20px;

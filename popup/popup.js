@@ -7,6 +7,8 @@ import {
   toggleEpisodeWatched,
   getSettings,
   updateSettings,
+  getNotifications,
+  clearNotifications,
 } from '../lib/storage.js';
 
 let currentView = 'watchlist';
@@ -23,6 +25,10 @@ const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
 const searchResults = document.getElementById('search-results');
 const searchEmpty = document.getElementById('search-empty');
+
+const notificationsCards = document.getElementById('notifications-cards');
+const notificationsEmpty = document.getElementById('notifications-empty');
+const notificationsClear = document.getElementById('notifications-clear');
 
 const episodesBack = document.getElementById('episodes-back');
 const episodesHeader = document.getElementById('episodes-header');
@@ -43,6 +49,7 @@ function switchView(view) {
   });
 
   if (view === 'watchlist') renderWatchlist();
+  if (view === 'notifications') renderNotifications();
 }
 
 navBtns.forEach((btn) => {
@@ -180,6 +187,40 @@ async function doSearch() {
     searchResults.innerHTML = `<div class="empty-state"><p>Error: ${err.message}</p></div>`;
   }
 }
+
+// --- Notifications ---
+async function renderNotifications() {
+  const notifications = await getNotifications();
+
+  notificationsEmpty.hidden = notifications.length > 0;
+  notificationsClear.hidden = notifications.length === 0;
+  notificationsCards.innerHTML = '';
+
+  for (const notif of notifications) {
+    const card = document.createElement('div');
+    card.className = 'anime-card';
+    card.innerHTML = `
+      <img class="anime-card__cover" src="${notif.coverUrl || ''}" alt="" loading="lazy">
+      <div class="anime-card__info">
+        <div class="anime-card__title">${notif.title}</div>
+        <div class="anime-card__meta">Episode ${notif.episode}</div>
+        <div class="anime-card__timestamp">${formatDate(notif.timestamp)}</div>
+      </div>
+    `;
+
+    const img = card.querySelector('.anime-card__cover');
+    img.addEventListener('error', () => {
+      img.src = '../icons/icon-128.png';
+    });
+
+    notificationsCards.appendChild(card);
+  }
+}
+
+notificationsClear.addEventListener('click', async () => {
+  await clearNotifications();
+  renderNotifications();
+});
 
 // --- Episodes ---
 function showEpisodes(entry) {
