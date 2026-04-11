@@ -167,6 +167,15 @@ body {
   background: #1e2d4d;
 }
 
+.anime-card--unwatched {
+  background: #1e1548;
+  border-left: 3px solid #a78bfa;
+}
+
+.anime-card--unwatched:hover {
+  background: #271d5e;
+}
+
 .anime-card__cover {
   width: 56px;
   height: 80px;

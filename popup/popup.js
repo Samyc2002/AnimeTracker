@@ -190,19 +190,23 @@ async function doSearch() {
 // --- Notifications ---
 async function renderNotifications() {
   const notifications = await getNotifications();
+  const watchlist = await getWatchlist();
 
   notificationsEmpty.hidden = notifications.length > 0;
   notificationsClear.hidden = notifications.length === 0;
   notificationsCards.innerHTML = '';
 
   for (const notif of notifications) {
+    const entry = watchlist[notif.mediaId];
+    const isWatched = entry?.episodesWatched?.includes(notif.episode);
+
     const card = document.createElement('div');
-    card.className = 'anime-card';
+    card.className = `anime-card${isWatched ? '' : ' anime-card--unwatched'}`;
     card.innerHTML = `
       <img class="anime-card__cover" src="${notif.coverUrl || ''}" alt="" loading="lazy">
       <div class="anime-card__info">
         <div class="anime-card__title">${notif.title}</div>
-        <div class="anime-card__meta">Episode ${notif.episode}</div>
+        <div class="anime-card__meta">Episode ${notif.episode}${isWatched ? '' : ' — Not watched'}</div>
         <div class="anime-card__timestamp">${formatDate(notif.timestamp)}</div>
       </div>
     `;
@@ -210,6 +214,10 @@ async function renderNotifications() {
     const img = card.querySelector('.anime-card__cover');
     img.addEventListener('error', () => {
       img.src = '../icons/icon-128.png';
+    });
+
+    card.addEventListener('click', () => {
+      if (entry) showEpisodes(entry);
     });
 
     notificationsCards.appendChild(card);
