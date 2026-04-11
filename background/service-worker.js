@@ -109,7 +109,7 @@ async function notifyNewEpisodes(newEpisodes, watchlist, settings) {
     for (const ep of newEpisodes) {
       const entry = watchlist[ep.mediaId];
       const title = lang === 'english' && entry?.title?.english ? entry.title.english : entry?.title?.romaji || 'Unknown';
-      const iconUrl = entry?.coverUrl || '../icons/icon-128.png';
+      const iconUrl = '../icons/icon-128.png';
 
       chrome.notifications.create(`ep-${ep.mediaId}-${ep.episode}`, {
         type: 'basic',
