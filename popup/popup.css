@@ -1,0 +1,366 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 380px;
+  min-height: 500px;
+  max-height: 600px;
+  overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #e0e0e0;
+  background: #1a1a2e;
+}
+
+/* Header */
+.header {
+  background: #16213e;
+  padding: 12px 16px 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #a78bfa;
+  margin-bottom: 10px;
+}
+
+.header__nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #2a2a4a;
+}
+
+.nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 13px;
+  padding: 8px 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.nav-btn:hover {
+  color: #c4b5fd;
+}
+
+.nav-btn.active {
+  color: #a78bfa;
+  border-bottom-color: #a78bfa;
+}
+
+/* Views */
+.view {
+  display: none;
+  padding: 16px;
+}
+
+.view.active {
+  display: block;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.empty-state p {
+  margin-bottom: 8px;
+}
+
+/* Buttons */
+.btn {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn--primary {
+  background: #7c3aed;
+  color: white;
+}
+
+.btn--primary:hover {
+  background: #6d28d9;
+}
+
+.btn--danger {
+  background: #dc2626;
+  color: white;
+}
+
+.btn--danger:hover {
+  background: #b91c1c;
+}
+
+.btn--text {
+  background: none;
+  color: #a78bfa;
+  padding: 4px 0;
+}
+
+.btn--text:hover {
+  color: #c4b5fd;
+}
+
+.btn--small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* Search bar */
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #3a3a5c;
+  border-radius: 6px;
+  background: #0f0f23;
+  color: #e0e0e0;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-bar input:focus {
+  border-color: #7c3aed;
+}
+
+/* Card list */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Anime card */
+.anime-card {
+  display: flex;
+  gap: 12px;
+  background: #16213e;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.anime-card:hover {
+  background: #1e2d4d;
+}
+
+.anime-card__cover {
+  width: 56px;
+  height: 80px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #2a2a4a;
+}
+
+.anime-card__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.anime-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.anime-card__meta {
+  font-size: 12px;
+  color: #888;
+}
+
+.anime-card__progress {
+  font-size: 12px;
+  color: #a78bfa;
+}
+
+.anime-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Status badges */
+.badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.badge--releasing {
+  background: #065f46;
+  color: #6ee7b7;
+}
+
+.badge--finished {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+.badge--upcoming {
+  background: #713f12;
+  color: #fde68a;
+}
+
+/* Episodes view */
+.episodes-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0 16px;
+}
+
+.episodes-header img {
+  width: 64px;
+  height: 90px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.episodes-header__info {
+  flex: 1;
+}
+
+.episodes-header__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.episodes-header__meta {
+  font-size: 12px;
+  color: #888;
+}
+
+.episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+
+.episode-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2a2a4a;
+  color: #888;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+  user-select: none;
+}
+
+.episode-cell:hover {
+  background: #3a3a6a;
+  transform: scale(1.05);
+}
+
+.episode-cell.watched {
+  background: #7c3aed;
+  color: white;
+}
+
+.episode-cell.watched:hover {
+  background: #6d28d9;
+}
+
+/* Settings */
+.settings-group {
+  margin-bottom: 20px;
+}
+
+.settings-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.settings-group select {
+  padding: 6px 10px;
+  border: 1px solid #3a3a5c;
+  border-radius: 6px;
+  background: #0f0f23;
+  color: #e0e0e0;
+  font-size: 13px;
+  margin-left: auto;
+}
+
+.settings-group input[type="checkbox"] {
+  accent-color: #7c3aed;
+  width: 16px;
+  height: 16px;
+}
+
+.settings-hint {
+  font-size: 11px;
+  color: #666;
+  margin-top: 6px;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #3a3a5c;
+  border-top-color: #a78bfa;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scrollbar */
+body::-webkit-scrollbar {
+  width: 6px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #3a3a5c;
+  border-radius: 3px;
+}

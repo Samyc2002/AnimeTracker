@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anime Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="header__title">Anime Tracker</h1>
+      <nav class="header__nav">
+        <button class="nav-btn active" data-view="watchlist">Watchlist</button>
+        <button class="nav-btn" data-view="search">Search</button>
+        <button class="nav-btn" data-view="settings">Settings</button>
+      </nav>
+    </header>
+
+    <!-- Watchlist View -->
+    <section id="view-watchlist" class="view active">
+      <div id="watchlist-empty" class="empty-state" hidden>
+        <p>No anime tracked yet.</p>
+        <p>Use the <strong>Search</strong> tab to find and add anime.</p>
+      </div>
+      <div id="watchlist-cards" class="card-list"></div>
+    </section>
+
+    <!-- Search View -->
+    <section id="view-search" class="view">
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Search anime..." autocomplete="off">
+        <button id="search-btn" class="btn btn--primary">Search</button>
+      </div>
+      <div id="search-results" class="card-list"></div>
+      <div id="search-empty" class="empty-state" hidden>
+        <p>No results found.</p>
+      </div>
+    </section>
+
+    <!-- Episode Detail View -->
+    <section id="view-episodes" class="view">
+      <button id="episodes-back" class="btn btn--text">&larr; Back</button>
+      <div id="episodes-header" class="episodes-header"></div>
+      <div id="episodes-grid" class="episodes-grid"></div>
+    </section>
+
+    <!-- Settings View -->
+    <section id="view-settings" class="view">
+      <div class="settings-group">
+        <label>
+          Poll interval
+          <select id="setting-poll">
+            <option value="15">Every 15 min</option>
+            <option value="30" selected>Every 30 min</option>
+            <option value="60">Every 60 min</option>
+          </select>
+        </label>
+      </div>
+      <div class="settings-group">
+        <label>
+          <input type="checkbox" id="setting-notifications" checked>
+          Enable notifications
+        </label>
+      </div>
+      <div class="settings-group">
+        <label>
+          Title language
+          <select id="setting-language">
+            <option value="english">English</option>
+            <option value="romaji">Romaji</option>
+          </select>
+        </label>
+      </div>
+      <div class="settings-group">
+        <button id="import-anilist" class="btn btn--primary">Import from AniList</button>
+        <p class="settings-hint">Requires AniList OAuth authorization.</p>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
