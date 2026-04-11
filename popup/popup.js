@@ -1,4 +1,4 @@
-import { searchAnime, mediaToWatchlistEntry } from '../lib/anilist.js';
+import { searchAnime, mediaToWatchlistEntry, fetchViewer, fetchUserList } from '../lib/anilist.js';
 import {
   init,
   getWatchlist,
@@ -10,6 +10,8 @@ import {
   getNotifications,
   clearNotifications,
 } from '../lib/storage.js';
+
+const ANILIST_CLIENT_ID = ''; // Paste your AniList API client ID here
 
 let currentView = 'notifications';
 let displayLanguage = 'english';
@@ -292,16 +294,59 @@ settingLanguage.addEventListener('change', async () => {
   if (currentView === 'watchlist') renderWatchlist();
 });
 
-importAnilist.addEventListener('click', () => {
-  // AniList OAuth - open in new tab
-  const clientId = ''; // User would set their own client ID
-  if (!clientId) {
-    alert('AniList OAuth Client ID not configured. This feature requires setting up an AniList API application.');
+importAnilist.addEventListener('click', async () => {
+  if (!ANILIST_CLIENT_ID) {
+    alert('Set ANILIST_CLIENT_ID in popup.js. Create one at https://anilist.co/settings/developer');
     return;
   }
-  const redirectUri = chrome.identity?.getRedirectURL?.() || '';
-  const url = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${redirectUri}`;
-  chrome.tabs.create({ url });
+
+  const statusEl = importAnilist.nextElementSibling;
+  importAnilist.disabled = true;
+
+  try {
+    statusEl.textContent = 'Authorizing with AniList...';
+
+    const redirectUrl = chrome.identity.getRedirectURL();
+    const authUrl =
+      `https://anilist.co/api/v2/oauth/authorize` +
+      `?client_id=${ANILIST_CLIENT_ID}` +
+      `&response_type=token` +
+      `&redirect_uri=${encodeURIComponent(redirectUrl)}`;
+
+    const responseUrl = await chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true,
+    });
+
+    const hash = new URL(responseUrl).hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
+    if (!token) throw new Error('No access token in response');
+
+    statusEl.textContent = 'Fetching user info...';
+    const viewer = await fetchViewer(token);
+
+    statusEl.textContent = 'Importing watchlist...';
+    const entries = await fetchUserList(viewer.id, token);
+
+    let count = 0;
+    for (const { media, progress } of entries) {
+      const entry = mediaToWatchlistEntry(media, progress);
+      await addToWatchlist(entry);
+      count++;
+    }
+
+    statusEl.textContent = `Imported ${count} anime from AniList.`;
+    if (currentView === 'watchlist') renderWatchlist();
+  } catch (err) {
+    if (err.message?.includes('canceled') || err.message?.includes('cancelled')) {
+      statusEl.textContent = 'Import cancelled.';
+    } else {
+      statusEl.textContent = `Error: ${err.message}`;
+    }
+  } finally {
+    importAnilist.disabled = false;
+  }
 });
 
 // --- Init ---
