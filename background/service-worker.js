@@ -13,28 +13,30 @@ import { diffAiring } from '../lib/differ.js';
 const ALARM_NAME = 'anime-poll';
 
 // --- Install / startup ---
-chrome.runtime.onInstalled.addListener(async () => {
-  await init();
-  const settings = await getSettings();
-  await setupAlarm(settings.pollIntervalMinutes);
-  // Run an initial poll
-  await poll();
+chrome.runtime.onInstalled.addListener(() => {
+  init().then(async () => {
+    const settings = await getSettings();
+    await setupAlarm(settings.pollIntervalMinutes);
+    console.log('[Anime Tracker] Installed, alarm set for every', settings.pollIntervalMinutes, 'min');
+  });
 });
 
-chrome.runtime.onStartup.addListener(async () => {
-  const settings = await getSettings();
-  await setupAlarm(settings.pollIntervalMinutes);
+chrome.runtime.onStartup.addListener(() => {
+  getSettings().then((settings) => setupAlarm(settings.pollIntervalMinutes));
 });
 
 async function setupAlarm(intervalMinutes) {
-  await chrome.alarms.clear(ALARM_NAME);
+  // Only clear our named alarm, not manually created ones
+  const existing = await chrome.alarms.get(ALARM_NAME);
+  if (existing) await chrome.alarms.clear(ALARM_NAME);
   chrome.alarms.create(ALARM_NAME, { periodInMinutes: intervalMinutes });
 }
 
 // --- Alarm handler ---
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) {
-    await poll();
+    // Don't use async listener — call poll and let it run
+    poll();
   }
 });
 
@@ -42,48 +44,43 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'UPDATE_ALARM') {
     setupAlarm(msg.interval).then(() => sendResponse({ ok: true }));
-    return true; // async response
+    return true;
   }
 });
 
 // --- Polling logic ---
 async function poll() {
+  console.log('[Anime Tracker] Poll started');
   try {
     const watchlist = await getWatchlist();
     const mediaIds = Object.keys(watchlist).map(Number);
-    if (mediaIds.length === 0) return;
+    console.log('[Anime Tracker] Media IDs:', mediaIds);
+    if (mediaIds.length === 0) {
+      console.log('[Anime Tracker] No tracked anime, skipping');
+      return;
+    }
 
     const settings = await getSettings();
     const lastPoll = await getLastPollTimestamp();
     const now = Math.floor(Date.now() / 1000);
-
-    // If first poll, look back 24 hours
     const from = lastPoll || now - 86400;
+    console.log('[Anime Tracker] Polling window:', new Date(from * 1000), '→', new Date(now * 1000));
 
     const airingSchedules = await fetchAiringSchedule(mediaIds, from, now);
+    console.log('[Anime Tracker] Airing schedules returned:', airingSchedules.length);
+
     const airingCache = await getAiringCache();
-
     const { newEpisodes, updatedCache } = diffAiring(airingSchedules, airingCache);
+    console.log('[Anime Tracker] New episodes found:', newEpisodes.length, newEpisodes);
 
-    // Send notifications
     if (settings.notificationsEnabled && newEpisodes.length > 0) {
       await notifyNewEpisodes(newEpisodes, watchlist, settings);
+      console.log('[Anime Tracker] Notifications sent');
     }
 
-    // Update storage
     await setAiringCache(updatedCache);
     await setLastPollTimestamp(now);
-
-    // Update watchlist entries with latest airing info
-    for (const schedule of airingSchedules) {
-      const entry = watchlist[schedule.mediaId];
-      if (entry) {
-        entry.nextAiringEpisode = {
-          airingAt: schedule.airingAt,
-          episode: schedule.episode,
-        };
-      }
-    }
+    console.log('[Anime Tracker] Poll complete, timestamp updated to', now);
   } catch (err) {
     console.error('[Anime Tracker] Poll error:', err);
   }
@@ -93,7 +90,6 @@ async function notifyNewEpisodes(newEpisodes, watchlist, settings) {
   const lang = settings.displayLanguage || 'english';
 
   if (newEpisodes.length > 3) {
-    // Batch into single notification
     const titles = newEpisodes
       .map((ep) => {
         const entry = watchlist[ep.mediaId];
