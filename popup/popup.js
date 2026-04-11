@@ -11,7 +11,7 @@ import {
   clearNotifications,
 } from '../lib/storage.js';
 
-const ANILIST_CLIENT_ID = ''; // Paste your AniList API client ID here
+const ANILIST_CLIENT_ID = '39009';
 
 let currentView = 'notifications';
 let displayLanguage = 'english';
