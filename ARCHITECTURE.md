@@ -24,9 +24,9 @@ A Chrome extension that lets you maintain an anime watchlist, track watched epis
 │  ┌──────────────────┐    chrome.runtime    ┌───────────────┐ │
 │  │   Popup UI       │◄──── messages ──────►│ Service Worker │ │
 │  │                  │                      │               │ │
-│  │  - Search anime  │                      │ - Poll loop   │ │
-│  │  - Watchlist     │                      │ - Episode diff│ │
-│  │  - Episode grid  │                      │ - Notify      │ │
+│  │  - Notifications │                      │ - Poll loop   │ │
+│  │  - Search anime  │                      │ - Episode diff│ │
+│  │  - Watchlist     │                      │ - Notify      │ │
 │  └────────┬─────────┘                      └───────┬───────┘ │
 │           │                                        │         │
 │           ▼                                        ▼         │
@@ -34,7 +34,8 @@ A Chrome extension that lets you maintain an anime watchlist, track watched epis
 │  │  Chrome Storage (local)                               │   │
 │  │                                                       │   │
 │  │  Watchlist entries, episode watch state,               │   │
-│  │  airing schedule cache, user settings                 │   │
+│  │  airing schedule cache, notification history,         │   │
+│  │  user settings                                        │   │
 │  └───────────────────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -48,7 +49,7 @@ anime-tracker/
 ├── manifest.json
 ├── popup/
 │   ├── index.html
-│   ├── popup.js            # UI logic (Preact or vanilla JS)
+│   ├── popup.js            # UI logic (vanilla JS)
 │   └── popup.css
 ├── background/
 │   └── service-worker.js   # Polling + notification dispatch
@@ -71,17 +72,18 @@ anime-tracker/
 The main interface users interact with when they click the extension icon.
 
 **Responsibilities:**
+- Display notification feed with unwatched episode highlighting
 - Search for anime via AniList and add to watchlist
 - Display the current watchlist with cover art, title, and airing status
 - Render an episode grid per series (1, 2, 3, ..., N)
 - Toggle episode watched state on click
-- Trigger AniList OAuth flow for list import
 
-**Views:**
+**Views (tab order):**
+- **Notifications view** (default) — feed of new episode alerts; unwatched episodes are highlighted with a purple left border; clicking an unwatched notification marks it as watched. Shows "Episode X of Anime Name" format
 - **Watchlist view** — cards for each tracked anime showing title, cover, next episode date, and progress (e.g., "7/12 watched")
 - **Search view** — text input that queries AniList `Media` search, shows results with an "Add" button
 - **Episode detail view** — numbered grid for a specific anime; clicked episodes are marked as watched
-- **Settings view** — poll interval, notification toggle, import from AniList/MAL
+- **Settings view** — poll interval, notification toggle, title language
 
 ### 2. Service Worker (background)
 
@@ -92,7 +94,8 @@ Runs in the background via `chrome.alarms`. No persistent connection — wakes u
 - On alarm fire: pull watchlist `mediaId` list from storage
 - Query AniList `AiringSchedule` for episodes airing between `lastPollTimestamp` and `now`
 - Diff results against cached state to find genuinely new episodes
-- Fire `chrome.notifications.create()` for each new episode
+- Persist new episodes to notification history in storage
+- Fire `chrome.notifications.create()` for each new episode (uses local icon — AniList CDN blocks CORS)
 - Update `lastPollTimestamp` and airing cache in storage
 
 **Why 30 minutes?** AniList rate limit is 90 requests/minute. A single poll for 20 tracked shows costs 1 request (batch query). 30 minutes is conservative, responsive enough for episode drops (most anime releases have a known schedule), and keeps the extension lightweight. This interval is user-configurable.
@@ -176,7 +179,7 @@ Fires native OS notifications when new episodes are detected.
 ```js
 chrome.notifications.create(`ep-${mediaId}-${episode}`, {
   type: 'basic',
-  iconUrl: coverImageUrl,
+  iconUrl: '../icons/icon-128.png',  // Local icon — AniList CDN blocks CORS
   title: `New Episode Dropped!`,
   message: `${animeTitle} — Episode ${episode} is now available`,
   priority: 2
@@ -229,6 +232,18 @@ chrome.notifications.create(`ep-${mediaId}-${episode}`, {
     }
   },
 
+  // Notification history (newest first, capped at 50)
+  notifications: [
+    {
+      mediaId: number,
+      episode: number,
+      airingAt: number,           // Unix timestamp of airing
+      title: string,              // Resolved display title
+      coverUrl: string,           // Cover image URL
+      timestamp: number           // When notification was created (Unix seconds)
+    }
+  ],
+
   // User settings
   settings: {
     pollIntervalMinutes: 30,       // 15 | 30 | 60
@@ -264,6 +279,7 @@ chrome.alarms fires (every 30 min)
   → Queries AniList AiringSchedule(mediaIds, from=lastPoll, to=now)
   → differ.js compares results vs airingCache
   → For each new episode:
+      → Persist to notification history in storage
       → chrome.notifications.create(...)
       → Update airingCache in storage
   → Update lastPollTimestamp = now
@@ -281,17 +297,15 @@ User opens anime detail in popup
   → Re-render grid (watched episodes visually distinct)
 ```
 
-### Importing from AniList
+### Marking episode as watched from notification
 
 ```
-User clicks "Import from AniList" in settings
-  → Redirect to AniList OAuth page
-  → User authorizes → redirect back with auth code
-  → Exchange code for access token
-  → Query MediaListCollection with token
-  → Map each entry to WatchlistEntry format
-  → Merge into existing watchlist (skip duplicates by mediaId)
-  → Write to chrome.storage.local
+User opens popup (Notifications tab is default)
+  → Notification feed renders with watched/unwatched state
+  → Unwatched notifications highlighted (purple border)
+  → User clicks unwatched notification
+  → toggleEpisodeWatched(mediaId, episode) called
+  → Notification feed re-renders (card loses highlight)
 ```
 
 ---
@@ -310,7 +324,8 @@ User clicks "Import from AniList" in settings
     "notifications"
   ],
   "background": {
-    "service_worker": "background/service-worker.js"
+    "service_worker": "background/service-worker.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup/index.html",
@@ -341,17 +356,18 @@ User clicks "Import from AniList" in settings
 
 ---
 
-## MVP build order
+## MVP (shipped)
 
-1. **AniList search + add to watchlist** — get the core loop working (search → add → persist → render)
+1. **AniList search + add to watchlist** — search → add → persist → render
 2. **Episode grid with click-to-mark-watched** — the tracking piece
-3. **Service worker polling + notifications** — the detection and alert system
-4. **AniList list import (OAuth)** — nice-to-have for migrating existing lists
+3. **Service worker polling + notifications** — detection, OS alerts, and in-app notification feed
+4. **Notification feed as default tab** — unwatched episodes highlighted, click to mark watched
 
 ---
 
 ## Future considerations
 
+- **AniList list import (OAuth)** — code exists in `anilist.js` (`fetchViewer`, `fetchUserList`) but AniList OAuth doesn't support `chromiumapp.org` redirect URLs. Needs a proxy or different auth approach
 - **Redirect to streaming sites** — when a notification fires or user clicks an episode, open a configurable streaming URL
 - **Cloud sync** — Supabase or Firebase backend so the watchlist persists across devices
 - **Auto-detect watched episodes** — content script that detects when you're on a streaming site and auto-marks episodes

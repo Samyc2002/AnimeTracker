@@ -6,11 +6,11 @@ Data is sourced from the [AniList GraphQL API](https://anilist.gitbook.io/anilis
 
 ## Features
 
+- **Notification feed** — see all new episode alerts in the popup, highlighted if unwatched; click to mark as watched
 - **Search & add anime** — search AniList's database and add series to your watchlist with one click
 - **Episode tracking** — click-to-toggle episode grid to mark what you've watched
 - **New episode notifications** — background polling detects newly aired episodes and sends native OS notifications
 - **Configurable settings** — poll interval (15/30/60 min), notification toggle, title language (English/Romaji)
-- **AniList import** — import your existing AniList watchlist via OAuth (requires client ID setup)
 
 ## Install
 
@@ -25,7 +25,7 @@ Data is sourced from the [AniList GraphQL API](https://anilist.gitbook.io/anilis
 anime-tracker/
 ├── manifest.json              # Chrome MV3 manifest
 ├── popup/
-│   ├── index.html             # Popup entry point
+│   ├── index.html             # Popup entry point (5 views)
 │   ├── popup.js               # UI logic (vanilla JS, ES modules)
 │   └── popup.css              # Dark theme styles
 ├── background/
@@ -45,14 +45,21 @@ anime-tracker/
 1. **Search** — type in the search bar, results come from AniList's `Media` query
 2. **Track** — added anime are persisted in `chrome.storage.local` as watchlist entries
 3. **Poll** — a service worker wakes up via `chrome.alarms` (default: every 30 min), queries AniList for newly aired episodes, and diffs against cached state
-4. **Notify** — new episodes trigger native Chrome notifications (batched if >3 fire at once)
-5. **Mark watched** — click episode numbers in the grid to toggle watched state
+4. **Notify** — new episodes trigger native Chrome notifications (batched if >3 fire at once) and are saved to the notification feed
+5. **Mark watched** — click an unwatched notification to mark it as watched, or use the episode grid from the watchlist
 
 ## AniList API
 
-All data comes from the [AniList GraphQL API](https://graphql.anilist.co). Public queries (search, airing schedules) require no authentication. Importing a user's personal list requires OAuth2 authorization.
+All data comes from the [AniList GraphQL API](https://graphql.anilist.co). No authentication required — all queries are public.
 
 Rate limit: 90 requests/minute. The extension's polling strategy stays well under this.
+
+## Publishing to Chrome Web Store
+
+1. Replace placeholder icons in `icons/` with proper artwork
+2. Zip the extension: `zip -r anime-tracker.zip . -x ".*" -x "ARCHITECTURE.md" -x "CLAUDE.md" -x "README.md"`
+3. Create a developer account at https://chrome.google.com/webstore/devconsole ($5 one-time fee)
+4. Upload the zip, fill in listing details, submit for review
 
 ## License
 
