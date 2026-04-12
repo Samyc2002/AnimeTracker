@@ -205,8 +205,8 @@ async function renderNotifications() {
     card.innerHTML = `
       <img class="anime-card__cover" src="${notif.coverUrl || ''}" alt="" loading="lazy">
       <div class="anime-card__info">
-        <div class="anime-card__title">${notif.title}</div>
-        <div class="anime-card__meta">Episode ${notif.episode}${isWatched ? '' : ' — Not watched'}</div>
+        <div class="anime-card__title">Episode ${notif.episode} of ${notif.title}</div>
+        <div class="anime-card__meta">${isWatched ? 'Watched' : 'Not watched'}</div>
         <div class="anime-card__timestamp">${formatDate(notif.timestamp)}</div>
       </div>
     `;
@@ -216,9 +216,12 @@ async function renderNotifications() {
       img.src = '../icons/icon-128.png';
     });
 
-    card.addEventListener('click', () => {
-      if (entry) showEpisodes(entry);
-    });
+    if (!isWatched && entry) {
+      card.addEventListener('click', async () => {
+        await toggleEpisodeWatched(notif.mediaId, notif.episode);
+        renderNotifications();
+      });
+    }
 
     notificationsCards.appendChild(card);
   }
