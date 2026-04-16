@@ -302,6 +302,12 @@ settingLanguage.addEventListener('change', async () => {
   if (currentView === 'watchlist') renderWatchlist();
 });
 
+// --- Footer ---
+document.getElementById('schedule-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.tabs.create({ url: e.target.href });
+});
+
 // --- Init ---
 async function start() {
   await init();
