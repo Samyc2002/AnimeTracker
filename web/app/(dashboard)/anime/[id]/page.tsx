@@ -5,9 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
+import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchAnimeDetail, mediaToWatchlistEntry } from '@/lib/anilist';
 import { useAuth } from '@/lib/auth-context';
+import EpisodeGrid from '@/components/EpisodeGrid';
 import type { AnimeDetail } from '@/lib/types';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -42,6 +43,7 @@ export default function AnimeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>([]);
 
   const { authed } = useAuth();
   const id = Number(params.id);
@@ -54,12 +56,22 @@ export default function AnimeDetailPage() {
 
         if (authed) {
           const user = await account.get();
-          const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-            Query.equal('user_id', user.$id),
-            Query.equal('media_id', id),
-            Query.limit(1),
+          const [existing, watchedRes] = await Promise.all([
+            databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+              Query.equal('user_id', user.$id),
+              Query.equal('media_id', id),
+              Query.limit(1),
+            ]),
+            databases.listDocuments(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, [
+              Query.equal('user_id', user.$id),
+              Query.equal('media_id', id),
+              Query.limit(5000),
+            ]),
           ]);
           setInWatchlist(existing.documents.length > 0);
+          setWatchedEpisodes(
+            watchedRes.documents.map((d) => (d as unknown as { episode_number: number }).episode_number)
+          );
         }
       } catch {
         setAnime(null);
@@ -224,6 +236,21 @@ export default function AnimeDetailPage() {
             />
           </div>
         )}
+
+        {(() => {
+          const epCount = anime.episodes || (anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : 0);
+          if (epCount <= 0) return null;
+          return (
+            <div className="mt-8">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase mb-3">Episodes</h2>
+              <EpisodeGrid
+                totalEpisodes={epCount}
+                watchedEpisodes={watchedEpisodes}
+                linkPrefix={`/anime/${anime.id}/watch`}
+              />
+            </div>
+          );
+        })()}
 
         {animeRelations.length > 0 && (
           <div className="mt-8 mb-8">
