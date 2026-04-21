@@ -24,11 +24,63 @@ body {
   z-index: 10;
 }
 
+.header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .header__title {
   font-size: 18px;
   font-weight: 700;
   color: #a78bfa;
-  margin-bottom: 10px;
+}
+
+.sync-indicator {
+  font-size: 11px;
+  color: #6ee7b7;
+  background: #065f46;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.auth-section {
+  background: #0f0f23;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.auth-status-text {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.auth-link {
+  color: #a78bfa;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-link:hover {
+  color: #c4b5fd;
+}
+
+.btn--disconnect {
+  background: #2a2a4a;
+  color: #e0e0e0;
+  font-size: 12px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.btn--disconnect:hover {
+  background: #3a3a5c;
 }
 
 .header__nav {

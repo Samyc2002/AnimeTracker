@@ -10,7 +10,10 @@
   <div id="app">
     <!-- Header -->
     <header class="header">
-      <h1 class="header__title">Anime Tracker</h1>
+      <div class="header__top">
+        <h1 class="header__title">Anime Tracker</h1>
+        <span id="sync-indicator" class="sync-indicator" hidden>Synced</span>
+      </div>
       <nav class="header__nav">
         <button class="nav-btn active" data-view="notifications">Notifications</button>
         <button class="nav-btn" data-view="watchlist">Watchlist</button>
@@ -62,6 +65,9 @@
 
     <!-- Settings View -->
     <section id="view-settings" class="view">
+      <div id="auth-section" class="settings-group auth-section">
+        <div id="auth-status"></div>
+      </div>
       <div class="settings-group">
         <label>
           Poll interval
@@ -90,7 +96,7 @@
     </section>
 
     <footer class="footer">
-      <a href="https://animeschedule.net/" target="_blank" rel="noopener" id="schedule-link">Browse airing anime &rarr;</a>
+      <a href="#" target="_blank" rel="noopener" id="schedule-link">Browse airing anime &rarr;</a>
     </footer>
   </div>
 

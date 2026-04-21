@@ -10,6 +10,7 @@ import {
   addNotification,
 } from '../lib/storage.js';
 import { diffAiring } from '../lib/differ.js';
+import { setAuth, clearAuth } from '../lib/auth.js';
 
 const ALARM_NAME = 'anime-poll';
 
@@ -41,10 +42,24 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// --- Message handler (from popup) ---
+// --- Message handler (from popup and content script) ---
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'UPDATE_ALARM') {
     setupAlarm(msg.interval).then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (msg.type === 'AUTH_JWT') {
+    setAuth(msg.jwt, msg.userId).then(() => {
+      console.log('[Anime Tracker] JWT received from web app');
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+  if (msg.type === 'AUTH_LOGOUT') {
+    clearAuth().then(() => {
+      console.log('[Anime Tracker] Logged out via web app');
+      sendResponse({ ok: true });
+    });
     return true;
   }
 });

@@ -1,57 +1,74 @@
-# Anime Tracker — Chrome Extension
+# Anime Tracker — Monorepo
 
 ## Project overview
 
-Chrome extension (Manifest V3) for tracking anime watchlists with episode notifications. Vanilla JS, no build step, no framework. Data from AniList GraphQL API, stored in `chrome.storage.local`.
+Anime watchlist tracker available as a Chrome extension and a Next.js web app. Data from AniList GraphQL API.
 
-## Architecture
+- **`ext/`** — Chrome Extension (Manifest V3, vanilla JS, no build step)
+- **`web/`** — Web App (Next.js, TypeScript, Tailwind, Supabase)
 
-- See `ARCHITECTURE.md` for the full design doc including data model, API queries, and key flows
+## Extension (`ext/`)
+
+- See `ARCHITECTURE.md` for the full design doc
 - **popup/** — UI layer (HTML/CSS/JS), 5 views: notifications (default), watchlist, search, episode detail, settings
 - **background/** — service worker for polling AniList airing schedules and dispatching notifications via `chrome.alarms`
 - **lib/** — shared modules: `anilist.js` (GraphQL client), `storage.js` (chrome.storage abstraction), `differ.js` (episode diff engine)
 - All JS uses ES modules (`import`/`export`)
+- **No build step** — plain JS loaded directly by Chrome
+- **Manifest V3** — service workers are ephemeral. All state in `chrome.storage`, never in-memory globals. Must declare `"type": "module"` in manifest
+- **Notifications** — batched if >3, local icon only (AniList CDN blocks CORS). History persisted in storage
+- **Service worker** — does NOT poll on install; first poll when alarm fires. Logs prefixed `[Anime Tracker]`
 
-## Key technical details
+## Web App (`web/`)
 
-- **No build step** — plain JS loaded directly by Chrome, no bundler
-- **Manifest V3** — service workers are ephemeral (wake on events, die after ~30s idle). All state must be in `chrome.storage`, never in-memory globals. The service worker must declare `"type": "module"` in the manifest to use ES module imports
-- **AniList API** — GraphQL endpoint at `https://graphql.anilist.co`, no API key needed for public queries. Rate limit: 90 req/min
-- **Notifications** — batched into a single notification if >3 episodes drop at once to avoid Chrome throttling. Notification icons must use local paths (AniList CDN blocks CORS from extension origins). Notification history is persisted in storage and displayed in the popup
-- **Service worker polling** — does NOT run an initial poll on install (to avoid consuming the polling window). First poll happens when the alarm fires. Console logs prefixed with `[Anime Tracker]` for debugging
+- **Next.js** with App Router, TypeScript, Tailwind CSS
+- **Appwrite Cloud** for auth (email/password) and database (document collections)
+- **Route groups**: `(auth)` for login/signup, `(dashboard)` for authenticated pages with client-side auth guard
+- **Pages**: watchlist, search, airing schedule, settings
+- **`lib/anilist.ts`** — TypeScript port of extension's AniList client, plus `fetchWeeklyAiring` query
+- **`lib/appwrite.ts`** — Appwrite client, account, databases instances + collection ID constants
+- **No middleware** — Appwrite handles sessions via cookies automatically; auth guard in dashboard layout
 
-## Storage schema
+## Storage
 
-Watchlist entries keyed by `mediaId` (AniList media ID). Each entry has: `title`, `coverUrl`, `status`, `totalEpisodes`, `nextAiringEpisode`, `episodesWatched` (array of episode numbers), `addedAt`.
+### Extension
+Watchlist in `chrome.storage.local` keyed by `mediaId`. Notifications capped at 50. Full schema in `ARCHITECTURE.md`.
 
-Notification history stored as `notifications` array (newest first, capped at 50). Each entry has: `mediaId`, `episode`, `airingAt`, `title`, `coverUrl`, `timestamp`.
-
-Full schema in `ARCHITECTURE.md`.
+### Web App
+Appwrite Cloud with document collections: `watchlist_entries`, `watched_episodes`, `profiles`. Each document has a `user_id` field. Profiles auto-created on first settings page visit.
 
 ## Code conventions
 
+### Extension
 - Vanilla JS, no TypeScript, no framework
-- ES module imports throughout (both popup and service worker)
-- Functions are async where they touch `chrome.storage` or `fetch`
-- No external dependencies — everything is self-contained
+- ES module imports throughout
+- No external dependencies
+
+### Web App
+- TypeScript throughout
+- Tailwind for styling (dark theme: `bg-[#0f0f23]`, purple accents)
+- Client components use `'use client'` directive
+- Appwrite client is a singleton module (`lib/appwrite.ts`)
 
 ## Known issues / decisions
 
-- **AniList OAuth import removed from MVP** — AniList's OAuth doesn't work with `chrome.identity.launchWebAuthFlow` (`chromiumapp.org` redirect URLs not supported). The code for `fetchViewer` and `fetchUserList` exists in `anilist.js` for future use
-- **Cover images in notifications** — `chrome.notifications.create()` can't use AniList CDN URLs (CORS blocked), so OS notifications use the local extension icon. The popup notifications view uses `<img>` tags which aren't subject to CORS, with an `onerror` fallback to the local icon
+- **AniList OAuth** removed from MVP — `chromiumapp.org` redirect URLs not supported. Code exists in `ext/lib/anilist.js` for future use
+- **Cover images in OS notifications** — must use local icon (CORS). Popup `<img>` tags work fine
+- **AniList queries not shared** between ext and web — extension has no build step, so no shared package. Queries are copied/ported
+- **Web app** requires `.env.local` with Appwrite project ID, database ID, and collection IDs
 
 ## Testing
 
-No test framework currently. To test manually:
-1. Load unpacked at `chrome://extensions/`
-2. Click the extension icon to open the popup
-3. Search for an anime, add it, toggle episodes
-4. Check `chrome://extensions/` → service worker "Inspect" for background logs
-
-To test polling/notifications:
+### Extension
+Load unpacked from `ext/` at `chrome://extensions/`. Test polling:
 ```js
-// In service worker console — reset and trigger a poll
 chrome.storage.local.set({ lastPollTimestamp: 0, airingCache: {}, notifications: [] }, () => {
   chrome.alarms.create('anime-poll', { delayInMinutes: 0.08 });
 });
 ```
+
+### Web App
+```bash
+cd web && npm run dev
+```
+Requires Appwrite Cloud project + `.env.local` configured. Create collections in the Appwrite console first (see `.env.local.example` for required IDs).

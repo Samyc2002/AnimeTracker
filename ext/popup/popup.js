@@ -10,6 +10,8 @@ import {
   getNotifications,
   clearNotifications,
 } from '../lib/storage.js';
+import { isLoggedIn, clearAuth } from '../lib/auth.js';
+import { WEB_APP_URL } from '../lib/config.js';
 
 let currentView = 'notifications';
 let displayLanguage = 'english';
@@ -37,6 +39,8 @@ const episodesGrid = document.getElementById('episodes-grid');
 const settingPoll = document.getElementById('setting-poll');
 const settingNotifications = document.getElementById('setting-notifications');
 const settingLanguage = document.getElementById('setting-language');
+const syncIndicator = document.getElementById('sync-indicator');
+const authStatus = document.getElementById('auth-status');
 
 // --- Navigation ---
 function switchView(view) {
@@ -277,6 +281,32 @@ function renderEpisodeGrid(entry, totalEps) {
 
 episodesBack.addEventListener('click', () => switchView('watchlist'));
 
+// --- Auth status ---
+async function renderAuthStatus() {
+  const loggedIn = await isLoggedIn();
+  syncIndicator.hidden = !loggedIn;
+
+  if (loggedIn) {
+    authStatus.innerHTML = `
+      <div class="auth-status-text">Syncing with Anime Tracker web app</div>
+      <button class="btn--disconnect" id="disconnect-btn">Disconnect</button>
+    `;
+    authStatus.querySelector('#disconnect-btn').addEventListener('click', async () => {
+      await clearAuth();
+      renderAuthStatus();
+      renderWatchlist();
+    });
+  } else {
+    authStatus.innerHTML = `
+      <div class="auth-status-text">Sign in at <a href="#" class="auth-link" id="open-webapp">${WEB_APP_URL.replace(/^https?:\/\//, '')}</a> to sync your watchlist</div>
+    `;
+    authStatus.querySelector('#open-webapp').addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: WEB_APP_URL });
+    });
+  }
+}
+
 // --- Settings ---
 async function loadSettings() {
   const settings = await getSettings();
@@ -284,6 +314,7 @@ async function loadSettings() {
   settingNotifications.checked = settings.notificationsEnabled;
   settingLanguage.value = settings.displayLanguage;
   displayLanguage = settings.displayLanguage;
+  await renderAuthStatus();
 }
 
 settingPoll.addEventListener('change', async () => {
@@ -303,14 +334,17 @@ settingLanguage.addEventListener('change', async () => {
 });
 
 // --- Footer ---
-document.getElementById('schedule-link').addEventListener('click', (e) => {
+const scheduleLink = document.getElementById('schedule-link');
+scheduleLink.href = `${WEB_APP_URL}/airing`;
+scheduleLink.addEventListener('click', (e) => {
   e.preventDefault();
-  chrome.tabs.create({ url: e.target.href });
+  chrome.tabs.create({ url: scheduleLink.href });
 });
 
 // --- Init ---
 async function start() {
   await init();
+  syncIndicator.hidden = !(await isLoggedIn());
   await loadSettings();
   renderNotifications();
 }
