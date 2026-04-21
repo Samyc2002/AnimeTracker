@@ -1,25 +1,32 @@
 # Streaming Architecture
 
-## Overview
+## Status
 
-The streaming feature has a pluggable provider interface. The UI (video player, watch page, episode grid) is built. You need to implement the stream source fetching in `lib/stream-provider.ts`.
+### Done
+- [x] Stream provider interface (`lib/stream-provider.ts`) — types + client function calling API route
+- [x] VideoPlayer component (`components/VideoPlayer.tsx`) — hls.js for `.m3u8`, native for `.mp4`, quality selector, subtitles, error handling
+- [x] Watch page (`app/(dashboard)/anime/[id]/watch/[episode]/page.tsx`) — player, prev/next nav, mark-as-watched, episode grid
+- [x] EpisodeGrid link mode (`components/EpisodeGrid.tsx`) — `linkPrefix` and `currentEpisode` props
+- [x] Episode list on anime detail page (`app/(dashboard)/anime/[id]/page.tsx`) — clickable episodes linking to watch pages
+- [x] Stream API route skeleton (`app/api/stream/route.ts`) — accepts `anilistId`, `malId`, `episode` params
+- [x] CORS proxy route (`app/api/proxy/route.ts`) — proxies video URLs that block cross-origin playback
+- [x] hls.js installed and integrated
 
-## How anime streaming sources work
-
-Most unofficial anime sites follow the same pattern:
-
-1. **ID Mapping** — You have an AniList/MAL ID, but the streaming source uses its own slug or ID. You need a mapping step (search the source's API by title, or use a mapping database like [ani-api mappings](https://github.com/Fribb/anime-lists)).
-
-2. **Episode link fetching** — Once you have the source's ID, hit their episode list endpoint to get a URL for a specific episode number.
-
-3. **Video URL extraction** — The episode page embeds a player hosted on a separate domain (GoGocdn, Vidstreaming, etc.). Parse that page for the embed URL, then parse the embed to get the actual `.m3u8` (HLS) or `.mp4` direct URL.
+### Pending (you implement)
+- [ ] **Scraping logic in `app/api/stream/route.ts`** — the three-step pipeline:
+  1. Map `anilistId`/`malId` to your source site's internal ID
+  2. Fetch episode embed URL from the source
+  3. Extract direct video URL (`.m3u8` or `.mp4`) from the embed
+- [ ] **Install `cheerio`** (`npm install cheerio`) if you need to parse HTML from source sites
+- [ ] **Decryption logic** (if needed) — some sources encrypt video URLs with AES-256; use Node's built-in `crypto` module
 
 ## Architecture
 
 ```
 Browser (client)
   │
-  │  fetch('/api/stream?anilistId=X&episode=Y')
+  │  getEpisodeStream() in lib/stream-provider.ts
+  │  calls fetch('/api/stream?anilistId=X&episode=Y')
   ▼
 Next.js API Route (server-side)
   │  app/api/stream/route.ts
@@ -34,156 +41,104 @@ Next.js API Route (server-side)
   │     (parse HTML, decrypt if needed, return .m3u8 or .mp4)
   │
   ▼
-Returns JSON: StreamSource[]
+Returns JSON: { sources: StreamSource[] }
   │  [{ url, quality, subtitles }]
   ▼
 VideoPlayer component
-  │  Uses hls.js for .m3u8 playback
-  │  Native <video> for .mp4
+  │  hls.js for .m3u8 | native <video> for .mp4
+  │  Quality selector | Subtitle tracks
   ▼
 User watches anime
 ```
 
 ### Why server-side?
 
-- **CORS** — Browser fetch to third-party sites is blocked by CORS. The API route fetches server-side and returns URLs to the client.
-- **Anti-bot** — Some sources use Cloudflare. Server-side requests can manage cookies/headers more easily.
-- **Decryption** — Video URL extraction often involves AES-256 decryption of encrypted strings. Better to keep this server-side.
+- **CORS** — Browser fetch to third-party sites is blocked. The API route fetches server-side.
+- **Anti-bot** — Server-side requests can manage cookies and headers.
+- **Decryption** — Video URL extraction often involves AES-256. Better to keep server-side.
 
-## Implementation steps
+## How to implement the scraping
 
-### Step 1: Add hls.js to VideoPlayer
+### Step 1: Reverse-engineer a source site
 
-```bash
-cd web && npm install hls.js
-```
+1. Open the streaming site in Chrome, navigate to an episode
+2. Open DevTools (`Cmd+Opt+I`) → **Network** tab → filter by **Fetch/XHR**
+3. Reload and trace the request chain:
+   - **Search/lookup** — maps anime name to the site's internal ID
+   - **Episode list** — returns episode URLs or IDs
+   - **Video embed** — returns iframe URL, encrypted source, or direct video URL
+4. Right-click requests → **Copy > Copy as fetch** to get exact headers/cookies
 
-Update `components/VideoPlayer.tsx` to detect `.m3u8` URLs and use hls.js:
+### Step 2: Follow the embed
 
-```ts
-import Hls from 'hls.js';
+If you get an iframe URL (not a direct video URL):
+1. Open that embed URL in a new tab
+2. Open Network tab again, look for `.m3u8` or `.mp4` requests
+3. If data is encrypted, check the embed page's `<script>` tags for decryption keys
 
-// In the component:
-useEffect(() => {
-  const video = videoRef.current;
-  if (!video || !current) return;
-
-  if (current.url.includes('.m3u8') && Hls.isSupported()) {
-    const hls = new Hls();
-    hls.loadSource(current.url);
-    hls.attachMedia(video);
-    return () => hls.destroy();
-  } else {
-    video.src = current.url;
-  }
-}, [current]);
-```
-
-### Step 2: Create the API route
-
-Create `app/api/stream/route.ts`:
+### Step 3: Replicate in the API route
 
 ```ts
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/stream/route.ts — pseudocode
+import * as cheerio from 'cheerio';
 
-export async function GET(req: NextRequest) {
-  const anilistId = Number(req.nextUrl.searchParams.get('anilistId'));
-  const malId = req.nextUrl.searchParams.get('malId');
-  const episode = Number(req.nextUrl.searchParams.get('episode'));
+// 1. Map ID
+const searchRes = await fetch('https://source.site/api/search?q=One+Piece');
+const slug = (await searchRes.json()).results[0].slug;
 
-  // 1. Map anilistId/malId to source slug
-  // 2. Fetch episode embed URL
-  // 3. Extract direct video URL
-  // 4. Return sources
+// 2. Get episode
+const epRes = await fetch(`https://source.site/api/episode/${slug}-episode-${episode}`);
+const embedUrl = (await epRes.json()).embedUrl;
 
-  return NextResponse.json({ sources: [] });
-}
+// 3. Extract video URL
+const embedHtml = await (await fetch(embedUrl)).text();
+const $ = cheerio.load(embedHtml);
+const m3u8Url = $('source').attr('src'); // or parse from script tags
+
+// 4. Proxy if needed (for CORS)
+const proxiedUrl = `/api/proxy?url=${encodeURIComponent(m3u8Url)}`;
+
+return NextResponse.json({
+  sources: [{ url: proxiedUrl, quality: '1080p' }]
+});
 ```
 
-### Step 3: Update stream-provider.ts
+### Step 4: Test
 
-Point `getEpisodeStream` to your API route:
+Hit `http://localhost:3000/api/stream?anilistId=21&episode=1` in the browser.
+If it returns `{ sources: [...] }`, the watch page picks it up automatically.
 
-```ts
-export async function getEpisodeStream(
-  malId: number | null,
-  anilistId: number,
-  episode: number
-): Promise<StreamSource[]> {
-  const params = new URLSearchParams({
-    anilistId: String(anilistId),
-    episode: String(episode),
-  });
-  if (malId) params.set('malId', String(malId));
+### Tips
 
-  const res = await fetch(`/api/stream?${params}`);
-  if (!res.ok) return [];
-
-  const data = await res.json();
-  return data.sources;
-}
-```
-
-### Step 4: Implement the scraping
-
-Two approaches:
-
-**Option A — Use an existing API wrapper (recommended to start)**
-
-Find an open-source anime API project on GitHub that handles scraping. Either:
-- Run it as a separate local service and proxy to it from your API route
-- Port the relevant scraping logic directly into your API route
-
-**Option B — Write your own scraper**
-
-1. Pick a source site
-2. Open browser DevTools → Network tab
-3. Navigate to an episode and observe the API calls
-4. Replicate those requests in your API route using `fetch()`
-5. The typical chain: search → episode list → embed page → decrypt/parse → video URL
-
-### Step 5: Handle CORS for video playback
-
-Even with server-side scraping, the `.m3u8` or `.mp4` URL may need CORS headers to play in the browser. If the source blocks cross-origin playback, add a proxy route:
-
-```ts
-// app/api/proxy/route.ts
-export async function GET(req: NextRequest) {
-  const url = req.nextUrl.searchParams.get('url');
-  if (!url) return new NextResponse('Missing url', { status: 400 });
-
-  const res = await fetch(url);
-  return new NextResponse(res.body, {
-    headers: {
-      'Content-Type': res.headers.get('Content-Type') || 'application/octet-stream',
-      'Access-Control-Allow-Origin': '*',
-    },
-  });
-}
-```
-
-Then rewrite video URLs through the proxy: `/api/proxy?url=<encoded-video-url>`
+- **Start simple** — find a source that returns direct `.m3u8` URLs without encryption
+- **Use `console.log`** in the API route to debug each step
+- **If a request works in browser but not in Node** — you're missing a header (compare with "Copy as fetch")
+- **Check `<script>` tags** in embed pages — decryption keys are often inline
 
 ## File reference
 
-| File | Purpose |
-|---|---|
-| `lib/stream-provider.ts` | Provider interface — calls API route |
-| `components/VideoPlayer.tsx` | Video player — needs hls.js for .m3u8 |
-| `app/api/stream/route.ts` | API route — scraping logic goes here |
-| `app/api/proxy/route.ts` | Optional CORS proxy for video URLs |
-| `app/(dashboard)/anime/[id]/watch/[episode]/page.tsx` | Watch page UI |
+| File | Status | Purpose |
+|---|---|---|
+| `lib/stream-provider.ts` | Done | Types + client function calling API route |
+| `components/VideoPlayer.tsx` | Done | hls.js player with quality/subtitle support |
+| `app/api/stream/route.ts` | Skeleton | Scraping logic goes here |
+| `app/api/proxy/route.ts` | Done | CORS proxy for video URLs |
+| `app/(dashboard)/anime/[id]/watch/[episode]/page.tsx` | Done | Watch page UI |
+| `components/EpisodeGrid.tsx` | Done | Episode grid with link + current highlight modes |
+| `app/(dashboard)/anime/[id]/page.tsx` | Done | Episode list linking to watch pages |
 
 ## Common video formats
 
 | Format | Extension | Player support |
 |---|---|---|
-| HLS | `.m3u8` | Needs hls.js (most common for anime sources) |
+| HLS | `.m3u8` | hls.js (integrated) |
 | MP4 | `.mp4` | Native HTML5 `<video>` |
-| DASH | `.mpd` | Needs dash.js (rare for anime) |
+| DASH | `.mpd` | Needs dash.js (not integrated, rare for anime) |
 
-## Useful libraries
+## Dependencies
 
-- **hls.js** — HLS playback in browsers
-- **cheerio** — HTML parsing for server-side scraping
-- **crypto** (Node built-in) — AES decryption of encrypted video URLs
+| Package | Purpose | Status |
+|---|---|---|
+| `hls.js` | HLS stream playback | Installed |
+| `cheerio` | HTML parsing for scraping | Install when needed: `npm install cheerio` |
+| `crypto` | AES decryption | Node built-in, no install needed |
