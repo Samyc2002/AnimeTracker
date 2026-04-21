@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Hls from 'hls.js';
 import type { StreamSource, SubtitleTrack } from '@/lib/stream-provider';
 
 interface VideoPlayerProps {
@@ -10,20 +11,56 @@ interface VideoPlayerProps {
 
 export default function VideoPlayer({ sources, onEnded }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [selectedQuality, setSelectedQuality] = useState(0);
   const [error, setError] = useState(false);
 
   const current = sources[selectedQuality];
   const subtitles: SubtitleTrack[] = current?.subtitles || [];
 
-  useEffect(() => {
-    setError(false);
-    if (videoRef.current && current) {
-      const time = videoRef.current.currentTime;
-      videoRef.current.load();
-      videoRef.current.currentTime = time;
+  const attachSource = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !current) return;
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
-  }, [selectedQuality, current]);
+
+    setError(false);
+    const time = video.currentTime;
+
+    if (current.url.includes('.m3u8') && Hls.isSupported()) {
+      const hls = new Hls();
+      hlsRef.current = hls;
+      hls.loadSource(current.url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.currentTime = time;
+        video.play().catch(() => {});
+      });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) setError(true);
+      });
+    } else if (current.url.includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS
+      video.src = current.url;
+      video.currentTime = time;
+    } else {
+      video.src = current.url;
+      video.currentTime = time;
+    }
+  }, [current]);
+
+  useEffect(() => {
+    attachSource();
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [attachSource]);
 
   if (sources.length === 0) {
     return (
@@ -33,7 +70,7 @@ export default function VideoPlayer({ sources, onEnded }: VideoPlayerProps) {
         </svg>
         <p className="text-gray-500 text-sm">No stream source available</p>
         <p className="text-gray-600 text-xs max-w-sm text-center">
-          Implement getEpisodeStream() in lib/stream-provider.ts to enable playback
+          Implement the stream API route to enable playback
         </p>
       </div>
     );
@@ -46,7 +83,7 @@ export default function VideoPlayer({ sources, onEnded }: VideoPlayerProps) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
             <p className="text-red-400 text-sm">Failed to load video</p>
             <button
-              onClick={() => { setError(false); videoRef.current?.load(); }}
+              onClick={() => attachSource()}
               className="text-xs text-purple-400 hover:text-purple-300"
             >
               Retry
@@ -59,9 +96,10 @@ export default function VideoPlayer({ sources, onEnded }: VideoPlayerProps) {
             autoPlay
             className="w-full h-full"
             onEnded={onEnded}
-            onError={() => setError(true)}
+            onError={() => {
+              if (!hlsRef.current) setError(true);
+            }}
           >
-            <source src={current.url} />
             {subtitles.map((sub) => (
               <track
                 key={sub.lang}

@@ -10,20 +10,23 @@ export interface StreamSource {
   subtitles?: SubtitleTrack[];
 }
 
-/**
- * Fetch available stream sources for an anime episode.
- *
- * Implement your stream fetching logic here. Both malId and anilistId
- * are provided since different sources use different ID systems.
- *
- * Return an array of StreamSource objects (one per quality level).
- * Return an empty array if no sources are found.
- */
 export async function getEpisodeStream(
-  _malId: number | null,
-  _anilistId: number,
-  _episode: number
+  malId: number | null,
+  anilistId: number,
+  episode: number
 ): Promise<StreamSource[]> {
-  // TODO: Implement your stream source fetching here
-  return [];
+  const params = new URLSearchParams({
+    anilistId: String(anilistId),
+    episode: String(episode),
+  });
+  if (malId) params.set('malId', String(malId));
+
+  try {
+    const res = await fetch(`/api/stream?${params}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.sources || [];
+  } catch {
+    return [];
+  }
 }
