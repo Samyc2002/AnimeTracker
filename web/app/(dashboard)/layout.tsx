@@ -3,6 +3,7 @@
 import { useEffect, useState, createContext, useContext } from 'react';
 import { account } from '@/lib/appwrite';
 import NavBar from '@/components/NavBar';
+import Footer from '@/components/Footer';
 import { SfwProvider } from '@/lib/sfw-context';
 
 interface AuthContextType {
@@ -78,9 +79,10 @@ export default function DashboardLayout({
   return (
     <AuthContext.Provider value={{ authed, loading }}>
       <SfwProvider>
-        <div data-dashboard-layout className="min-h-screen bg-[#0b0e14]">
+        <div data-dashboard-layout className="min-h-screen bg-[#0b0e14] flex flex-col">
           <NavBar />
-          <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
+          <main className="max-w-5xl mx-auto px-6 py-8 flex-1 w-full">{children}</main>
+          <Footer />
         </div>
       </SfwProvider>
     </AuthContext.Provider>
