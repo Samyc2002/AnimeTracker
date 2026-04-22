@@ -41,7 +41,8 @@ export default function AnimeCard({
         alt=""
         width={56}
         height={80}
-        className="rounded object-cover flex-shrink-0"
+        className="rounded object-cover flex-shrink-0 w-14 h-20"
+        sizes="56px"
         unoptimized
       />
       <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">

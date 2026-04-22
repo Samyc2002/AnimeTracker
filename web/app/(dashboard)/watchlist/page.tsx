@@ -10,7 +10,7 @@ import Image from 'next/image';
 import type { WatchStatus } from '@/lib/types';
 
 function upgradeImageUrl(url: string): string {
-  return url.replace('/medium/', '/large/');
+  return url.replace(/\/(?:small|medium)\//, '/large/');
 }
 
 interface WatchlistDoc {
