@@ -57,6 +57,7 @@ export default function WatchlistPage() {
     }
     return 'list';
   });
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: WatchlistDoc } | null>(null);
 
   const loadWatchlist = useCallback(async () => {
     try {
@@ -75,10 +76,10 @@ export default function WatchlistPage() {
       const docs = watchlist.documents as unknown as WatchlistDoc[];
       setEntries(docs);
 
-      if (selectedEntry) {
-        const updated = docs.find((d) => d.$id === selectedEntry.$id);
-        if (updated) setSelectedEntry(updated);
-      }
+      setSelectedEntry((prev) => {
+        if (!prev) return null;
+        return docs.find((d) => d.$id === prev.$id) || null;
+      });
 
       const map: Record<number, WatchedDoc[]> = {};
       (watched.documents as unknown as WatchedDoc[]).forEach((w) => {
@@ -90,7 +91,7 @@ export default function WatchlistPage() {
       // Not authenticated — layout will redirect
     }
     setLoading(false);
-  }, [selectedEntry]);
+  }, []);
 
   useEffect(() => {
     loadWatchlist();
@@ -130,6 +131,11 @@ export default function WatchlistPage() {
       });
     }
     loadWatchlist();
+  }
+
+  function handleContextMenu(e: React.MouseEvent, entry: WatchlistDoc) {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, entry });
   }
 
   function getAvailableEpisodes(entry: WatchlistDoc): number | undefined {
@@ -268,23 +274,24 @@ export default function WatchlistPage() {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const watchStatus = entry.watch_status || 'Watching';
             return (
-              <AnimeCard
-                key={entry.$id}
-                title={title}
-                coverUrl={upgradeImageUrl(entry.cover_url)}
-                status={entry.status}
-                episodes={entry.total_episodes}
-                progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
-                onClick={() => setSelectedEntry(entry)}
-                action={
-                  <div className="flex items-center gap-1">
-                    <AddToPlaylist mediaId={entry.media_id} />
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${statusColors[watchStatus]}`}>
-                      {watchStatus}
-                    </span>
-                  </div>
-                }
-              />
+              <div key={entry.$id} onContextMenu={(e) => handleContextMenu(e, entry)}>
+                <AnimeCard
+                  title={title}
+                  coverUrl={upgradeImageUrl(entry.cover_url)}
+                  status={entry.status}
+                  episodes={entry.total_episodes}
+                  progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
+                  onClick={() => setSelectedEntry(entry)}
+                  action={
+                    <div className="flex items-center gap-1">
+                      <AddToPlaylist mediaId={entry.media_id} />
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${statusColors[watchStatus]}`}>
+                        {watchStatus}
+                      </span>
+                    </div>
+                  }
+                />
+              </div>
             );
           })}
         </div>
@@ -299,6 +306,7 @@ export default function WatchlistPage() {
                 key={entry.$id}
                 className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group"
                 onClick={() => setSelectedEntry(entry)}
+                onContextMenu={(e) => handleContextMenu(e, entry)}
               >
                 <div className="relative w-full aspect-[3/4]">
                   <Image
@@ -327,6 +335,39 @@ export default function WatchlistPage() {
             );
           })}
         </div>
+      )}
+
+      {contextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }} />
+          <div
+            className="fixed z-50 bg-[#141925] border border-[#253040] rounded-lg shadow-xl py-1 min-w-[160px]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <p className="px-3 py-1.5 text-xs text-gray-500 truncate max-w-[200px]">
+              {contextMenu.entry.title_english || contextMenu.entry.title_romaji}
+            </p>
+            <div className="border-t border-[#253040] my-1" />
+            {WATCH_STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => { updateWatchStatus(contextMenu.entry, s); setContextMenu(null); }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#1c2333] transition-colors ${
+                  (contextMenu.entry.watch_status || 'Watching') === s ? 'text-teal-400' : 'text-gray-300'
+                }`}
+              >
+                {(contextMenu.entry.watch_status || 'Watching') === s ? '● ' : '○ '}{s}
+              </button>
+            ))}
+            <div className="border-t border-[#253040] my-1" />
+            <button
+              onClick={() => { removeFromWatchlist(contextMenu.entry); setContextMenu(null); }}
+              className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-[#1c2333] transition-colors"
+            >
+              Remove from watchlist
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
