@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { account } from '@/lib/appwrite';
+import { useSfw } from '@/lib/sfw-context';
 
 const navItems = [
   { href: '/watchlist', label: 'Watchlist' },
@@ -15,6 +16,7 @@ const navItems = [
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { sfwMode, setSfwMode } = useSfw();
 
   async function handleSignOut() {
     localStorage.removeItem('anime_tracker_ext_jwt');
@@ -44,12 +46,24 @@ export default function NavBar() {
           ))}
         </div>
       </div>
-      <button
-        onClick={handleSignOut}
-        className="text-sm text-gray-400 hover:text-gray-200"
-      >
-        Sign out
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setSfwMode(!sfwMode)}
+          className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
+            sfwMode
+              ? 'bg-teal-600/20 text-teal-400 border border-teal-500/30'
+              : 'bg-red-600/20 text-red-400 border border-red-500/30'
+          }`}
+        >
+          {sfwMode ? 'SFW' : 'NSFW'}
+        </button>
+        <button
+          onClick={handleSignOut}
+          className="text-sm text-gray-400 hover:text-gray-200"
+        >
+          Sign out
+        </button>
+      </div>
     </nav>
   );
 }
