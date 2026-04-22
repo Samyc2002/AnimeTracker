@@ -9,6 +9,10 @@ import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
 import type { WatchStatus } from '@/lib/types';
 
+function upgradeImageUrl(url: string): string {
+  return url.replace('/medium/', '/large/');
+}
+
 interface WatchlistDoc {
   $id: string;
   user_id: string;
@@ -153,7 +157,7 @@ export default function WatchlistPage() {
           &larr; Back to watchlist
         </button>
         <div className="flex gap-4 items-center mb-6">
-          <img src={selectedEntry.cover_url} alt="" className="w-16 h-24 rounded object-cover" />
+          <img src={upgradeImageUrl(selectedEntry.cover_url)} alt="" className="w-16 h-24 rounded object-cover" />
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-gray-200">{title}</h2>
             <p className="text-sm text-gray-500">{watchedEpisodes.length}/{selectedEntry.total_episodes || '?'} watched</p>
@@ -267,7 +271,7 @@ export default function WatchlistPage() {
               <AnimeCard
                 key={entry.$id}
                 title={title}
-                coverUrl={entry.cover_url}
+                coverUrl={upgradeImageUrl(entry.cover_url)}
                 status={entry.status}
                 episodes={entry.total_episodes}
                 progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
@@ -298,7 +302,7 @@ export default function WatchlistPage() {
               >
                 <div className="relative w-full aspect-[3/4]">
                   <Image
-                    src={entry.cover_url || '/icon-128.png'}
+                    src={upgradeImageUrl(entry.cover_url) || '/icon-128.png'}
                     alt={title}
                     fill
                     className="object-cover"
