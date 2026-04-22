@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
+import Image from 'next/image';
 import { fetchAnimeDetail } from '@/lib/anilist';
 import Footer from '@/components/Footer';
 import type { AnimeDetail } from '@/lib/types';
@@ -78,7 +78,8 @@ export default function PublicPlaylistPage() {
   return (
     <div className="min-h-screen bg-[#0b0e14]">
       <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
-        <Link href="/" className="text-lg font-bold text-teal-400">
+        <Link href="/" className="flex items-center gap-2 text-lg font-bold text-teal-400">
+          <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
           Anime Tracker
         </Link>
         <Link

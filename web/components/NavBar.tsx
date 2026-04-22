@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { account } from '@/lib/appwrite';
 import { useSfw } from '@/lib/sfw-context';
