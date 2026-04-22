@@ -6,6 +6,7 @@ export interface AniListMedia {
     english: string | null;
   };
   coverImage: {
+    large: string;
     medium: string;
   };
   status: 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
@@ -58,7 +59,7 @@ export interface AnimeDetail {
       node: {
         id: number;
         title: { romaji: string; english: string | null };
-        coverImage: { medium: string };
+        coverImage: { large: string; medium: string };
         type: string;
         status: string;
       };

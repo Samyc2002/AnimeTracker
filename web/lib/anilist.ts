@@ -9,7 +9,7 @@ query SearchAnime($search: String) {
       id
       idMal
       title { romaji english }
-      coverImage { medium }
+      coverImage { large medium }
       status
       episodes
       nextAiringEpisode {
@@ -49,7 +49,7 @@ query WeeklyAiring($from: Int, $to: Int, $page: Int) {
         id
         idMal
         title { romaji english }
-        coverImage { medium }
+        coverImage { large medium }
         status
         episodes
       }
@@ -64,7 +64,7 @@ query TrendingAnime {
       id
       idMal
       title { romaji english }
-      coverImage { medium }
+      coverImage { large medium }
       status
       episodes
       nextAiringEpisode { airingAt episode }
@@ -75,7 +75,7 @@ query TrendingAnime {
       id
       idMal
       title { romaji english }
-      coverImage { medium }
+      coverImage { large medium }
       status
       episodes
       nextAiringEpisode { airingAt episode }
@@ -107,7 +107,7 @@ query AnimeDetail($id: Int) {
         node {
           id
           title { romaji english }
-          coverImage { medium }
+          coverImage { large medium }
           type
           status
         }
@@ -192,7 +192,7 @@ export function mediaToWatchlistEntry(media: AniListMedia) {
     id_mal: media.idMal,
     title_romaji: media.title.romaji,
     title_english: media.title.english,
-    cover_url: media.coverImage?.medium || '',
+    cover_url: media.coverImage?.large || media.coverImage?.medium || '',
     status: media.status,
     total_episodes: media.episodes,
     next_airing_episode: media.nextAiringEpisode?.episode ?? null,

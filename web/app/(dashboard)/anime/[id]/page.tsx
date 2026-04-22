@@ -130,23 +130,9 @@ export default function AnimeDetailPage() {
           alt=""
           className="absolute inset-0 w-full h-full object-cover blur-3xl scale-110 opacity-15"
         />
-        <div className="absolute inset-0 bg-[#0b0e14]/80" />
       </div>
 
-      {anime.bannerImage && (
-        <div className="relative w-full h-48 md:h-56">
-          <Image
-            src={anime.bannerImage}
-            alt=""
-            fill
-            className="object-cover"
-            unoptimized
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e14] to-transparent" />
-        </div>
-      )}
-
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-5xl mx-auto px-6 pt-24">
         <div className={`flex gap-6 ${anime.bannerImage ? '-mt-20 relative z-10' : 'mt-8'}`}>
           <div className="flex-shrink-0">
             <Image
@@ -242,7 +228,7 @@ export default function AnimeDetailPage() {
                   >
                     <div className="relative w-full aspect-[3/4]">
                       <Image
-                        src={rel.coverImage?.medium || '/icon-128.png'}
+                        src={rel.coverImage?.large || rel.coverImage?.medium || '/icon-128.png'}
                         alt={relTitle}
                         fill
                         className="object-cover"
