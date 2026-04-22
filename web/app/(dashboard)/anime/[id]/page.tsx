@@ -91,6 +91,14 @@ export default function AnimeDetailPage() {
     setAdding(false);
   }
 
+  useEffect(() => {
+    const layoutEl = document.querySelector('[data-dashboard-layout]') as HTMLElement | null;
+    if (layoutEl) layoutEl.style.background = 'transparent';
+    return () => {
+      if (layoutEl) layoutEl.style.background = '';
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
@@ -112,14 +120,6 @@ export default function AnimeDetailPage() {
     .sort((a, b) => relationOrder.indexOf(a.relationType) - relationOrder.indexOf(b.relationType));
 
   const backdropImage = anime.bannerImage || anime.coverImage.large || anime.coverImage.medium;
-
-  useEffect(() => {
-    const layoutEl = document.querySelector('[data-dashboard-layout]') as HTMLElement | null;
-    if (layoutEl) layoutEl.style.background = 'transparent';
-    return () => {
-      if (layoutEl) layoutEl.style.background = '';
-    };
-  }, []);
 
   return (
     <div className="-mx-6 -mt-8 relative min-h-screen">
