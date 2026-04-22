@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Client, Databases, Query, Users } from 'node-appwrite';
+import { getOnlineCount } from '@/lib/online-tracker';
 
 function getServerClient() {
   const client = new Client()
@@ -56,23 +57,7 @@ export async function GET() {
       ]).then((r) => r.total),
     ]);
 
-    // Count unique users with activity in last 5 minutes (online now)
-    const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
-    const [onlineWl, onlineEp] = await Promise.all([
-      databases.listDocuments(dbId, watchlistCol, [
-        Query.greaterThan('$updatedAt', fiveMinAgo),
-        Query.select(['user_id']),
-        Query.limit(500),
-      ]),
-      databases.listDocuments(dbId, watchedEpCol, [
-        Query.greaterThan('$createdAt', fiveMinAgo),
-        Query.select(['user_id']),
-        Query.limit(500),
-      ]),
-    ]);
-    const onlineUserIds = new Set<string>();
-    onlineWl.documents.forEach((d) => onlineUserIds.add((d as unknown as { user_id: string }).user_id));
-    onlineEp.documents.forEach((d) => onlineUserIds.add((d as unknown as { user_id: string }).user_id));
+    const onlineNow = getOnlineCount();
 
     // Count unique users with activity in last 7 days
     const recentDocs = await databases.listDocuments(dbId, watchlistCol, [
@@ -90,7 +75,7 @@ export async function GET() {
     recentEpDocs.documents.forEach((d) => activeUserIds.add((d as unknown as { user_id: string }).user_id));
 
     return NextResponse.json({
-      online_now: onlineUserIds.size,
+      online_now: onlineNow,
       totals: {
         users: totalUsers,
         watchlist_entries: totalWatchlistEntries,

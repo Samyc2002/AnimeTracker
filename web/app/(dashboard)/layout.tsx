@@ -41,6 +41,25 @@ export default function DashboardLayout({
     return () => clearInterval(interval);
   }, [authed]);
 
+  useEffect(() => {
+    if (!authed) return;
+    async function heartbeat() {
+      try {
+        const user = await account.get();
+        await fetch('/api/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.$id }),
+        });
+      } catch {
+        // Non-critical
+      }
+    }
+    heartbeat();
+    const interval = setInterval(heartbeat, 60_000);
+    return () => clearInterval(interval);
+  }, [authed]);
+
   if (!authed) {
     return (
       <div className="min-h-screen bg-[#0f0f23] flex items-center justify-center">
