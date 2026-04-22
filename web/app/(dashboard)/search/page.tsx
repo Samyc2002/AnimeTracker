@@ -35,7 +35,7 @@ function RecommendationGrid({
             >
               <div className="relative w-full aspect-[3/4]">
                 <Image
-                  src={media.coverImage?.large || media.coverImage?.medium || '/icon-128.png'}
+                  src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/icon-128.png'}
                   alt={mediaTitle}
                   fill
                   className="object-cover"
@@ -136,7 +136,7 @@ export default function SearchPage() {
               <AnimeCard
                 key={media.id}
                 title={title}
-                coverUrl={media.coverImage?.large || media.coverImage?.medium || ''}
+                coverUrl={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || ''}
                 status={media.status}
                 episodes={media.episodes}
                 onClick={() => router.push(`/anime/${media.id}`)}

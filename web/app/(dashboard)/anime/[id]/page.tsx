@@ -119,7 +119,7 @@ export default function AnimeDetailPage() {
     .filter((e) => e.node.type === 'ANIME')
     .sort((a, b) => relationOrder.indexOf(a.relationType) - relationOrder.indexOf(b.relationType));
 
-  const backdropImage = anime.bannerImage || anime.coverImage.large || anime.coverImage.medium;
+  const backdropImage = anime.bannerImage || anime.coverImage.extraLarge || anime.coverImage.large || anime.coverImage.medium;
 
   return (
     <div className="-mx-6 -mt-8 relative min-h-screen">
@@ -136,7 +136,7 @@ export default function AnimeDetailPage() {
         <div className={`flex gap-6 ${anime.bannerImage ? '-mt-20 relative z-10' : 'mt-8'}`}>
           <div className="flex-shrink-0">
             <Image
-              src={anime.coverImage.large || anime.coverImage.medium}
+              src={anime.coverImage.extraLarge || anime.coverImage.large || anime.coverImage.medium}
               alt={title}
               width={160}
               height={230}
@@ -228,7 +228,7 @@ export default function AnimeDetailPage() {
                   >
                     <div className="relative w-full aspect-[3/4]">
                       <Image
-                        src={rel.coverImage?.large || rel.coverImage?.medium || '/icon-128.png'}
+                        src={rel.coverImage?.extraLarge || rel.coverImage?.large || rel.coverImage?.medium || '/icon-128.png'}
                         alt={relTitle}
                         fill
                         className="object-cover"

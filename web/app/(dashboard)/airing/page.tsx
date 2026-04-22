@@ -206,7 +206,7 @@ export default function AiringPage() {
                         >
                           <div className="relative w-full aspect-[3/4]">
                             <Image
-                              src={media.coverImage?.large || media.coverImage?.medium || '/icon-128.png'}
+                              src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/icon-128.png'}
                               alt={title}
                               fill
                               className="object-cover"
