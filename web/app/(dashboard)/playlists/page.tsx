@@ -5,6 +5,7 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
 import { searchAnime, fetchAnimeDetail } from '@/lib/anilist';
 import Image from 'next/image';
+import RequireAuth from '@/components/RequireAuth';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
 
 interface PlaylistDoc {
@@ -25,7 +26,11 @@ function slugify(text: string): string {
     .slice(0, 64) || 'playlist';
 }
 
-export default function PlaylistsPage() {
+export default function PlaylistsPageGuarded() {
+  return <RequireAuth><PlaylistsPage /></RequireAuth>;
+}
+
+function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);

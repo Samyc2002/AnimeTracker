@@ -8,6 +8,7 @@ import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
 import { useSfw } from '@/lib/sfw-context';
+import RequireAuth from '@/components/RequireAuth';
 import type { WatchStatus } from '@/lib/types';
 
 function upgradeImageUrl(url: string): string {
@@ -47,7 +48,11 @@ const statusColors: Record<WatchStatus, string> = {
 
 type ViewMode = 'list' | 'card';
 
-export default function WatchlistPage() {
+export default function WatchlistPageGuarded() {
+  return <RequireAuth><WatchlistPage /></RequireAuth>;
+}
+
+function WatchlistPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);

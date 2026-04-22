@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anilist';
+import RequireAuth from '@/components/RequireAuth';
 
 interface ProfileDoc {
   $id: string;
@@ -13,7 +14,11 @@ interface ProfileDoc {
   anilist_token?: string;
 }
 
-export default function SettingsPage() {
+export default function SettingsPageGuarded() {
+  return <RequireAuth><SettingsPage /></RequireAuth>;
+}
+
+function SettingsPage() {
   const searchParams = useSearchParams();
   const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);

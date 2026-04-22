@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import RequireAuth from '@/components/RequireAuth';
 
 interface Stats {
   online_now: number;
@@ -95,7 +96,11 @@ function StatCard({
   );
 }
 
-export default function AdminPage() {
+export default function AdminPageGuarded() {
+  return <RequireAuth><AdminPage /></RequireAuth>;
+}
+
+function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

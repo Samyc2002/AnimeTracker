@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { account } from '@/lib/appwrite';
 import NavBar from '@/components/NavBar';
 import { SfwProvider } from '@/lib/sfw-context';
+
+interface AuthContextType {
+  authed: boolean;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType>({ authed: false, loading: true });
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 export default function DashboardLayout({
   children,
@@ -12,12 +22,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [authed, setAuthed] = useState(false);
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     account.get()
       .then(async (user) => {
         setAuthed(true);
+        setLoading(false);
         try {
           const jwt = await account.createJWT();
           localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: jwt.jwt, userId: user.$id }));
@@ -25,8 +36,11 @@ export default function DashboardLayout({
           // JWT creation is non-critical
         }
       })
-      .catch(() => router.replace('/login'));
-  }, [router]);
+      .catch(() => {
+        setAuthed(false);
+        setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     if (!authed) return;
@@ -61,20 +75,14 @@ export default function DashboardLayout({
     return () => clearInterval(interval);
   }, [authed]);
 
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
-  }
-
   return (
-    <SfwProvider>
-      <div data-dashboard-layout className="min-h-screen bg-[#0b0e14]">
-        <NavBar />
-        <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
-      </div>
-    </SfwProvider>
+    <AuthContext.Provider value={{ authed, loading }}>
+      <SfwProvider>
+        <div data-dashboard-layout className="min-h-screen bg-[#0b0e14]">
+          <NavBar />
+          <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
+        </div>
+      </SfwProvider>
+    </AuthContext.Provider>
   );
 }
