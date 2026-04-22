@@ -36,9 +36,9 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f23]">
-      <div className="w-full max-w-sm p-8 bg-[#1a1a2e] rounded-xl">
-        <h1 className="text-2xl font-bold text-purple-400 mb-6 text-center">Create an account</h1>
+    <div className="min-h-screen flex items-center justify-center bg-[#0b0e14]">
+      <div className="w-full max-w-sm p-8 bg-[#111827] rounded-xl">
+        <h1 className="text-2xl font-bold text-teal-400 mb-6 text-center">Create an account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
@@ -46,7 +46,7 @@ export default function SignupPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-2 bg-[#0f0f23] border border-[#3a3a5c] rounded-lg text-gray-200 focus:border-purple-500 outline-none"
+            className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
           />
           <input
             type="password"
@@ -55,20 +55,20 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
-            className="w-full px-4 py-2 bg-[#0f0f23] border border-[#3a3a5c] rounded-lg text-gray-200 focus:border-purple-500 outline-none"
+            className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50"
+            className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Sign up'}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-400">
           Already have an account?{' '}
-          <Link href="/login" className="text-purple-400 hover:text-purple-300">Sign in</Link>
+          <Link href="/login" className="text-teal-400 hover:text-teal-300">Sign in</Link>
         </p>
       </div>
     </div>

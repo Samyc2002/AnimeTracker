@@ -60,7 +60,7 @@ export default function SettingsPage() {
           <select
             value={language}
             onChange={(e) => saveLanguage(e.target.value)}
-            className="px-3 py-1.5 bg-[#0f0f23] border border-[#3a3a5c] rounded-lg text-gray-200 text-sm"
+            className="px-3 py-1.5 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm"
           >
             <option value="English">English</option>
             <option value="Japanese">Japanese</option>

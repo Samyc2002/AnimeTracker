@@ -22,9 +22,9 @@ export default function NavBar() {
   }
 
   return (
-    <nav className="bg-[#16213e] border-b border-[#2a2a4a] px-6 py-3 flex items-center justify-between">
+    <nav className="bg-[#141925] border-b border-[#1e2736] px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-6">
-        <Link href="/watchlist" className="text-lg font-bold text-purple-400">
+        <Link href="/watchlist" className="text-lg font-bold text-teal-400">
           Anime Tracker
         </Link>
         <div className="flex gap-1">
@@ -34,8 +34,8 @@ export default function NavBar() {
               href={href}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 pathname === href
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-[#1e2d4d]'
+                  ? 'bg-teal-600 text-white'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-[#1c2333]'
               }`}
             >
               {label}

@@ -62,14 +62,14 @@ export default function DashboardLayout({
 
   if (!authed) {
     return (
-      <div className="min-h-screen bg-[#0f0f23] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center">
         <p className="text-gray-500">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f23]">
+    <div className="min-h-screen bg-[#0b0e14]">
       <NavBar />
       <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
     </div>

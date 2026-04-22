@@ -33,7 +33,7 @@ export default function AnimeCard({
 
   return (
     <div
-      className={`flex gap-3 bg-[#16213e] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1e2d4d]' : ''} transition-colors`}
+      className={`flex gap-3 bg-[#141925] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} transition-colors`}
       onClick={onClick}
     >
       <Image
@@ -52,7 +52,7 @@ export default function AnimeCard({
           </span>
           {episodes && <span className="text-gray-500">{episodes} eps</span>}
         </div>
-        {progress && <p className="text-xs text-purple-400">{progress}</p>}
+        {progress && <p className="text-xs text-teal-400">{progress}</p>}
       </div>
       {action && <div className="flex items-center flex-shrink-0">{action}</div>}
     </div>

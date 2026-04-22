@@ -139,7 +139,7 @@ export default function WatchlistPage() {
 
     return (
       <div>
-        <button onClick={() => setSelectedEntry(null)} className="text-purple-400 text-sm mb-4 hover:text-purple-300">
+        <button onClick={() => setSelectedEntry(null)} className="text-teal-400 text-sm mb-4 hover:text-teal-300">
           &larr; Back to watchlist
         </button>
         <div className="flex gap-4 items-center mb-6">
@@ -150,7 +150,7 @@ export default function WatchlistPage() {
             <select
               value={watchStatus}
               onChange={(e) => updateWatchStatus(selectedEntry, e.target.value as WatchStatus)}
-              className="mt-2 px-3 py-1 text-sm bg-[#0f0f23] border border-[#3a3a5c] rounded-lg text-gray-200 outline-none"
+              className="mt-2 px-3 py-1 text-sm bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 outline-none"
             >
               {WATCH_STATUSES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -167,7 +167,7 @@ export default function WatchlistPage() {
 
         {availableUpTo !== undefined && availableUpTo < total && (
           <div className="mb-4 flex items-center gap-2 text-xs text-gray-500">
-            <span className="inline-block w-4 h-4 rounded border border-dashed border-[#3a3a5c] bg-[#1a1a2e]" />
+            <span className="inline-block w-4 h-4 rounded border border-dashed border-[#253040] bg-[#111827]" />
             <span>Dashed episodes have not aired yet</span>
           </div>
         )}
@@ -211,8 +211,8 @@ export default function WatchlistPage() {
             onClick={() => setFilter(s as WatchStatus | typeof ALL_FILTER)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === s
-                ? 'bg-purple-600 text-white'
-                : 'bg-[#16213e] text-gray-400 hover:text-gray-200'
+                ? 'bg-teal-600 text-white'
+                : 'bg-[#141925] text-gray-400 hover:text-gray-200'
             }`}
           >
             {s} <span className="text-xs opacity-60">({counts[s] || 0})</span>

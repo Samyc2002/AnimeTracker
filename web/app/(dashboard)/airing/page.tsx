@@ -141,19 +141,19 @@ export default function AiringPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setWeekOffset((w) => w - 1)}
-            className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+            className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
           >
             &larr; Prev Week
           </button>
           <button
             onClick={() => setWeekOffset(0)}
-            className="text-xs px-2 py-1 rounded bg-[#1a1a2e] text-gray-400 hover:text-gray-200 transition-colors"
+            className="text-xs px-2 py-1 rounded bg-[#111827] text-gray-400 hover:text-gray-200 transition-colors"
           >
             Today
           </button>
           <button
             onClick={() => setWeekOffset((w) => w + 1)}
-            className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+            className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
           >
             Next Week &rarr;
           </button>
@@ -162,7 +162,7 @@ export default function AiringPage() {
 
       {loading ? (
         <div className="flex justify-center mt-12">
-          <div className="w-6 h-6 border-2 border-[#3a3a5c] border-t-purple-500 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
@@ -178,11 +178,11 @@ export default function AiringPage() {
                 <div
                   className={`text-center py-2 mb-3 rounded-lg ${
                     today
-                      ? 'bg-purple-600/20 border border-purple-500/40'
-                      : 'bg-[#16213e]'
+                      ? 'bg-teal-600/20 border border-teal-500/40'
+                      : 'bg-[#141925]'
                   }`}
                 >
-                  <div className={`text-sm font-semibold ${today ? 'text-purple-400' : 'text-gray-300'}`}>
+                  <div className={`text-sm font-semibold ${today ? 'text-teal-400' : 'text-gray-300'}`}>
                     {day}
                   </div>
                   <div className="text-xs text-gray-500">{date}</div>
@@ -201,7 +201,7 @@ export default function AiringPage() {
                       return (
                         <div
                           key={`${s.mediaId}-${s.episode}`}
-                          className="bg-[#16213e] rounded-lg overflow-hidden hover:bg-[#1e2d4d] transition-colors group cursor-pointer"
+                          className="bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group cursor-pointer"
                           onClick={() => router.push(`/anime/${s.mediaId}`)}
                         >
                           <div className="relative w-full aspect-[3/4]">
@@ -223,7 +223,7 @@ export default function AiringPage() {
                               className={`absolute top-1.5 right-1.5 px-2 py-1 rounded text-[10px] font-semibold transition-all ${
                                 isTracked
                                   ? 'bg-emerald-600/90 text-white opacity-100'
-                                  : 'bg-purple-600/90 hover:bg-purple-500 text-white opacity-0 group-hover:opacity-100'
+                                  : 'bg-teal-600/90 hover:bg-teal-500 text-white opacity-0 group-hover:opacity-100'
                               }`}
                             >
                               {isTracked ? 'Tracked' : trackingId === s.mediaId ? '...' : '+ Track'}
@@ -233,7 +233,7 @@ export default function AiringPage() {
                             <p className="text-xs font-medium text-gray-200 truncate" title={title}>
                               {title}
                             </p>
-                            <p className="text-[10px] text-purple-400 mt-0.5">
+                            <p className="text-[10px] text-teal-400 mt-0.5">
                               {formatTime(s.airingAt)}
                             </p>
                           </div>

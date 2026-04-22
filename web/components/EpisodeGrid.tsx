@@ -30,7 +30,7 @@ export default function EpisodeGrid({
           return (
             <div
               key={ep}
-              className="h-9 rounded text-sm font-semibold bg-[#1a1a2e] text-gray-700 flex items-center justify-center cursor-not-allowed border border-[#2a2a4a] border-dashed"
+              className="h-9 rounded text-sm font-semibold bg-[#111827] text-gray-700 flex items-center justify-center cursor-not-allowed border border-[#1e2736] border-dashed"
               title={`Episode ${ep} — not yet aired`}
             >
               {ep}
@@ -42,8 +42,8 @@ export default function EpisodeGrid({
           isCurrent
             ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
             : isWatched
-              ? 'bg-purple-600 text-white hover:bg-purple-700'
-              : 'bg-[#2a2a4a] text-gray-500 hover:bg-[#3a3a6a]'
+              ? 'bg-teal-600 text-white hover:bg-teal-700'
+              : 'bg-[#1e2736] text-gray-500 hover:bg-[#2a3a4d]'
         }`;
 
         if (linkPrefix) {

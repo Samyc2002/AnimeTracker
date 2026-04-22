@@ -94,7 +94,7 @@ export default function AnimeDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
-        <div className="w-6 h-6 border-2 border-[#3a3a5c] border-t-purple-500 rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -111,8 +111,21 @@ export default function AnimeDetailPage() {
     .filter((e) => e.node.type === 'ANIME')
     .sort((a, b) => relationOrder.indexOf(a.relationType) - relationOrder.indexOf(b.relationType));
 
+  const backdropImage = anime.bannerImage || anime.coverImage.large || anime.coverImage.medium;
+
   return (
-    <div className="-mx-6 -mt-8">
+    <div className="-mx-6 -mt-8 relative">
+      <div className="fixed inset-0 -z-10">
+        <Image
+          src={backdropImage}
+          alt=""
+          fill
+          className="object-cover blur-3xl scale-110 opacity-15"
+          unoptimized
+        />
+        <div className="absolute inset-0 bg-[#0b0e14]/85" />
+      </div>
+
       {anime.bannerImage && (
         <div className="relative w-full h-48 md:h-56">
           <Image
@@ -122,7 +135,7 @@ export default function AnimeDetailPage() {
             className="object-cover"
             unoptimized
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f23] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e14] to-transparent" />
         </div>
       )}
 
@@ -168,7 +181,7 @@ export default function AnimeDetailPage() {
             <button
               onClick={handleAdd}
               disabled={inWatchlist || adding}
-              className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+              className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
             >
               {inWatchlist ? 'In Watchlist' : adding ? 'Adding...' : '+ Add to Watchlist'}
             </button>
@@ -176,11 +189,11 @@ export default function AnimeDetailPage() {
         </div>
 
         {anime.nextAiringEpisode && (
-          <div className="mt-6 bg-[#16213e] rounded-lg p-4 flex items-center gap-3">
+          <div className="mt-6 bg-[#141925] rounded-lg p-4 flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-sm text-gray-300">
               Episode {anime.nextAiringEpisode.episode} airing in{' '}
-              <span className="text-purple-400 font-semibold">
+              <span className="text-teal-400 font-semibold">
                 {formatCountdown(anime.nextAiringEpisode.timeUntilAiring)}
               </span>
             </span>
@@ -190,7 +203,7 @@ export default function AnimeDetailPage() {
         {anime.genres.length > 0 && (
           <div className="mt-6 flex flex-wrap gap-2">
             {anime.genres.map((g) => (
-              <span key={g} className="px-3 py-1 bg-[#1a1a2e] border border-[#3a3a5c] rounded-full text-xs text-gray-300">
+              <span key={g} className="px-3 py-1 bg-[#111827] border border-[#253040] rounded-full text-xs text-gray-300">
                 {g}
               </span>
             ))}
@@ -217,7 +230,7 @@ export default function AnimeDetailPage() {
                 return (
                   <div
                     key={rel.id}
-                    className="bg-[#16213e] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1e2d4d] transition-colors"
+                    className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors"
                     onClick={() => router.push(`/anime/${rel.id}`)}
                   >
                     <div className="relative w-full aspect-[3/4]">

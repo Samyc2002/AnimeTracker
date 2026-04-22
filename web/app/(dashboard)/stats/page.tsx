@@ -47,24 +47,24 @@ function StatCard({
   label,
   value,
   icon,
-  accent = 'purple',
+  accent = 'teal',
   pulse = false,
 }: {
   label: string;
   value: number;
   icon: string;
-  accent?: 'purple' | 'emerald' | 'blue' | 'amber';
+  accent?: 'teal' | 'emerald' | 'blue' | 'amber';
   pulse?: boolean;
 }) {
   const accentColors = {
-    purple: 'from-purple-500/20 to-purple-600/5 border-purple-500/20',
+    teal: 'from-teal-500/20 to-teal-600/5 border-teal-500/20',
     emerald: 'from-emerald-500/20 to-emerald-600/5 border-emerald-500/20',
     blue: 'from-blue-500/20 to-blue-600/5 border-blue-500/20',
     amber: 'from-amber-500/20 to-amber-600/5 border-amber-500/20',
   };
 
   const textColors = {
-    purple: 'text-purple-400',
+    teal: 'text-teal-400',
     emerald: 'text-emerald-400',
     blue: 'text-blue-400',
     amber: 'text-amber-400',
@@ -127,7 +127,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="flex justify-center mt-24">
-        <div className="w-8 h-8 border-2 border-[#3a3a5c] border-t-purple-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -137,7 +137,7 @@ export default function AdminPage() {
       <div className="mt-12 text-center">
         <p className="text-red-400 mb-2">Failed to load analytics</p>
         <p className="text-gray-500 text-sm">{error}</p>
-        <button onClick={fetchStats} className="mt-4 text-sm text-purple-400 hover:text-purple-300">
+        <button onClick={fetchStats} className="mt-4 text-sm text-teal-400 hover:text-teal-300">
           Retry
         </button>
       </div>
@@ -171,7 +171,7 @@ export default function AdminPage() {
       <div className="mb-6">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">All Time</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Total Users" value={stats.totals.users} icon="👤" accent="purple" />
+          <StatCard label="Total Users" value={stats.totals.users} icon="👤" accent="teal" />
           <StatCard label="Watchlist Entries" value={stats.totals.watchlist_entries} icon="📋" accent="blue" />
           <StatCard label="Episodes Watched" value={stats.totals.watched_episodes} icon="▶" accent="emerald" />
           <StatCard label="Online Now" value={stats.online_now} icon="🟢" accent="emerald" pulse />
@@ -181,7 +181,7 @@ export default function AdminPage() {
       <div className="mb-6">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Last 7 Days</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard label="Active Users" value={stats.last_7_days.active_users} icon="📊" accent="purple" />
+          <StatCard label="Active Users" value={stats.last_7_days.active_users} icon="📊" accent="teal" />
           <StatCard label="Watchlist Adds" value={stats.last_7_days.watchlist_adds} icon="➕" accent="blue" />
           <StatCard label="Episodes Watched" value={stats.last_7_days.episodes_watched} icon="🎬" accent="emerald" />
         </div>
