@@ -86,6 +86,7 @@ export interface WatchlistEntry {
   next_airing_episode: number | null;
   next_airing_at: number | null;
   watch_status?: WatchStatus;
+  is_adult?: boolean;
   added_at?: string;
 }
 

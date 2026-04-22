@@ -7,6 +7,7 @@ import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISO
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
+import { useSfw } from '@/lib/sfw-context';
 import type { WatchStatus } from '@/lib/types';
 
 function upgradeImageUrl(url: string): string {
@@ -24,6 +25,7 @@ interface WatchlistDoc {
   total_episodes: number | null;
   next_airing_episode: number | null;
   watch_status?: WatchStatus;
+  is_adult?: boolean;
 }
 
 interface WatchedDoc {
@@ -47,6 +49,7 @@ type ViewMode = 'list' | 'card';
 
 export default function WatchlistPage() {
   const router = useRouter();
+  const { sfwMode } = useSfw();
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [watchedMap, setWatchedMap] = useState<Record<number, WatchedDoc[]>>({});
   const [loading, setLoading] = useState(true);
@@ -128,13 +131,15 @@ export default function WatchlistPage() {
     );
   }
 
+  const sfwEntries = sfwMode ? entries.filter((e) => !e.is_adult) : entries;
+
   const filteredEntries = filter === ALL_FILTER
-    ? entries
-    : entries.filter((e) => (e.watch_status || 'Watching') === filter);
+    ? sfwEntries
+    : sfwEntries.filter((e) => (e.watch_status || 'Watching') === filter);
 
   const counts: Record<string, number> = {
-    [ALL_FILTER]: entries.length,
-    ...Object.fromEntries(WATCH_STATUSES.map((s) => [s, entries.filter((e) => (e.watch_status || 'Watching') === s).length])),
+    [ALL_FILTER]: sfwEntries.length,
+    ...Object.fromEntries(WATCH_STATUSES.map((s) => [s, sfwEntries.filter((e) => (e.watch_status || 'Watching') === s).length])),
   };
 
   return (
