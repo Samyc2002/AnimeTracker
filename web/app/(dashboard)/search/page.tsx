@@ -1,18 +1,86 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { searchAnime, mediaToWatchlistEntry } from '@/lib/anilist';
+import { searchAnime, fetchRecommendations, mediaToWatchlistEntry } from '@/lib/anilist';
 import SearchBar from '@/components/SearchBar';
 import AnimeCard from '@/components/AnimeCard';
+import Image from 'next/image';
 import type { AniListMedia } from '@/lib/types';
 
+function RecommendationGrid({
+  title,
+  items,
+  onClickAnime,
+}: {
+  title: string;
+  items: AniListMedia[];
+  onClickAnime: (id: number) => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">{title}</h2>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+        {items.map((media) => {
+          const mediaTitle = media.title.english || media.title.romaji;
+          return (
+            <div
+              key={media.id}
+              className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group"
+              onClick={() => onClickAnime(media.id)}
+            >
+              <div className="relative w-full aspect-[3/4]">
+                <Image
+                  src={media.coverImage?.medium || '/icon-128.png'}
+                  alt={mediaTitle}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              <div className="p-2">
+                <p className="text-xs font-medium text-gray-200 truncate" title={mediaTitle}>
+                  {mediaTitle}
+                </p>
+                {media.episodes && (
+                  <p className="text-[10px] text-gray-500 mt-0.5">{media.episodes} eps</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function SearchPage() {
+  const router = useRouter();
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [trending, setTrending] = useState<AniListMedia[]>([]);
+  const [popular, setPopular] = useState<AniListMedia[]>([]);
+  const [recsLoading, setRecsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadRecs() {
+      try {
+        const recs = await fetchRecommendations();
+        setTrending(recs.trending);
+        setPopular(recs.popular);
+      } catch {
+        // Non-critical
+      }
+      setRecsLoading(false);
+    }
+    loadRecs();
+  }, []);
 
   const handleSearch = useCallback(async (query: string) => {
     setLoading(true);
@@ -44,6 +112,8 @@ export default function SearchPage() {
     setAddedIds((prev) => new Set(prev).add(media.id));
   }
 
+  const showRecommendations = !searched && !loading;
+
   return (
     <div>
       <h1 className="text-xl font-bold text-gray-200 mb-4">Search Anime</h1>
@@ -57,30 +127,54 @@ export default function SearchPage() {
         <p className="text-gray-500 text-center">No results found.</p>
       )}
 
-      <div className="space-y-2">
-        {results.map((media) => {
-          const inList = addedIds.has(media.id);
-          const title = media.title.english || media.title.romaji;
-          return (
-            <AnimeCard
-              key={media.id}
-              title={title}
-              coverUrl={media.coverImage?.medium || ''}
-              status={media.status}
-              episodes={media.episodes}
-              action={
-                <button
-                  onClick={(e) => { e.stopPropagation(); addToWatchlist(media); }}
-                  disabled={inList}
-                  className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50"
-                >
-                  {inList ? 'Added' : '+ Add'}
-                </button>
-              }
+      {!loading && searched && results.length > 0 && (
+        <div className="space-y-2">
+          {results.map((media) => {
+            const inList = addedIds.has(media.id);
+            const title = media.title.english || media.title.romaji;
+            return (
+              <AnimeCard
+                key={media.id}
+                title={title}
+                coverUrl={media.coverImage?.medium || ''}
+                status={media.status}
+                episodes={media.episodes}
+                onClick={() => router.push(`/anime/${media.id}`)}
+                action={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); addToWatchlist(media); }}
+                    disabled={inList}
+                    className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50"
+                  >
+                    {inList ? 'Added' : '+ Add'}
+                  </button>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {showRecommendations && (
+        recsLoading ? (
+          <div className="flex justify-center mt-8">
+            <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            <RecommendationGrid
+              title="Trending Now"
+              items={trending}
+              onClickAnime={(id) => router.push(`/anime/${id}`)}
             />
-          );
-        })}
-      </div>
+            <RecommendationGrid
+              title="Popular This Season"
+              items={popular}
+              onClickAnime={(id) => router.push(`/anime/${id}`)}
+            />
+          </>
+        )
+      )}
     </div>
   );
 }

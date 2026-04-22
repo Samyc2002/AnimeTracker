@@ -57,6 +57,32 @@ query WeeklyAiring($from: Int, $to: Int, $page: Int) {
   }
 }`;
 
+const TRENDING_QUERY = `
+query TrendingAnime {
+  trending: Page(perPage: 10) {
+    media(type: ANIME, sort: TRENDING_DESC) {
+      id
+      idMal
+      title { romaji english }
+      coverImage { medium }
+      status
+      episodes
+      nextAiringEpisode { airingAt episode }
+    }
+  }
+  popular: Page(perPage: 10) {
+    media(type: ANIME, sort: POPULARITY_DESC, status: RELEASING) {
+      id
+      idMal
+      title { romaji english }
+      coverImage { medium }
+      status
+      episodes
+      nextAiringEpisode { airingAt episode }
+    }
+  }
+}`;
+
 const ANIME_DETAIL_QUERY = `
 query AnimeDetail($id: Int) {
   Media(id: $id, type: ANIME) {
@@ -141,6 +167,17 @@ export async function fetchWeeklyAiring(
   return {
     schedules: data.Page.airingSchedules,
     hasNextPage: data.Page.pageInfo.hasNextPage,
+  };
+}
+
+export async function fetchRecommendations(): Promise<{ trending: AniListMedia[]; popular: AniListMedia[] }> {
+  const data = await gql<{
+    trending: { media: AniListMedia[] };
+    popular: { media: AniListMedia[] };
+  }>(TRENDING_QUERY);
+  return {
+    trending: data.trending.media,
+    popular: data.popular.media,
   };
 }
 
