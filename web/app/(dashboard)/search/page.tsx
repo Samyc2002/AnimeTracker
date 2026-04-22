@@ -9,6 +9,7 @@ import SearchBar from '@/components/SearchBar';
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
+import { useSfw } from '@/lib/sfw-context';
 import type { AniListMedia } from '@/lib/types';
 
 function RecommendationGrid({
@@ -64,6 +65,7 @@ function RecommendationGrid({
 
 export default function SearchPage() {
   const router = useRouter();
+  const { sfwMode } = useSfw();
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -133,7 +135,7 @@ export default function SearchPage() {
 
       {!loading && searched && results.length > 0 && (
         <div className="space-y-2">
-          {results.map((media) => {
+          {results.filter((m) => !sfwMode || !m.isAdult).map((media) => {
             const inList = addedIds.has(media.id);
             const title = media.title.english || media.title.romaji;
             return (
@@ -171,12 +173,12 @@ export default function SearchPage() {
           <>
             <RecommendationGrid
               title="Trending Now"
-              items={trending}
+              items={sfwMode ? trending.filter((m) => !m.isAdult) : trending}
               onClickAnime={(id) => router.push(`/anime/${id}`)}
             />
             <RecommendationGrid
               title="Popular This Season"
-              items={popular}
+              items={sfwMode ? popular.filter((m) => !m.isAdult) : popular}
               onClickAnime={(id) => router.push(`/anime/${id}`)}
             />
           </>

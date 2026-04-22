@@ -12,6 +12,7 @@ export interface AniListMedia {
   };
   status: 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
   episodes: number | null;
+  isAdult?: boolean;
   nextAiringEpisode: {
     airingAt: number;
     episode: number;
@@ -46,6 +47,7 @@ export interface AnimeDetail {
   season: string | null;
   seasonYear: number | null;
   genres: string[];
+  isAdult?: boolean;
   averageScore: number | null;
   studios: {
     nodes: { name: string }[];

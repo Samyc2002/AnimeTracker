@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { account } from '@/lib/appwrite';
 import NavBar from '@/components/NavBar';
+import { SfwProvider } from '@/lib/sfw-context';
 
 export default function DashboardLayout({
   children,
@@ -69,9 +70,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <div data-dashboard-layout className="min-h-screen bg-[#0b0e14]">
-      <NavBar />
-      <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
-    </div>
+    <SfwProvider>
+      <div data-dashboard-layout className="min-h-screen bg-[#0b0e14]">
+        <NavBar />
+        <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
+      </div>
+    </SfwProvider>
   );
 }

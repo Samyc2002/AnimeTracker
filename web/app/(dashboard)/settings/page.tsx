@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anilist';
+import { useSfw } from '@/lib/sfw-context';
 
 interface ProfileDoc {
   $id: string;
@@ -15,6 +16,7 @@ interface ProfileDoc {
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
+  const { sfwMode, setSfwMode } = useSfw();
   const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState('');
@@ -205,6 +207,19 @@ export default function SettingsPage() {
         </div>
 
         {saving && <p className="text-xs text-gray-500">Saving...</p>}
+
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-gray-300">SFW Mode</label>
+            <p className="text-xs text-gray-600">Hide adult content from all pages</p>
+          </div>
+          <button
+            onClick={() => setSfwMode(!sfwMode)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${sfwMode ? 'bg-teal-600' : 'bg-[#253040]'}`}
+          >
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${sfwMode ? 'left-5' : 'left-0.5'}`} />
+          </button>
+        </div>
 
         <div className="border-t border-[#253040] pt-6">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">AniList Integration</h2>

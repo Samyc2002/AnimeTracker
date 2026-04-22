@@ -67,6 +67,7 @@ query TrendingAnime {
       coverImage { extraLarge large medium }
       status
       episodes
+      isAdult
       nextAiringEpisode { airingAt episode }
     }
   }
@@ -78,6 +79,7 @@ query TrendingAnime {
       coverImage { extraLarge large medium }
       status
       episodes
+      isAdult
       nextAiringEpisode { airingAt episode }
     }
   }
@@ -99,7 +101,8 @@ query UserList($userId: Int) {
           coverImage { extraLarge large medium }
           status
           episodes
-          nextAiringEpisode { airingAt episode }
+          isAdult
+      nextAiringEpisode { airingAt episode }
         }
       }
     }
@@ -121,6 +124,7 @@ query AnimeDetail($id: Int) {
     season
     seasonYear
     genres
+    isAdult
     averageScore
     studios(isMain: true) { nodes { name } }
     nextAiringEpisode { airingAt episode timeUntilAiring }

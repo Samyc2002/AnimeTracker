@@ -7,6 +7,7 @@ import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/
 import { fetchWeeklyAiring, mediaToWatchlistEntry } from '@/lib/anilist';
 import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
+import { useSfw } from '@/lib/sfw-context';
 import type { AiringSchedule } from '@/lib/types';
 
 function getWeekRange(offset: number = 0) {
@@ -50,6 +51,7 @@ const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6]; // Mon=0 through Sun=6 (offsets from
 
 export default function AiringPage() {
   const router = useRouter();
+  const { sfwMode } = useSfw();
   const [schedules, setSchedules] = useState<AiringSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -193,7 +195,7 @@ export default function AiringPage() {
                   <p className="text-xs text-gray-600 text-center py-4">No anime</p>
                 ) : (
                   <div className="space-y-2">
-                    {items.map((s) => {
+                    {items.filter((s) => !sfwMode || !s.media?.isAdult).map((s) => {
                       const media = s.media;
                       if (!media) return null;
                       const title = media.title.english || media.title.romaji;
