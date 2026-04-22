@@ -14,11 +14,11 @@
   display: none;
 }
 
-@keyframes carousel {
+@keyframes carousel-scroll {
   0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(var(--carousel-offset)); }
 }
 
-.animate-carousel {
-  animation: carousel 30s linear infinite;
+.carousel-scroll {
+  animation: carousel-scroll 30s linear infinite;
 }

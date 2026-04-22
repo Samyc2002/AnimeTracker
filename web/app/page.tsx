@@ -8,29 +8,11 @@ import { fetchRecommendations } from '@/lib/anilist';
 import Footer from '@/components/Footer';
 import type { AniListMedia } from '@/lib/types';
 
-function CarouselStrip({ items }: { items: AniListMedia[] }) {
-  return (
-    <div className="flex gap-4 shrink-0">
-      {items.map((anime, i) => (
-        <div key={`${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
-          <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
-              alt={anime.title.english || anime.title.romaji}
-              className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
-              draggable={false}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function TrendingCarousel({ items }: { items: AniListMedia[] }) {
   const [ready, setReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState('0px');
 
   useEffect(() => {
     const el = containerRef.current;
@@ -44,7 +26,17 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
 
     function check() {
       loaded++;
-      if (loaded >= total) setReady(true);
+      if (loaded >= total) {
+        if (trackRef.current) {
+          const children = trackRef.current.children;
+          const firstHalf = children[0] as HTMLElement;
+          if (firstHalf) {
+            const gap = 16;
+            setOffset(`-${firstHalf.offsetWidth + gap}px`);
+          }
+        }
+        setReady(true);
+      }
     }
 
     imgs.forEach((img) => {
@@ -62,11 +54,41 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
       <div ref={containerRef} className={`relative overflow-hidden transition-opacity duration-700 ${ready ? 'opacity-100' : 'opacity-0'}`}>
         <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
-        <div className={`flex w-max hover:[animation-play-state:paused] ${ready ? 'animate-carousel' : ''}`}>
-          <CarouselStrip items={items} />
-          <div className="w-4 shrink-0" />
-          <CarouselStrip items={items} />
-          <div className="w-4 shrink-0" />
+        <div
+          ref={trackRef}
+          className={`flex gap-4 w-max hover:[animation-play-state:paused] ${ready ? 'carousel-scroll' : ''}`}
+          style={{ '--carousel-offset': offset } as React.CSSProperties}
+        >
+          <div className="flex gap-4 shrink-0">
+            {items.map((anime, i) => (
+              <div key={`a-${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
+                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
+                    alt={anime.title.english || anime.title.romaji}
+                    className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
+                    draggable={false}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-4 shrink-0">
+            {items.map((anime, i) => (
+              <div key={`b-${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
+                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
+                    alt={anime.title.english || anime.title.romaji}
+                    className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
+                    draggable={false}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       <p className="text-center text-xs text-gray-600 mt-4">Trending on AniList right now</p>
