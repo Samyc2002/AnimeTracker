@@ -117,29 +117,33 @@ export default function LandingPage() {
               )}
             </div>
           </div>
-        </section>
 
-        {/* Trending preview */}
-        {trending.length > 0 && (
-          <section className="max-w-5xl mx-auto px-6 pb-16">
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-              {trending.map((anime) => (
-                <div key={anime.id} className="flex-shrink-0 w-32">
-                  <div className="relative w-32 h-44 rounded-lg overflow-hidden">
-                    <Image
-                      src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
-                      alt={anime.title.english || anime.title.romaji}
-                      fill
-                      className="object-cover opacity-80 hover:opacity-100 transition-opacity"
-                      unoptimized
-                    />
-                  </div>
+          {/* Trending preview — inside hero for seamless gradient */}
+          {trending.length > 0 && (
+            <div className="relative max-w-5xl mx-auto px-0 pb-16">
+              <div className="relative">
+                <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
+                <div className="flex gap-3 overflow-x-auto px-6 pb-2 scrollbar-hide">
+                  {trending.map((anime) => (
+                    <div key={anime.id} className="flex-shrink-0 w-32">
+                      <div className="relative w-32 h-44 rounded-lg overflow-hidden">
+                        <Image
+                          src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
+                          alt={anime.title.english || anime.title.romaji}
+                          fill
+                          className="object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
+                          unoptimized
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <p className="text-center text-xs text-gray-600 mt-3">Trending on AniList right now</p>
             </div>
-            <p className="text-center text-xs text-gray-600 mt-3">Trending on AniList right now</p>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* Features */}
         <section className="max-w-5xl mx-auto px-6 py-16">
