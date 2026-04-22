@@ -12,16 +12,19 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   color: #e0e0e0;
-  background: #1a1a2e;
+  background: #0b0e14;
 }
 
 /* Header */
 .header {
-  background: #16213e;
+  background: rgba(20, 25, 37, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   padding: 12px 16px 0;
   position: sticky;
   top: 0;
   z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .header__top {
@@ -34,7 +37,7 @@ body {
 .header__title {
   font-size: 18px;
   font-weight: 700;
-  color: #a78bfa;
+  color: #2dd4bf;
 }
 
 .sync-indicator {
@@ -47,7 +50,7 @@ body {
 }
 
 .auth-section {
-  background: #0f0f23;
+  background: #0b0e14;
   border-radius: 8px;
   padding: 12px;
 }
@@ -59,17 +62,17 @@ body {
 }
 
 .auth-link {
-  color: #a78bfa;
+  color: #2dd4bf;
   text-decoration: none;
   cursor: pointer;
 }
 
 .auth-link:hover {
-  color: #c4b5fd;
+  color: #5eead4;
 }
 
 .btn--disconnect {
-  background: #2a2a4a;
+  background: #1e2736;
   color: #e0e0e0;
   font-size: 12px;
   padding: 4px 12px;
@@ -80,13 +83,13 @@ body {
 }
 
 .btn--disconnect:hover {
-  background: #3a3a5c;
+  background: #253040;
 }
 
 .header__nav {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid #2a2a4a;
+  border-bottom: 2px solid #1e2736;
 }
 
 .nav-btn {
@@ -103,12 +106,12 @@ body {
 }
 
 .nav-btn:hover {
-  color: #c4b5fd;
+  color: #5eead4;
 }
 
 .nav-btn.active {
-  color: #a78bfa;
-  border-bottom-color: #a78bfa;
+  color: #2dd4bf;
+  border-bottom-color: #2dd4bf;
 }
 
 /* Views */
@@ -143,12 +146,12 @@ body {
 }
 
 .btn--primary {
-  background: #7c3aed;
+  background: #0d9488;
   color: white;
 }
 
 .btn--primary:hover {
-  background: #6d28d9;
+  background: #0f766e;
 }
 
 .btn--danger {
@@ -162,12 +165,12 @@ body {
 
 .btn--text {
   background: none;
-  color: #a78bfa;
+  color: #2dd4bf;
   padding: 4px 0;
 }
 
 .btn--text:hover {
-  color: #c4b5fd;
+  color: #5eead4;
 }
 
 .btn--small {
@@ -185,16 +188,16 @@ body {
 .search-bar input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #3a3a5c;
+  border: 1px solid #253040;
   border-radius: 6px;
-  background: #0f0f23;
+  background: #0b0e14;
   color: #e0e0e0;
   font-size: 14px;
   outline: none;
 }
 
 .search-bar input:focus {
-  border-color: #7c3aed;
+  border-color: #0d9488;
 }
 
 /* Card list */
@@ -208,7 +211,7 @@ body {
 .anime-card {
   display: flex;
   gap: 12px;
-  background: #16213e;
+  background: #141925;
   border-radius: 8px;
   padding: 10px;
   cursor: pointer;
@@ -216,16 +219,16 @@ body {
 }
 
 .anime-card:hover {
-  background: #1e2d4d;
+  background: #1c2333;
 }
 
 .anime-card--unwatched {
-  background: #1e1548;
-  border-left: 3px solid #a78bfa;
+  background: #0d2937;
+  border-left: 3px solid #2dd4bf;
 }
 
 .anime-card--unwatched:hover {
-  background: #271d5e;
+  background: #103340;
 }
 
 .anime-card__cover {
@@ -234,7 +237,7 @@ body {
   border-radius: 4px;
   object-fit: cover;
   flex-shrink: 0;
-  background: #2a2a4a;
+  background: #1e2736;
 }
 
 .anime-card__info {
@@ -262,7 +265,7 @@ body {
 
 .anime-card__progress {
   font-size: 12px;
-  color: #a78bfa;
+  color: #2dd4bf;
 }
 
 .anime-card__actions {
@@ -341,24 +344,24 @@ body {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  background: #2a2a4a;
+  background: #1e2736;
   color: #888;
   transition: background 0.15s, color 0.15s, transform 0.1s;
   user-select: none;
 }
 
 .episode-cell:hover {
-  background: #3a3a6a;
+  background: #2a3a4d;
   transform: scale(1.05);
 }
 
 .episode-cell.watched {
-  background: #7c3aed;
+  background: #0d9488;
   color: white;
 }
 
 .episode-cell.watched:hover {
-  background: #6d28d9;
+  background: #0f766e;
 }
 
 /* Notifications */
@@ -391,16 +394,16 @@ body {
 
 .settings-group select {
   padding: 6px 10px;
-  border: 1px solid #3a3a5c;
+  border: 1px solid #253040;
   border-radius: 6px;
-  background: #0f0f23;
+  background: #0b0e14;
   color: #e0e0e0;
   font-size: 13px;
   margin-left: auto;
 }
 
 .settings-group input[type="checkbox"] {
-  accent-color: #7c3aed;
+  accent-color: #0d9488;
   width: 16px;
   height: 16px;
 }
@@ -415,17 +418,17 @@ body {
 .footer {
   text-align: center;
   padding: 12px 16px;
-  border-top: 1px solid #2a2a4a;
+  border-top: 1px solid #1e2736;
 }
 
 .footer a {
-  color: #a78bfa;
+  color: #2dd4bf;
   text-decoration: none;
   font-size: 12px;
 }
 
 .footer a:hover {
-  color: #c4b5fd;
+  color: #5eead4;
 }
 
 /* Loading spinner */
@@ -433,8 +436,8 @@ body {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 2px solid #3a3a5c;
-  border-top-color: #a78bfa;
+  border: 2px solid #253040;
+  border-top-color: #2dd4bf;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   margin: 20px auto;
@@ -450,10 +453,10 @@ body::-webkit-scrollbar {
 }
 
 body::-webkit-scrollbar-track {
-  background: #1a1a2e;
+  background: #0b0e14;
 }
 
 body::-webkit-scrollbar-thumb {
-  background: #3a3a5c;
+  background: #253040;
   border-radius: 3px;
 }
