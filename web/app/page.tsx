@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { account } from '@/lib/appwrite';
@@ -8,100 +8,38 @@ import { fetchRecommendations } from '@/lib/anilist';
 import Footer from '@/components/Footer';
 import type { AniListMedia } from '@/lib/types';
 
-function TrendingCarousel({ items }: { items: AniListMedia[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const scrollLeftStart = useRef(0);
-  const isVisible = useRef(true);
-  const pauseAutoScroll = useRef(false);
-
-  const doubled = [...items, ...items];
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => { isVisible.current = entry.isIntersecting; },
-      { threshold: 0 }
-    );
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    let rafId: number;
-
-    function tick() {
-      const el = scrollRef.current;
-      if (el && isVisible.current && !pauseAutoScroll.current) {
-        el.scrollLeft += 0.5;
-        const halfWidth = el.scrollWidth / 2;
-        if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
-          el.scrollLeft -= halfWidth;
-        }
-      }
-      rafId = requestAnimationFrame(tick);
-    }
-
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
-  function handleWheel(e: React.WheelEvent) {
-    e.preventDefault();
-  }
-
-  function handleMouseDown(e: React.MouseEvent) {
-    isDragging.current = true;
-    pauseAutoScroll.current = true;
-    startX.current = e.pageX;
-    scrollLeftStart.current = scrollRef.current?.scrollLeft || 0;
-    if (scrollRef.current) scrollRef.current.style.cursor = 'grabbing';
-  }
-
-  function handleMouseMove(e: React.MouseEvent) {
-    if (!isDragging.current || !scrollRef.current) return;
-    const dx = e.pageX - startX.current;
-    scrollRef.current.scrollLeft = scrollLeftStart.current - dx;
-  }
-
-  function handleMouseUp() {
-    isDragging.current = false;
-    pauseAutoScroll.current = false;
-    if (scrollRef.current) scrollRef.current.style.cursor = 'grab';
-  }
-
+function CarouselStrip({ items }: { items: AniListMedia[] }) {
   return (
-    <div ref={containerRef} className="relative mx-auto pb-12">
-      <div className="relative">
+    <div className="flex gap-4 shrink-0">
+      {items.map((anime, i) => (
+        <div key={`${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
+          <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
+            <Image
+              src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
+              alt={anime.title.english || anime.title.romaji}
+              fill
+              className="object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
+              unoptimized
+              draggable={false}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrendingCarousel({ items }: { items: AniListMedia[] }) {
+  return (
+    <div className="relative mx-auto pb-12">
+      <div className="relative overflow-hidden">
         <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
-        <div
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto px-8 sm:px-16 no-scrollbar cursor-grab select-none"
-          onWheel={handleWheel}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          {doubled.map((anime, i) => (
-            <div key={`${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
-              <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
-                <Image
-                  src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
-                  alt={anime.title.english || anime.title.romaji}
-                  fill
-                  className="object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300 pointer-events-none"
-                  unoptimized
-                  draggable={false}
-                />
-              </div>
-            </div>
-          ))}
+        <div className="flex w-max animate-carousel hover:[animation-play-state:paused]">
+          <CarouselStrip items={items} />
+          <div className="w-4 shrink-0" />
+          <CarouselStrip items={items} />
+          <div className="w-4 shrink-0" />
         </div>
       </div>
       <p className="text-center text-xs text-gray-600 mt-4">Trending on AniList right now</p>
