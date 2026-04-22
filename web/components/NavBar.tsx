@@ -22,7 +22,7 @@ export default function NavBar() {
   }
 
   return (
-    <nav className="bg-[#141925] border-b border-[#1e2736] px-6 py-3 flex items-center justify-between">
+    <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-6">
         <Link href="/watchlist" className="text-lg font-bold text-teal-400">
           Anime Tracker
