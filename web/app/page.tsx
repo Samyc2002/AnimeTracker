@@ -14,15 +14,12 @@ function CarouselStrip({ items }: { items: AniListMedia[] }) {
       {items.map((anime, i) => (
         <div key={`${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
           <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
               alt={anime.title.english || anime.title.romaji}
-              fill
-              className="object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
-              unoptimized
+              className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
               draggable={false}
-              loading="eager"
-              priority
             />
           </div>
         </div>
