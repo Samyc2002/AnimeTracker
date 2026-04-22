@@ -47,7 +47,12 @@ export default function WatchlistPage() {
   const [selectedEntry, setSelectedEntry] = useState<WatchlistDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(ALL_FILTER);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('watchlist_view') as ViewMode) || 'list';
+    }
+    return 'list';
+  });
 
   const loadWatchlist = useCallback(async () => {
     try {
@@ -214,7 +219,7 @@ export default function WatchlistPage() {
         <h1 className="text-xl font-bold text-gray-200">Watchlist</h1>
         <div className="flex gap-1 bg-[#141925] rounded-lg p-0.5 border border-[#253040]">
           <button
-            onClick={() => setViewMode('list')}
+            onClick={() => { setViewMode('list'); localStorage.setItem('watchlist_view', 'list'); }}
             className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-teal-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
             title="List view"
           >
@@ -223,7 +228,7 @@ export default function WatchlistPage() {
             </svg>
           </button>
           <button
-            onClick={() => setViewMode('card')}
+            onClick={() => { setViewMode('card'); localStorage.setItem('watchlist_view', 'card'); }}
             className={`p-1.5 rounded transition-colors ${viewMode === 'card' ? 'bg-teal-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
             title="Card view"
           >
