@@ -5,7 +5,7 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
 
 export default function SettingsPage() {
-  const [language, setLanguage] = useState('english');
+  const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState('');
   const [profileDocId, setProfileDocId] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function SettingsPage() {
       } else {
         const newProfile = await databases.createDocument(DATABASE_ID, PROFILES_COLLECTION_ID, ID.unique(), {
           user_id: user.$id,
-          display_language: 'english',
+          display_language: 'English',
         });
         setProfileDocId(newProfile.$id);
       }
@@ -62,8 +62,8 @@ export default function SettingsPage() {
             onChange={(e) => saveLanguage(e.target.value)}
             className="px-3 py-1.5 bg-[#0f0f23] border border-[#3a3a5c] rounded-lg text-gray-200 text-sm"
           >
-            <option value="english">English</option>
-            <option value="romaji">Romaji</option>
+            <option value="English">English</option>
+            <option value="Japanese">Japanese</option>
           </select>
         </div>
 
