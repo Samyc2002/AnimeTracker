@@ -32,7 +32,7 @@ function RecommendationGrid({
           return (
             <div
               key={media.id}
-              className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group"
+              className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${media.isAdult ? 'border border-red-500/40' : ''}`}
               onClick={() => onClickAnime(media.id)}
             >
               <div className="relative w-full aspect-[3/4]">
@@ -145,6 +145,7 @@ export default function SearchPage() {
                 coverUrl={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || ''}
                 status={media.status}
                 episodes={media.episodes}
+                isAdult={media.isAdult}
                 onClick={() => router.push(`/anime/${media.id}`)}
                 action={
                   <div className="flex items-center gap-1">

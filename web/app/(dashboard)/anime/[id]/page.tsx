@@ -223,7 +223,7 @@ export default function AnimeDetailPage() {
                 return (
                   <div
                     key={rel.id}
-                    className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors"
+                    className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors ${rel.isAdult ? 'border border-red-500/40' : ''}`}
                     onClick={() => router.push(`/anime/${rel.id}`)}
                   >
                     <div className="relative w-full aspect-[3/4]">

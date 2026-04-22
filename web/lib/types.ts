@@ -66,6 +66,7 @@ export interface AnimeDetail {
         coverImage: { extraLarge: string; large: string; medium: string };
         type: string;
         status: string;
+        isAdult?: boolean;
       };
     }[];
   };

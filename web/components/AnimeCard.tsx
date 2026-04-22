@@ -10,6 +10,7 @@ interface AnimeCardProps {
   progress?: string;
   action?: React.ReactNode;
   onClick?: () => void;
+  isAdult?: boolean;
 }
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -28,12 +29,13 @@ export default function AnimeCard({
   progress,
   action,
   onClick,
+  isAdult,
 }: AnimeCardProps) {
   const statusInfo = statusLabels[status] || statusLabels.FINISHED;
 
   return (
     <div
-      className={`flex gap-3 bg-[#141925] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} transition-colors`}
+      className={`flex gap-3 bg-[#141925] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
       onClick={onClick}
     >
       <Image

@@ -106,7 +106,7 @@ export default function PublicPlaylistPage() {
               return (
                 <div
                   key={anime.id}
-                  className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors"
+                  className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors ${anime.isAdult ? 'border border-red-500/40' : ''}`}
                   onClick={() => router.push(`/anime/${anime.id}`)}
                 >
                   <div className="relative w-full aspect-[3/4]">

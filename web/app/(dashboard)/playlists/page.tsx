@@ -353,7 +353,7 @@ function PlaylistEditor({
               const detail = animeDetails.get(id);
               const detailTitle = detail ? (detail.title.english || detail.title.romaji) : `Anime #${id}`;
               return (
-                <div key={id} className="bg-[#141925] rounded-lg overflow-hidden group relative">
+                <div key={id} className={`bg-[#141925] rounded-lg overflow-hidden group relative ${detail?.isAdult ? 'border border-red-500/40' : ''}`}>
                   <div className="relative w-full aspect-[3/4]">
                     {detail ? (
                       <Image

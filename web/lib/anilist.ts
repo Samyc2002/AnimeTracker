@@ -138,6 +138,7 @@ query AnimeDetail($id: Int) {
           coverImage { extraLarge large medium }
           type
           status
+          isAdult
         }
       }
     }

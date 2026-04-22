@@ -199,6 +199,7 @@ export default function WatchlistPage() {
                   coverUrl={upgradeImageUrl(entry.cover_url)}
                   status={entry.status}
                   episodes={entry.total_episodes}
+                  isAdult={entry.is_adult}
                   progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
                   onClick={() => router.push(`/anime/${entry.media_id}`)}
                   action={
@@ -223,7 +224,7 @@ export default function WatchlistPage() {
             return (
               <div
                 key={entry.$id}
-                className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group"
+                className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${entry.is_adult ? 'border border-red-500/40' : ''}`}
                 onClick={() => router.push(`/anime/${entry.media_id}`)}
                 onContextMenu={(e) => handleContextMenu(e, entry)}
               >

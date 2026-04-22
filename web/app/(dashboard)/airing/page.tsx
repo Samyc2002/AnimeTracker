@@ -204,7 +204,7 @@ export default function AiringPage() {
                       return (
                         <div
                           key={`${s.mediaId}-${s.episode}`}
-                          className="bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group cursor-pointer"
+                          className={`bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group cursor-pointer ${media.isAdult ? 'border border-red-500/40' : ''}`}
                           onClick={() => router.push(`/anime/${s.mediaId}`)}
                         >
                           <div className="relative w-full aspect-[3/4]">
