@@ -21,6 +21,8 @@ function CarouselStrip({ items }: { items: AniListMedia[] }) {
               className="object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
               unoptimized
               draggable={false}
+              loading="eager"
+              priority
             />
           </div>
         </div>
