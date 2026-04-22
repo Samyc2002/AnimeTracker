@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { account } from '@/lib/appwrite';
@@ -29,12 +29,40 @@ function CarouselStrip({ items }: { items: AniListMedia[] }) {
 }
 
 function TrendingCarousel({ items }: { items: AniListMedia[] }) {
+  const [ready, setReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const imgs = el.querySelectorAll('img');
+    if (imgs.length === 0) return;
+
+    let loaded = 0;
+    const total = imgs.length;
+
+    function check() {
+      loaded++;
+      if (loaded >= total) setReady(true);
+    }
+
+    imgs.forEach((img) => {
+      if (img.complete) {
+        check();
+      } else {
+        img.addEventListener('load', check, { once: true });
+        img.addEventListener('error', check, { once: true });
+      }
+    });
+  }, [items]);
+
   return (
     <div className="relative mx-auto pb-12">
-      <div className="relative overflow-hidden">
+      <div ref={containerRef} className={`relative overflow-hidden transition-opacity duration-700 ${ready ? 'opacity-100' : 'opacity-0'}`}>
         <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
-        <div className="flex w-max animate-carousel hover:[animation-play-state:paused]">
+        <div className={`flex w-max hover:[animation-play-state:paused] ${ready ? 'animate-carousel' : ''}`}>
           <CarouselStrip items={items} />
           <div className="w-4 shrink-0" />
           <CarouselStrip items={items} />
