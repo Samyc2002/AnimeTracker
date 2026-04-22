@@ -22,9 +22,9 @@ export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { sfwMode, setSfwMode } = useSfw();
-  const { authed } = useAuth();
+  const { authed, loading } = useAuth();
 
-  const navItems = authed ? authNavItems : publicNavItems;
+  const navItems = loading ? [] : authed ? authNavItems : publicNavItems;
 
   async function handleSignOut() {
     localStorage.removeItem('anime_tracker_ext_jwt');
@@ -65,7 +65,7 @@ export default function NavBar() {
         >
           {sfwMode ? 'SFW' : 'NSFW'}
         </button>
-        {authed ? (
+        {!loading && (authed ? (
           <button
             onClick={handleSignOut}
             className="text-sm text-gray-400 hover:text-gray-200"
@@ -79,7 +79,7 @@ export default function NavBar() {
           >
             Sign In
           </Link>
-        )}
+        ))}
       </div>
     </nav>
   );
