@@ -52,6 +52,7 @@ query WeeklyAiring($from: Int, $to: Int, $page: Int) {
         coverImage { extraLarge large medium }
         status
         episodes
+        isAdult
       }
     }
   }
