@@ -76,8 +76,8 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-600/10 via-transparent to-blue-600/10" />
+        <section className="relative overflow-hidden pb-8">
+          <div className="absolute inset-0 bg-gradient-to-b from-teal-600/10 via-blue-600/5 to-transparent" />
           <div className="absolute top-20 left-1/4 w-72 h-72 bg-teal-500/5 rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
 
@@ -120,14 +120,14 @@ export default function LandingPage() {
 
           {/* Trending preview — inside hero for seamless gradient */}
           {trending.length > 0 && (
-            <div className="relative max-w-5xl mx-auto px-0 pb-16">
+            <div className="relative mx-auto pb-12">
               <div className="relative">
-                <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
-                <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
-                <div className="flex gap-3 overflow-x-auto px-6 pb-2 scrollbar-hide">
+                <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
+                <div className="flex gap-4 overflow-x-auto px-8 sm:px-16 no-scrollbar">
                   {trending.map((anime) => (
-                    <div key={anime.id} className="flex-shrink-0 w-32">
-                      <div className="relative w-32 h-44 rounded-lg overflow-hidden">
+                    <div key={anime.id} className="flex-shrink-0 w-40 sm:w-44">
+                      <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
                         <Image
                           src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
                           alt={anime.title.english || anime.title.romaji}
@@ -140,7 +140,7 @@ export default function LandingPage() {
                   ))}
                 </div>
               </div>
-              <p className="text-center text-xs text-gray-600 mt-3">Trending on AniList right now</p>
+              <p className="text-center text-xs text-gray-600 mt-4">Trending on AniList right now</p>
             </div>
           )}
         </section>
