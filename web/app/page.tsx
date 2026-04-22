@@ -8,6 +8,26 @@ import { fetchRecommendations } from '@/lib/anilist';
 import Footer from '@/components/Footer';
 import type { AniListMedia } from '@/lib/types';
 
+function CarouselStrip({ items, prefix }: { items: AniListMedia[]; prefix: string }) {
+  return (
+    <div className="flex gap-4 shrink-0" aria-hidden={prefix !== 'a'}>
+      {items.map((anime, i) => (
+        <div key={`${prefix}-${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
+          <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
+              alt={anime.title.english || anime.title.romaji}
+              className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
+              draggable={false}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TrendingCarousel({ items }: { items: AniListMedia[] }) {
   const [ready, setReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -28,11 +48,10 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
       loaded++;
       if (loaded >= total) {
         if (trackRef.current) {
-          const children = trackRef.current.children;
-          const firstHalf = children[0] as HTMLElement;
-          if (firstHalf) {
+          const firstStrip = trackRef.current.children[0] as HTMLElement;
+          if (firstStrip) {
             const gap = 16;
-            setOffset(`-${firstHalf.offsetWidth + gap}px`);
+            setOffset(`-${firstStrip.offsetWidth + gap}px`);
           }
         }
         setReady(true);
@@ -59,36 +78,9 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
           className={`flex gap-4 w-max hover:[animation-play-state:paused] ${ready ? 'carousel-scroll' : ''}`}
           style={{ '--carousel-offset': offset } as React.CSSProperties}
         >
-          <div className="flex gap-4 shrink-0">
-            {items.map((anime, i) => (
-              <div key={`a-${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
-                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
-                    alt={anime.title.english || anime.title.romaji}
-                    className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
-                    draggable={false}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-4 shrink-0">
-            {items.map((anime, i) => (
-              <div key={`b-${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
-                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
-                    alt={anime.title.english || anime.title.romaji}
-                    className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
-                    draggable={false}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <CarouselStrip items={items} prefix="a" />
+          <CarouselStrip items={items} prefix="b" />
+          <CarouselStrip items={items} prefix="c" />
         </div>
       </div>
       <p className="text-center text-xs text-gray-600 mt-4">Trending on AniList right now</p>
