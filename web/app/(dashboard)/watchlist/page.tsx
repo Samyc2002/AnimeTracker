@@ -5,6 +5,7 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import AnimeCard from '@/components/AnimeCard';
 import EpisodeGrid from '@/components/EpisodeGrid';
+import type { WatchStatus } from '@/lib/types';
 
 interface WatchlistDoc {
   $id: string;
@@ -15,6 +16,8 @@ interface WatchlistDoc {
   cover_url: string;
   status: string;
   total_episodes: number | null;
+  next_airing_episode: number | null;
+  watch_status?: WatchStatus;
 }
 
 interface WatchedDoc {
@@ -24,11 +27,22 @@ interface WatchedDoc {
   episode_number: number;
 }
 
+const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
+const ALL_FILTER = 'All';
+
+const statusColors: Record<WatchStatus, string> = {
+  Watching: 'bg-emerald-900/60 text-emerald-300',
+  Planned: 'bg-blue-900/60 text-blue-300',
+  Completed: 'bg-purple-900/60 text-purple-300',
+  Dropped: 'bg-red-900/60 text-red-300',
+};
+
 export default function WatchlistPage() {
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [watchedMap, setWatchedMap] = useState<Record<number, WatchedDoc[]>>({});
   const [selectedEntry, setSelectedEntry] = useState<WatchlistDoc | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(ALL_FILTER);
 
   const loadWatchlist = useCallback(async () => {
     try {
@@ -44,7 +58,13 @@ export default function WatchlistPage() {
         Query.limit(5000),
       ]);
 
-      setEntries(watchlist.documents as unknown as WatchlistDoc[]);
+      const docs = watchlist.documents as unknown as WatchlistDoc[];
+      setEntries(docs);
+
+      if (selectedEntry) {
+        const updated = docs.find((d) => d.$id === selectedEntry.$id);
+        if (updated) setSelectedEntry(updated);
+      }
 
       const map: Record<number, WatchedDoc[]> = {};
       (watched.documents as unknown as WatchedDoc[]).forEach((w) => {
@@ -56,7 +76,7 @@ export default function WatchlistPage() {
       // Not authenticated — layout will redirect
     }
     setLoading(false);
-  }, []);
+  }, [selectedEntry]);
 
   useEffect(() => {
     loadWatchlist();
@@ -71,6 +91,13 @@ export default function WatchlistPage() {
     }
 
     setSelectedEntry(null);
+    loadWatchlist();
+  }
+
+  async function updateWatchStatus(entry: WatchlistDoc, newStatus: WatchStatus) {
+    await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
+      watch_status: newStatus,
+    });
     loadWatchlist();
   }
 
@@ -91,6 +118,13 @@ export default function WatchlistPage() {
     loadWatchlist();
   }
 
+  function getAvailableEpisodes(entry: WatchlistDoc): number | undefined {
+    if (entry.status === 'RELEASING' && entry.next_airing_episode) {
+      return entry.next_airing_episode - 1;
+    }
+    return undefined;
+  }
+
   if (loading) {
     return <p className="text-gray-500 text-center mt-12">Loading watchlist...</p>;
   }
@@ -100,6 +134,8 @@ export default function WatchlistPage() {
     const watchedEpisodes = episodeDocs.map((d) => d.episode_number);
     const total = selectedEntry.total_episodes || Math.max(watchedEpisodes.length, 12);
     const title = selectedEntry.title_english || selectedEntry.title_romaji || 'Unknown';
+    const watchStatus = selectedEntry.watch_status || 'Watching';
+    const availableUpTo = getAvailableEpisodes(selectedEntry);
 
     return (
       <div>
@@ -108,21 +144,39 @@ export default function WatchlistPage() {
         </button>
         <div className="flex gap-4 items-center mb-6">
           <img src={selectedEntry.cover_url} alt="" className="w-16 h-24 rounded object-cover" />
-          <div>
+          <div className="flex-1">
             <h2 className="text-lg font-semibold text-gray-200">{title}</h2>
             <p className="text-sm text-gray-500">{watchedEpisodes.length}/{selectedEntry.total_episodes || '?'} watched</p>
+            <select
+              value={watchStatus}
+              onChange={(e) => updateWatchStatus(selectedEntry, e.target.value as WatchStatus)}
+              className="mt-2 px-3 py-1 text-sm bg-[#0f0f23] border border-[#3a3a5c] rounded-lg text-gray-200 outline-none"
+            >
+              {WATCH_STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
           <button
             onClick={() => removeFromWatchlist(selectedEntry)}
-            className="ml-auto px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg"
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg flex-shrink-0"
           >
             Remove
           </button>
         </div>
+
+        {availableUpTo !== undefined && availableUpTo < total && (
+          <div className="mb-4 flex items-center gap-2 text-xs text-gray-500">
+            <span className="inline-block w-4 h-4 rounded border border-dashed border-[#3a3a5c] bg-[#1a1a2e]" />
+            <span>Dashed episodes have not aired yet</span>
+          </div>
+        )}
+
         <EpisodeGrid
           totalEpisodes={total}
           watchedEpisodes={watchedEpisodes}
           onToggle={(ep) => toggleEpisode(selectedEntry.media_id, ep)}
+          availableUpTo={availableUpTo}
         />
       </div>
     );
@@ -137,24 +191,62 @@ export default function WatchlistPage() {
     );
   }
 
+  const filteredEntries = filter === ALL_FILTER
+    ? entries
+    : entries.filter((e) => (e.watch_status || 'Watching') === filter);
+
+  const counts: Record<string, number> = {
+    [ALL_FILTER]: entries.length,
+    ...Object.fromEntries(WATCH_STATUSES.map((s) => [s, entries.filter((e) => (e.watch_status || 'Watching') === s).length])),
+  };
+
   return (
-    <div className="space-y-2">
+    <div>
       <h1 className="text-xl font-bold text-gray-200 mb-4">Watchlist</h1>
-      {entries.map((entry) => {
-        const episodeDocs = watchedMap[entry.media_id] || [];
-        const title = entry.title_english || entry.title_romaji || 'Unknown';
-        return (
-          <AnimeCard
-            key={entry.$id}
-            title={title}
-            coverUrl={entry.cover_url}
-            status={entry.status}
-            episodes={entry.total_episodes}
-            progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
-            onClick={() => setSelectedEntry(entry)}
-          />
-        );
-      })}
+
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {[ALL_FILTER, ...WATCH_STATUSES].map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilter(s as WatchStatus | typeof ALL_FILTER)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filter === s
+                ? 'bg-purple-600 text-white'
+                : 'bg-[#16213e] text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            {s} <span className="text-xs opacity-60">({counts[s] || 0})</span>
+          </button>
+        ))}
+      </div>
+
+      {filteredEntries.length === 0 ? (
+        <p className="text-gray-500 text-center mt-8">No anime with status &ldquo;{filter}&rdquo;</p>
+      ) : (
+        <div className="space-y-2">
+          {filteredEntries.map((entry) => {
+            const episodeDocs = watchedMap[entry.media_id] || [];
+            const title = entry.title_english || entry.title_romaji || 'Unknown';
+            const watchStatus = entry.watch_status || 'Watching';
+            return (
+              <AnimeCard
+                key={entry.$id}
+                title={title}
+                coverUrl={entry.cover_url}
+                status={entry.status}
+                episodes={entry.total_episodes}
+                progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
+                onClick={() => setSelectedEntry(entry)}
+                action={
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${statusColors[watchStatus]}`}>
+                    {watchStatus}
+                  </span>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

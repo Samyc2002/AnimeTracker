@@ -66,6 +66,8 @@ export interface AnimeDetail {
   };
 }
 
+export type WatchStatus = 'Watching' | 'Planned' | 'Completed' | 'Dropped';
+
 export interface WatchlistEntry {
   id?: number;
   user_id?: string;
@@ -78,6 +80,7 @@ export interface WatchlistEntry {
   total_episodes: number | null;
   next_airing_episode: number | null;
   next_airing_at: number | null;
+  watch_status?: WatchStatus;
   added_at?: string;
 }
 

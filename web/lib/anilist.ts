@@ -160,5 +160,6 @@ export function mediaToWatchlistEntry(media: AniListMedia) {
     total_episodes: media.episodes,
     next_airing_episode: media.nextAiringEpisode?.episode ?? null,
     next_airing_at: media.nextAiringEpisode?.airingAt ?? null,
+    watch_status: 'Watching',
   };
 }
