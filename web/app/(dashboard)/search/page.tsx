@@ -7,6 +7,7 @@ import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/
 import { searchAnime, fetchRecommendations, mediaToWatchlistEntry } from '@/lib/anilist';
 import SearchBar from '@/components/SearchBar';
 import AnimeCard from '@/components/AnimeCard';
+import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
 import type { AniListMedia } from '@/lib/types';
 
@@ -141,13 +142,16 @@ export default function SearchPage() {
                 episodes={media.episodes}
                 onClick={() => router.push(`/anime/${media.id}`)}
                 action={
-                  <button
-                    onClick={(e) => { e.stopPropagation(); addToWatchlist(media); }}
-                    disabled={inList}
-                    className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50"
-                  >
-                    {inList ? 'Added' : '+ Add'}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <AddToPlaylist mediaId={media.id} />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); addToWatchlist(media); }}
+                      disabled={inList}
+                      className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50"
+                    >
+                      {inList ? 'Added' : '+ Add'}
+                    </button>
+                  </div>
                 }
               />
             );

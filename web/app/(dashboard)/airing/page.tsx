@@ -6,6 +6,7 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchWeeklyAiring, mediaToWatchlistEntry } from '@/lib/anilist';
 import Image from 'next/image';
+import AddToPlaylist from '@/components/AddToPlaylist';
 import type { AiringSchedule } from '@/lib/types';
 
 function getWeekRange(offset: number = 0) {
@@ -216,6 +217,9 @@ export default function AiringPage() {
                               <span className="text-xs font-bold text-white">
                                 Ep {s.episode}
                               </span>
+                            </div>
+                            <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                              <AddToPlaylist mediaId={s.mediaId} />
                             </div>
                             <button
                               onClick={(e) => handleTrack(e, s)}
