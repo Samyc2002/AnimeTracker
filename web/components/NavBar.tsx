@@ -7,7 +7,6 @@ import { useSfw } from '@/lib/sfw-context';
 import { useAuth } from '@/app/(dashboard)/layout';
 
 const publicNavItems = [
-  { href: '/search', label: 'Search' },
   { href: '/airing', label: 'Airing' },
 ];
 

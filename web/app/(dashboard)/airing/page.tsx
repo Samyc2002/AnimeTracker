@@ -8,6 +8,7 @@ import { fetchWeeklyAiring, mediaToWatchlistEntry } from '@/lib/anilist';
 import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
+import { useAuth } from '@/app/(dashboard)/layout';
 import type { AiringSchedule } from '@/lib/types';
 
 function getWeekRange(offset: number = 0) {
@@ -52,6 +53,7 @@ const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6]; // Mon=0 through Sun=6 (offsets from
 export default function AiringPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
+  const { authed } = useAuth();
   const [schedules, setSchedules] = useState<AiringSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -220,20 +222,24 @@ export default function AiringPage() {
                                 Ep {s.episode}
                               </span>
                             </div>
-                            <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                              <AddToPlaylist mediaId={s.mediaId} />
-                            </div>
-                            <button
-                              onClick={(e) => handleTrack(e, s)}
-                              disabled={isTracked || trackingId === s.mediaId}
-                              className={`absolute top-1.5 right-1.5 px-2 py-1 rounded text-[10px] font-semibold transition-all ${
-                                isTracked
-                                  ? 'bg-emerald-600/90 text-white opacity-100'
-                                  : 'bg-teal-600/90 hover:bg-teal-500 text-white opacity-0 group-hover:opacity-100'
-                              }`}
-                            >
-                              {isTracked ? 'Tracked' : trackingId === s.mediaId ? '...' : '+ Track'}
-                            </button>
+                            {authed && (
+                              <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                <AddToPlaylist mediaId={s.mediaId} />
+                              </div>
+                            )}
+                            {authed && (
+                              <button
+                                onClick={(e) => handleTrack(e, s)}
+                                disabled={isTracked || trackingId === s.mediaId}
+                                className={`absolute top-1.5 right-1.5 px-2 py-1 rounded text-[10px] font-semibold transition-all ${
+                                  isTracked
+                                    ? 'bg-emerald-600/90 text-white opacity-100'
+                                    : 'bg-teal-600/90 hover:bg-teal-500 text-white opacity-0 group-hover:opacity-100'
+                                }`}
+                              >
+                                {isTracked ? 'Tracked' : trackingId === s.mediaId ? '...' : '+ Track'}
+                              </button>
+                            )}
                           </div>
                           <div className="p-2">
                             <p className="text-xs font-medium text-gray-200 truncate" title={title}>

@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchAnimeDetail, mediaToWatchlistEntry } from '@/lib/anilist';
+import { useAuth } from '@/app/(dashboard)/layout';
 import type { AnimeDetail } from '@/lib/types';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -41,30 +43,31 @@ export default function AnimeDetailPage() {
   const [inWatchlist, setInWatchlist] = useState(false);
   const [adding, setAdding] = useState(false);
 
+  const { authed } = useAuth();
   const id = Number(params.id);
 
   useEffect(() => {
     async function load() {
       try {
-        const [detail, user] = await Promise.all([
-          fetchAnimeDetail(id),
-          account.get(),
-        ]);
+        const detail = await fetchAnimeDetail(id);
         setAnime(detail);
 
-        const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.equal('media_id', id),
-          Query.limit(1),
-        ]);
-        setInWatchlist(existing.documents.length > 0);
+        if (authed) {
+          const user = await account.get();
+          const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+            Query.equal('user_id', user.$id),
+            Query.equal('media_id', id),
+            Query.limit(1),
+          ]);
+          setInWatchlist(existing.documents.length > 0);
+        }
       } catch {
         setAnime(null);
       }
       setLoading(false);
     }
     load();
-  }, [id]);
+  }, [id, authed]);
 
   async function handleAdd() {
     if (!anime || adding) return;
@@ -171,13 +174,22 @@ export default function AnimeDetailPage() {
               )}
             </div>
 
-            <button
-              onClick={handleAdd}
-              disabled={inWatchlist || adding}
-              className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
-            >
-              {inWatchlist ? 'In Watchlist' : adding ? 'Adding...' : '+ Add to Watchlist'}
-            </button>
+            {authed ? (
+              <button
+                onClick={handleAdd}
+                disabled={inWatchlist || adding}
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+              >
+                {inWatchlist ? 'In Watchlist' : adding ? 'Adding...' : '+ Add to Watchlist'}
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium transition-colors inline-block"
+              >
+                Sign in to track
+              </Link>
+            )}
           </div>
         </div>
 
