@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import AnimeCard from '@/components/AnimeCard';
-import EpisodeGrid from '@/components/EpisodeGrid';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
 import type { WatchStatus } from '@/lib/types';
@@ -46,9 +46,9 @@ const statusColors: Record<WatchStatus, string> = {
 type ViewMode = 'list' | 'card';
 
 export default function WatchlistPage() {
+  const router = useRouter();
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [watchedMap, setWatchedMap] = useState<Record<number, WatchedDoc[]>>({});
-  const [selectedEntry, setSelectedEntry] = useState<WatchlistDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(ALL_FILTER);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -76,11 +76,6 @@ export default function WatchlistPage() {
       const docs = watchlist.documents as unknown as WatchlistDoc[];
       setEntries(docs);
 
-      setSelectedEntry((prev) => {
-        if (!prev) return null;
-        return docs.find((d) => d.$id === prev.$id) || null;
-      });
-
       const map: Record<number, WatchedDoc[]> = {};
       (watched.documents as unknown as WatchedDoc[]).forEach((w) => {
         if (!map[w.media_id]) map[w.media_id] = [];
@@ -105,7 +100,6 @@ export default function WatchlistPage() {
       await databases.deleteDocument(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, doc.$id);
     }
 
-    setSelectedEntry(null);
     loadWatchlist();
   }
 
@@ -116,93 +110,13 @@ export default function WatchlistPage() {
     loadWatchlist();
   }
 
-  async function toggleEpisode(mediaId: number, episode: number) {
-    const user = await account.get();
-    const episodeDocs = watchedMap[mediaId] || [];
-    const existing = episodeDocs.find((d) => d.episode_number === episode);
-
-    if (existing) {
-      await databases.deleteDocument(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, existing.$id);
-    } else {
-      await databases.createDocument(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, ID.unique(), {
-        user_id: user.$id,
-        media_id: mediaId,
-        episode_number: episode,
-      });
-    }
-    loadWatchlist();
-  }
-
   function handleContextMenu(e: React.MouseEvent, entry: WatchlistDoc) {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, entry });
   }
 
-  function getAvailableEpisodes(entry: WatchlistDoc): number | undefined {
-    if (entry.status === 'RELEASING' && entry.next_airing_episode) {
-      return entry.next_airing_episode - 1;
-    }
-    return undefined;
-  }
-
   if (loading) {
     return <p className="text-gray-500 text-center mt-12">Loading watchlist...</p>;
-  }
-
-  if (selectedEntry) {
-    const episodeDocs = watchedMap[selectedEntry.media_id] || [];
-    const watchedEpisodes = episodeDocs.map((d) => d.episode_number);
-    const total = selectedEntry.total_episodes || Math.max(watchedEpisodes.length, 12);
-    const title = selectedEntry.title_english || selectedEntry.title_romaji || 'Unknown';
-    const watchStatus = selectedEntry.watch_status || 'Watching';
-    const availableUpTo = getAvailableEpisodes(selectedEntry);
-
-    return (
-      <div>
-        <button onClick={() => setSelectedEntry(null)} className="text-teal-400 text-sm mb-4 hover:text-teal-300">
-          &larr; Back to watchlist
-        </button>
-        <div className="flex gap-4 items-center mb-6">
-          <img src={upgradeImageUrl(selectedEntry.cover_url)} alt="" className="w-16 h-24 rounded object-cover" />
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-gray-200">{title}</h2>
-            <p className="text-sm text-gray-500">{watchedEpisodes.length}/{selectedEntry.total_episodes || '?'} watched</p>
-            <select
-              value={watchStatus}
-              onChange={(e) => updateWatchStatus(selectedEntry, e.target.value as WatchStatus)}
-              className="mt-2 px-3 py-1 text-sm bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 outline-none"
-            >
-              {WATCH_STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <AddToPlaylist mediaId={selectedEntry.media_id} />
-            <button
-              onClick={() => removeFromWatchlist(selectedEntry)}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg"
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-
-        {availableUpTo !== undefined && availableUpTo < total && (
-          <div className="mb-4 flex items-center gap-2 text-xs text-gray-500">
-            <span className="inline-block w-4 h-4 rounded border border-dashed border-[#253040] bg-[#111827]" />
-            <span>Dashed episodes have not aired yet</span>
-          </div>
-        )}
-
-        <EpisodeGrid
-          totalEpisodes={total}
-          watchedEpisodes={watchedEpisodes}
-          onToggle={(ep) => toggleEpisode(selectedEntry.media_id, ep)}
-          availableUpTo={availableUpTo}
-        />
-      </div>
-    );
   }
 
   if (entries.length === 0) {
@@ -281,7 +195,7 @@ export default function WatchlistPage() {
                   status={entry.status}
                   episodes={entry.total_episodes}
                   progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
-                  onClick={() => setSelectedEntry(entry)}
+                  onClick={() => router.push(`/anime/${entry.media_id}`)}
                   action={
                     <div className="flex items-center gap-1">
                       <AddToPlaylist mediaId={entry.media_id} />
@@ -305,7 +219,7 @@ export default function WatchlistPage() {
               <div
                 key={entry.$id}
                 className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group"
-                onClick={() => setSelectedEntry(entry)}
+                onClick={() => router.push(`/anime/${entry.media_id}`)}
                 onContextMenu={(e) => handleContextMenu(e, entry)}
               >
                 <div className="relative w-full aspect-[3/4]">
