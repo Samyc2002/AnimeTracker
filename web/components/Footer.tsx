@@ -6,7 +6,7 @@ export default function Footer() {
     <footer className="border-t border-white/5 bg-[#0a0d13]">
       <div className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-teal-400">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
             <Image src="/logo.png" alt="" width={24} height={24} className="rounded" unoptimized />
             Anime Tracker
           </Link>

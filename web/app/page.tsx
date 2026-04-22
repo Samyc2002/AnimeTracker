@@ -130,7 +130,7 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen">
       <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-teal-400">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
             <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
             Anime Tracker
           </Link>

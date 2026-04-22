@@ -40,7 +40,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex flex-col bg-[#0b0e14]">
       <div className="flex-1 flex items-center justify-center">
       <div className="w-full max-w-sm p-8 bg-[#111827] rounded-xl">
-        <h1 className="text-2xl font-bold text-teal-400 mb-6 text-center">Create an account</h1>
+        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400 mb-6 text-center">Create an account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
