@@ -129,9 +129,26 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
-        <Link href="/" className="text-lg font-bold text-teal-400">
-          Anime Tracker
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-lg font-bold text-teal-400">
+            Anime Tracker
+          </Link>
+          <div className="flex gap-1">
+            {loggedIn && (
+              <>
+                <Link href="/watchlist" className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors">Watchlist</Link>
+                <Link href="/search" className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors">Search</Link>
+              </>
+            )}
+            <Link href="/airing" className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors">Airing</Link>
+            {loggedIn && (
+              <>
+                <Link href="/playlists" className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors">Playlists</Link>
+                <Link href="/settings" className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors">Settings</Link>
+              </>
+            )}
+          </div>
+        </div>
         {loggedIn ? (
           <Link
             href="/watchlist"
