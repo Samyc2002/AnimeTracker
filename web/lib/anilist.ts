@@ -83,6 +83,29 @@ query TrendingAnime {
   }
 }`;
 
+const VIEWER_QUERY = `query { Viewer { id name } }`;
+
+const USER_LIST_QUERY = `
+query UserList($userId: Int) {
+  MediaListCollection(userId: $userId, type: ANIME, status_in: [CURRENT, PLANNING, COMPLETED, DROPPED, PAUSED]) {
+    lists {
+      entries {
+        progress
+        status
+        media {
+          id
+          idMal
+          title { romaji english }
+          coverImage { extraLarge large medium }
+          status
+          episodes
+          nextAiringEpisode { airingAt episode }
+        }
+      }
+    }
+  }
+}`;
+
 const ANIME_DETAIL_QUERY = `
 query AnimeDetail($id: Int) {
   Media(id: $id, type: ANIME) {
@@ -116,10 +139,13 @@ query AnimeDetail($id: Int) {
   }
 }`;
 
-async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+async function gql<T>(query: string, variables: Record<string, unknown> = {}, token?: string): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetch(ANILIST_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ query, variables }),
   });
 
@@ -179,6 +205,51 @@ export async function fetchRecommendations(): Promise<{ trending: AniListMedia[]
     trending: data.trending.media,
     popular: data.popular.media,
   };
+}
+
+export async function fetchViewer(token: string): Promise<{ id: number; name: string }> {
+  const data = await gql<{ Viewer: { id: number; name: string } }>(VIEWER_QUERY, {}, token);
+  return data.Viewer;
+}
+
+const ANILIST_STATUS_MAP: Record<string, string> = {
+  CURRENT: 'Watching',
+  PLANNING: 'Planned',
+  COMPLETED: 'Completed',
+  DROPPED: 'Dropped',
+  PAUSED: 'Dropped',
+};
+
+export interface AniListUserEntry {
+  media: AniListMedia;
+  progress: number;
+  watchStatus: string;
+}
+
+export async function fetchUserList(userId: number, token: string): Promise<AniListUserEntry[]> {
+  const data = await gql<{
+    MediaListCollection: {
+      lists: {
+        entries: {
+          progress: number;
+          status: string;
+          media: AniListMedia;
+        }[];
+      }[];
+    };
+  }>(USER_LIST_QUERY, { userId }, token);
+
+  const entries: AniListUserEntry[] = [];
+  for (const list of data.MediaListCollection.lists) {
+    for (const entry of list.entries) {
+      entries.push({
+        media: entry.media,
+        progress: entry.progress,
+        watchStatus: ANILIST_STATUS_MAP[entry.status] || 'Watching',
+      });
+    }
+  }
+  return entries;
 }
 
 export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
