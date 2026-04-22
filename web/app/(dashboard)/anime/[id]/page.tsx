@@ -113,17 +113,24 @@ export default function AnimeDetailPage() {
 
   const backdropImage = anime.bannerImage || anime.coverImage.large || anime.coverImage.medium;
 
+  useEffect(() => {
+    const layoutEl = document.querySelector('[data-dashboard-layout]') as HTMLElement | null;
+    if (layoutEl) layoutEl.style.background = 'transparent';
+    return () => {
+      if (layoutEl) layoutEl.style.background = '';
+    };
+  }, []);
+
   return (
-    <div className="-mx-6 -mt-8 relative">
-      <div className="fixed inset-0 -z-10">
-        <Image
+    <div className="-mx-6 -mt-8 relative min-h-screen">
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={backdropImage}
           alt=""
-          fill
-          className="object-cover blur-3xl scale-110 opacity-15"
-          unoptimized
+          className="absolute inset-0 w-full h-full object-cover blur-3xl scale-110 opacity-15"
         />
-        <div className="absolute inset-0 bg-[#0b0e14]/85" />
+        <div className="absolute inset-0 bg-[#0b0e14]/80" />
       </div>
 
       {anime.bannerImage && (
