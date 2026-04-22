@@ -10,31 +10,45 @@ import type { AniListMedia } from '@/lib/types';
 
 function TrendingCarousel({ items }: { items: AniListMedia[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
-  const scrollLeft = useRef(0);
-  const autoScrollSpeed = useRef(0.5);
-  const animationRef = useRef<number>(0);
+  const scrollLeftStart = useRef(0);
+  const isVisible = useRef(true);
   const pauseAutoScroll = useRef(false);
 
   const doubled = [...items, ...items];
 
-  const autoScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (el && !pauseAutoScroll.current) {
-      el.scrollLeft += autoScrollSpeed.current;
-      const halfWidth = el.scrollWidth / 2;
-      if (el.scrollLeft >= halfWidth) {
-        el.scrollLeft -= halfWidth;
-      }
-    }
-    animationRef.current = requestAnimationFrame(autoScroll);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => { isVisible.current = entry.isIntersecting; },
+      { threshold: 0 }
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    animationRef.current = requestAnimationFrame(autoScroll);
-    return () => cancelAnimationFrame(animationRef.current);
-  }, [autoScroll]);
+    let rafId: number;
+
+    function tick() {
+      const el = scrollRef.current;
+      if (el && isVisible.current && !pauseAutoScroll.current) {
+        el.scrollLeft += 0.5;
+        const halfWidth = el.scrollWidth / 2;
+        if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
+          el.scrollLeft -= halfWidth;
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
 
   function handleWheel(e: React.WheelEvent) {
     e.preventDefault();
@@ -44,14 +58,14 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
     isDragging.current = true;
     pauseAutoScroll.current = true;
     startX.current = e.pageX;
-    scrollLeft.current = scrollRef.current?.scrollLeft || 0;
+    scrollLeftStart.current = scrollRef.current?.scrollLeft || 0;
     if (scrollRef.current) scrollRef.current.style.cursor = 'grabbing';
   }
 
   function handleMouseMove(e: React.MouseEvent) {
     if (!isDragging.current || !scrollRef.current) return;
     const dx = e.pageX - startX.current;
-    scrollRef.current.scrollLeft = scrollLeft.current - dx;
+    scrollRef.current.scrollLeft = scrollLeftStart.current - dx;
   }
 
   function handleMouseUp() {
@@ -61,7 +75,7 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
   }
 
   return (
-    <div className="relative mx-auto pb-12">
+    <div ref={containerRef} className="relative mx-auto pb-12">
       <div className="relative">
         <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
