@@ -8,6 +8,7 @@ const navItems = [
   { href: '/watchlist', label: 'Watchlist' },
   { href: '/search', label: 'Search' },
   { href: '/airing', label: 'Airing' },
+  { href: '/playlists', label: 'Playlists' },
   { href: '/settings', label: 'Settings' },
 ];
 

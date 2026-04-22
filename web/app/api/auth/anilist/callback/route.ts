@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
     });
 
     if (!tokenRes.ok) {
+      const errBody = await tokenRes.text();
+      console.error('[AniList OAuth] Token exchange failed:', tokenRes.status, errBody);
       return NextResponse.redirect(new URL('/settings?anilist=error', req.url));
     }
 
@@ -63,7 +65,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.redirect(new URL('/settings?anilist=connected', req.url));
-  } catch {
+  } catch (err) {
+    console.error('[AniList OAuth] Error:', err);
     return NextResponse.redirect(new URL('/settings?anilist=error', req.url));
   }
 }
