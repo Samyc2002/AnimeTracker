@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { account } from '@/lib/appwrite';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -34,7 +35,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0b0e14]">
+    <div className="min-h-screen flex flex-col bg-[#0b0e14]">
+      <div className="flex-1 flex items-center justify-center">
       <div className="w-full max-w-sm p-8 bg-[#111827] rounded-xl">
         <h1 className="text-2xl font-bold text-teal-400 mb-6 text-center">Anime Tracker</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -68,6 +70,8 @@ export default function LoginPage() {
           <Link href="/signup" className="text-teal-400 hover:text-teal-300">Sign up</Link>
         </p>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }

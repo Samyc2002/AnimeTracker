@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { fetchAnimeDetail } from '@/lib/anilist';
+import Footer from '@/components/Footer';
 import type { AnimeDetail } from '@/lib/types';
 
 interface PlaylistData {
@@ -137,6 +138,8 @@ export default function PublicPlaylistPage() {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }

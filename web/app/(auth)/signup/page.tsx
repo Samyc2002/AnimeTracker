@@ -5,6 +5,7 @@ import { account } from '@/lib/appwrite';
 import { ID } from 'appwrite';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -36,7 +37,8 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0b0e14]">
+    <div className="min-h-screen flex flex-col bg-[#0b0e14]">
+      <div className="flex-1 flex items-center justify-center">
       <div className="w-full max-w-sm p-8 bg-[#111827] rounded-xl">
         <h1 className="text-2xl font-bold text-teal-400 mb-6 text-center">Create an account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -71,6 +73,8 @@ export default function SignupPage() {
           <Link href="/login" className="text-teal-400 hover:text-teal-300">Sign in</Link>
         </p>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }
