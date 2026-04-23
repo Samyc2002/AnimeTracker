@@ -81,7 +81,7 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
       <button
         ref={btnRef}
         onClick={(e) => { e.stopPropagation(); updatePos(); setOpen(!open); }}
-        className="p-1.5 rounded hover:bg-[#1e2736] transition-colors text-gray-500 hover:text-gray-300"
+        className="p-1.5 rounded bg-teal-600/20 text-teal-400 hover:bg-teal-600/40 transition-colors"
         title="Add to playlist"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
