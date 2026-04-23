@@ -68,7 +68,7 @@ function PlaylistsPage() {
         title: newTitle.trim(),
         description: newDescription.trim(),
         anime_ids: '[]',
-        visibility: 'public',
+        visibility: 'Public',
         slug,
       });
       setNewTitle('');

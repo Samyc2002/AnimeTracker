@@ -19,7 +19,7 @@ export async function GET(
 
     const res = await databases.listDocuments(dbId, playlistsCol, [
       Query.equal('slug', slug),
-      Query.equal('visibility', 'public'),
+      Query.equal('visibility', 'Public'),
       Query.limit(1),
     ]);
 
