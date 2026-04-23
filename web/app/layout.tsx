@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Anime Tracker — Track, Sync, Share",
+    default: "Anime Tracker — Track Your Watchlist, Sync with AniList",
     template: "%s | Anime Tracker",
   },
   description: "Track your anime watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.",
   metadataBase: new URL("https://animetracker.lol"),
   openGraph: {
-    title: "Anime Tracker — Track, Sync, Share",
+    title: "Anime Tracker — Track Your Watchlist, Sync with AniList",
     description: "Track your anime watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.",
     url: "https://animetracker.lol",
     siteName: "Anime Tracker",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
         url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "Anime Tracker — Track, Sync, Share",
+        alt: "Anime Tracker — Track Your Watchlist, Sync with AniList",
       },
     ],
     locale: "en_US",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Anime Tracker — Track, Sync, Share",
+    title: "Anime Tracker — Track Your Watchlist, Sync with AniList",
     description: "Track your anime watchlist, follow airing schedules, sync with AniList, and share curated playlists.",
     images: ["/api/og"],
   },
