@@ -19,37 +19,24 @@ export async function GET() {
       >
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
+            fontSize: '64px',
+            fontWeight: 800,
+            background: 'linear-gradient(to right, #2dd4bf, #60a5fa)',
+            backgroundClip: 'text',
+            color: 'transparent',
             marginBottom: '24px',
           }}
         >
-          <img
-            src="https://animetracker.lol/logo.png"
-            width={80}
-            height={80}
-            style={{ borderRadius: '16px' }}
-          />
-          <span
-            style={{
-              fontSize: '56px',
-              fontWeight: 800,
-              background: 'linear-gradient(to right, #2dd4bf, #60a5fa)',
-              backgroundClip: 'text',
-              color: 'transparent',
-            }}
-          >
-            Anime Tracker
-          </span>
+          Anime Tracker
         </div>
         <p
           style={{
-            fontSize: '24px',
+            fontSize: '28px',
             color: '#9ca3af',
-            maxWidth: '700px',
+            maxWidth: '800px',
             textAlign: 'center',
             lineHeight: 1.5,
+            margin: 0,
           }}
         >
           Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists.
@@ -58,10 +45,10 @@ export async function GET() {
           style={{
             display: 'flex',
             gap: '12px',
-            marginTop: '32px',
+            marginTop: '40px',
           }}
         >
-          <div style={{ background: '#0d9488', color: 'white', padding: '10px 24px', borderRadius: '8px', fontSize: '18px', fontWeight: 600 }}>
+          <div style={{ background: '#0d9488', color: 'white', padding: '12px 32px', borderRadius: '10px', fontSize: '20px', fontWeight: 600 }}>
             Get Started Free
           </div>
         </div>
