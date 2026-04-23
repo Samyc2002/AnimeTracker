@@ -198,7 +198,7 @@ function WatchlistPage() {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const watchStatus = entry.watch_status || 'Watching';
             return (
-              <div key={entry.$id} onContextMenu={(e) => handleContextMenu(e, entry)}>
+              <div key={entry.$id} className="group/row" onContextMenu={(e) => handleContextMenu(e, entry)}>
                 <AnimeCard
                   title={title}
                   coverUrl={upgradeImageUrl(entry.cover_url)}
@@ -209,7 +209,9 @@ function WatchlistPage() {
                   onClick={() => router.push(`/anime/${entry.media_id}`)}
                   action={
                     <div className="flex items-center gap-1">
-                      <AddToPlaylist mediaId={entry.media_id} />
+                      <div className="opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <AddToPlaylist mediaId={entry.media_id} />
+                      </div>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${statusColors[watchStatus]}`}>
                         {watchStatus}
                       </span>
@@ -241,7 +243,7 @@ function WatchlistPage() {
                     className="object-cover"
                     unoptimized
                   />
-                  <div className="absolute top-1.5 right-1.5 flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                     <AddToPlaylist mediaId={entry.media_id} />
                   </div>
                   <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">

@@ -35,7 +35,7 @@ export default function AnimeCard({
 
   return (
     <div
-      className={`flex gap-3 bg-[#141925] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
+      className={`group/card flex gap-3 bg-[#141925] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
       onClick={onClick}
     >
       <Image

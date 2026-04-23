@@ -149,7 +149,9 @@ export default function SearchPage() {
                 onClick={() => router.push(`/anime/${media.id}`)}
                 action={
                   <div className="flex items-center gap-1">
-                    <AddToPlaylist mediaId={media.id} />
+                    <div className="opacity-0 group-hover/card:opacity-100 transition-opacity">
+                      <AddToPlaylist mediaId={media.id} />
+                    </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); addToWatchlist(media); }}
                       disabled={inList}
