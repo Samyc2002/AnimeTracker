@@ -14,7 +14,7 @@
   "_content_scripts_note": "Update matches URL here AND WEB_APP_URL in lib/config.js when deploying to production",
   "content_scripts": [
     {
-      "matches": ["http://localhost:3000/*"],
+      "matches": ["https://animetracker.lol/*"],
       "js": ["content/bridge.js"],
       "run_at": "document_idle"
     }
