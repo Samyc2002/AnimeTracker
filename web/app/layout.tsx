@@ -26,20 +26,20 @@ export const metadata: Metadata = {
     siteName: "Anime Tracker",
     images: [
       {
-        url: "/logo.png",
-        width: 512,
-        height: 512,
-        alt: "Anime Tracker",
+        url: "/api/og",
+        width: 1200,
+        height: 630,
+        alt: "Anime Tracker — Track, Sync, Share",
       },
     ],
     locale: "en_US",
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Anime Tracker — Track, Sync, Share",
     description: "Track your anime watchlist, follow airing schedules, sync with AniList, and share curated playlists.",
-    images: ["/logo.png"],
+    images: ["/api/og"],
   },
   icons: {
     icon: "/icon.png",
