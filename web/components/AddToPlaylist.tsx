@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
 
@@ -14,7 +14,19 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
   const [open, setOpen] = useState(false);
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  const updatePos = useCallback(() => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const dropWidth = 224;
+    let left = rect.right - dropWidth;
+    if (left < 8) left = 8;
+    if (left + dropWidth > window.innerWidth - 8) left = window.innerWidth - dropWidth - 8;
+    setPos({ top: rect.bottom + 4, left });
+  }, []);
 
   useEffect(() => {
     if (!open || loaded) return;
@@ -36,10 +48,14 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
   }, [open, loaded]);
 
   useEffect(() => {
+    if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (dropRef.current && !dropRef.current.contains(e.target as Node) &&
+          btnRef.current && !btnRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
-    if (open) document.addEventListener('mousedown', handleClick);
+    document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
@@ -61,9 +77,10 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        ref={btnRef}
+        onClick={(e) => { e.stopPropagation(); updatePos(); setOpen(!open); }}
         className="p-1.5 rounded hover:bg-[#1e2736] transition-colors text-gray-500 hover:text-gray-300"
         title="Add to playlist"
       >
@@ -77,7 +94,9 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-1 z-50 w-56 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+          ref={dropRef}
+          className="fixed z-[100] w-56 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+          style={{ top: pos.top, left: pos.left }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-3 py-2 border-b border-[#253040]">
@@ -120,6 +139,6 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }
