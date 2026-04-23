@@ -1,5 +1,5 @@
 [build]
-  command = "echo '--- npm install ---' && npm install --legacy-peer-deps && echo '--- npm run build ---' && npm run build || (echo '--- BUILD FAILED ---' && exit 1)"
+  command = "node -v && npm -v && npm ci && npm run build"
   publish = ".next"
 
 [build.environment]
