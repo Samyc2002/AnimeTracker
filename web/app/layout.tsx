@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "Anime Tracker",
     images: [
       {
-        url: "/api/og",
+        url: "/og.png",
         width: 1200,
         height: 630,
         alt: "Anime Tracker — Track Your Watchlist, Sync with AniList",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Anime Tracker — Track Your Watchlist, Sync with AniList",
     description: "Track your anime watchlist, follow airing schedules, sync with AniList, and share curated playlists.",
-    images: ["/api/og"],
+    images: ["/og.png"],
   },
   icons: {
     icon: "/icon.png",
