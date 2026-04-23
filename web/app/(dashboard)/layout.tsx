@@ -59,6 +59,25 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!authed) return;
+    async function pollNotifications() {
+      try {
+        const user = await account.get();
+        await fetch('/api/notifications/poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.$id }),
+        });
+      } catch {
+        // Non-critical
+      }
+    }
+    pollNotifications();
+    const pollInterval = setInterval(pollNotifications, 15 * 60 * 1000);
+    return () => clearInterval(pollInterval);
+  }, [authed]);
+
+  useEffect(() => {
+    if (!authed) return;
     async function heartbeat() {
       try {
         const user = await account.get();
