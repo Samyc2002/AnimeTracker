@@ -17,9 +17,10 @@ export default function Footer() {
             <Link href="/login" className="text-gray-500 hover:text-gray-300 transition-colors">Sign In</Link>
             <Link href="/privacy" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</Link>
             <a
-              href="#"
-              className="hidden text-gray-500 hover:text-gray-300 transition-colors"
-              data-extension-link
+              href="https://chromewebstore.google.com/detail/anime-tracker/biidimfpepakgljgokmoiljgakehbhod"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-gray-300 transition-colors"
             >
               Chrome Extension
             </a>

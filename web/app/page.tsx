@@ -109,6 +109,16 @@ const FEATURES = [
     title: 'Shareable Playlists',
     description: 'Curate themed anime collections and share them with friends via a public link.',
   },
+  {
+    icon: '🧩',
+    title: 'Chrome Extension',
+    description: 'Quick access from any tab — track anime, get airing notifications, and sync with the web app.',
+  },
+  {
+    icon: '👤',
+    title: 'Public Profiles',
+    description: 'Share your taste with the world. Show off your watchlist and stats with a shareable profile link.',
+  },
 ];
 
 const STEPS = [
@@ -189,7 +199,7 @@ export default function LandingPage() {
             <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10">
               Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.
             </p>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-4">
               {loggedIn ? (
                 <Link
                   href="/watchlist"
@@ -213,6 +223,21 @@ export default function LandingPage() {
                   </Link>
                 </>
               )}
+              <a
+                href="https://chromewebstore.google.com/detail/anime-tracker/biidimfpepakgljgokmoiljgakehbhod"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3 bg-[#141925] hover:bg-[#1c2333] text-gray-300 rounded-lg font-semibold text-lg border border-[#253040] transition-colors inline-flex items-center gap-2"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="4" />
+                  <line x1="21.17" y1="8" x2="12" y2="8" />
+                  <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
+                  <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
+                </svg>
+                Chrome Extension
+              </a>
             </div>
           </div>
 
@@ -227,7 +252,7 @@ export default function LandingPage() {
           <h2 className="text-2xl font-bold text-gray-200 text-center mb-12">
             Everything you need to track anime
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
