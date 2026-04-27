@@ -6,10 +6,6 @@ export default function DevtoolsGuard() {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') return;
 
-    function blockContextMenu(e: MouseEvent) {
-      e.preventDefault();
-    }
-
     function blockDevtoolsKeys(e: KeyboardEvent) {
       if (e.key === 'F12') {
         e.preventDefault();
@@ -24,10 +20,8 @@ export default function DevtoolsGuard() {
       }
     }
 
-    document.addEventListener('contextmenu', blockContextMenu);
     document.addEventListener('keydown', blockDevtoolsKeys);
     return () => {
-      document.removeEventListener('contextmenu', blockContextMenu);
       document.removeEventListener('keydown', blockDevtoolsKeys);
     };
   }, []);
