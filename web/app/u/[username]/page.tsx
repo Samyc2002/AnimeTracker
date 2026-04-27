@@ -111,7 +111,7 @@ function GuestProfileContent({ profile }: { profile: PublicProfile }) {
 }
 
 function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: PublicProfile; sfwMode: boolean; authed: boolean; onToggleSfw?: () => void }) {
-  useTitle(profile.display_name || profile.username);
+  useTitle(`Profile | ${profile.display_name || profile.username}`);
 
   const [activeTab, setActiveTab] = useState<WatchStatus | 'All'>(() => {
     if (typeof window !== 'undefined') {
