@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
 import { useSfw } from '@/lib/sfw-context';
+import SfwToggle from '@/components/SfwToggle';
 import { useAuth } from '@/lib/auth-context';
 
 const publicNavItems = [
@@ -134,16 +135,7 @@ export default function NavBar() {
             </Link>
           </>
         )}
-        <button
-          onClick={() => setSfwMode(!sfwMode)}
-          className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-            sfwMode
-              ? 'bg-teal-600/20 text-teal-400 border border-teal-500/30'
-              : 'bg-red-600/20 text-red-400 border border-red-500/30'
-          }`}
-        >
-          {sfwMode ? 'SFW' : 'NSFW'}
-        </button>
+        <SfwToggle sfwMode={sfwMode} onToggle={() => setSfwMode(!sfwMode)} />
         {!loading && (authed ? (
           <button
             onClick={handleSignOut}

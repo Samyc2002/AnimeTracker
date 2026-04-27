@@ -20,16 +20,14 @@ function sendAuth(data) {
 
 function checkAndForward() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  console.log('[Anime Tracker Bridge] Checking JWT:', raw ? 'found' : 'not found');
   if (raw) {
     try {
       const { jwt, userId } = JSON.parse(raw);
       if (jwt && userId) {
-        console.log('[Anime Tracker Bridge] Sending JWT to extension for user:', userId);
         sendAuth({ type: 'AUTH_JWT', jwt, userId });
       }
-    } catch (err) {
-      console.error('[Anime Tracker Bridge] Malformed JWT data:', err);
+    } catch {
+      // Malformed JWT data
     }
   } else {
     sendAuth({ type: 'AUTH_LOGOUT' });
@@ -43,3 +41,37 @@ window.addEventListener('storage', (e) => {
 });
 
 setInterval(checkAndForward, POLL_INTERVAL_MS);
+
+// --- Stream bridge ---
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  if (event.data?.type !== 'ANIME_STREAM_REQUEST') return;
+
+  const { title, episode, mode } = event.data;
+  try {
+    chrome.runtime.sendMessage(
+      { type: 'RESOLVE_STREAM', title, episode, mode, appOrigin: window.location.origin },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          window.postMessage({
+            type: 'ANIME_STREAM_RESPONSE',
+            success: false,
+            sources: [],
+            error: chrome.runtime.lastError.message,
+          });
+          return;
+        }
+        window.postMessage({
+          type: 'ANIME_STREAM_RESPONSE',
+          success: response?.success || false,
+          sources: response?.sources || [],
+          error: response?.error || null,
+        });
+      }
+    );
+  } catch {
+    // Extension context invalidated
+  }
+});
+
+window.postMessage({ type: 'ANIME_EXTENSION_READY' });

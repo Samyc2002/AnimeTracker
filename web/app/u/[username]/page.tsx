@@ -8,6 +8,7 @@ import { account } from '@/lib/appwrite';
 import { AuthContext } from '@/lib/auth-context';
 import { SfwProvider, useSfw } from '@/lib/sfw-context';
 import NavBar from '@/components/NavBar';
+import SfwToggle from '@/components/SfwToggle';
 import Footer from '@/components/Footer';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
@@ -67,9 +68,9 @@ function AnimeGrid({ entries }: { entries: PublicProfileEntry[] }) {
             </div>
             <div className="p-2">
               <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
-              <p className="text-[10px] text-teal-400 mt-0.5">
-                {entry.episodes_watched}/{entry.total_episodes || '?'} watched
-              </p>
+              {entry.total_episodes && (
+                <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>
+              )}
             </div>
           </Link>
         );
@@ -86,16 +87,7 @@ function GuestNav({ sfwMode, onToggleSfw }: { sfwMode: boolean; onToggleSfw: () 
         Anime Tracker
       </Link>
       <div className="flex items-center gap-3">
-        <button
-          onClick={onToggleSfw}
-          className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-            sfwMode
-              ? 'bg-teal-600/20 text-teal-400 border border-teal-500/30'
-              : 'bg-red-600/20 text-red-400 border border-red-500/30'
-          }`}
-        >
-          {sfwMode ? 'SFW' : 'NSFW'}
-        </button>
+        <SfwToggle sfwMode={sfwMode} onToggle={onToggleSfw} />
         <Link
           href="/login"
           className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
@@ -171,9 +163,8 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
           <p className="text-sm text-gray-500 mt-1">Member since {joinedDate}</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
           <StatCard label="Total Anime" value={sfwWatchlist.length} />
-          <StatCard label="Episodes" value={profile.stats.episodes_watched} />
           <StatCard label="Watching" value={tabCounts['Watching'] || 0} />
           <StatCard label="Completed" value={tabCounts['Completed'] || 0} />
           <StatCard label="Planned" value={tabCounts['Planned'] || 0} />
