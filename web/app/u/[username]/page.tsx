@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTitle } from '@/lib/useTitle';
 import { account } from '@/lib/appwrite';
 import { AuthContext } from '@/lib/auth-context';
 import { SfwProvider, useSfw } from '@/lib/sfw-context';
@@ -110,6 +111,7 @@ function GuestProfileContent({ profile }: { profile: PublicProfile }) {
 }
 
 function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: PublicProfile; sfwMode: boolean; authed: boolean; onToggleSfw?: () => void }) {
+  useTitle(profile.display_name || profile.username);
 
   const [activeTab, setActiveTab] = useState<WatchStatus | 'All'>(() => {
     if (typeof window !== 'undefined') {
