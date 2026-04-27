@@ -68,7 +68,8 @@ export default function WatchPage() {
     async function loadSources() {
       setLoadingSources(true);
       try {
-        const result = await getEpisodeStream(anime?.idMal ?? null, animeId, episodeNum);
+        const title = anime?.title.romaji || anime?.title.english || '';
+        const result = await getEpisodeStream(anime?.idMal ?? null, animeId, episodeNum, title);
         setSources(result);
       } catch {
         setSources([]);

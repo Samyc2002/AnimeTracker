@@ -10,23 +10,59 @@ export interface StreamSource {
   subtitles?: SubtitleTrack[];
 }
 
-export async function getEpisodeStream(
-  malId: number | null,
-  anilistId: number,
-  episode: number
-): Promise<StreamSource[]> {
-  const params = new URLSearchParams({
-    anilistId: String(anilistId),
-    episode: String(episode),
-  });
-  if (malId) params.set('malId', String(malId));
+export function isExtensionAvailable(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      resolve(false);
+    }, 2000);
 
-  try {
-    const res = await fetch(`/api/stream?${params}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.sources || [];
-  } catch {
-    return [];
-  }
+    function handler(event: MessageEvent) {
+      if (event.data?.type === 'ANIME_EXTENSION_READY') {
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        resolve(true);
+      }
+    }
+    window.addEventListener('message', handler);
+  });
+}
+
+export async function getEpisodeStream(
+  _malId: number | null,
+  _anilistId: number,
+  episode: number,
+  title: string,
+  mode: string = 'sub',
+): Promise<StreamSource[]> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      resolve([]);
+    }, 15000);
+
+    function handler(event: MessageEvent) {
+      if (event.data?.type !== 'ANIME_STREAM_RESPONSE') return;
+      console.log('[Stream Provider] Got ANIME_STREAM_RESPONSE:', event.data);
+      clearTimeout(timeout);
+      window.removeEventListener('message', handler);
+
+      const sources: StreamSource[] = (event.data.sources || []).map(
+        (s: { url: string; quality: string; referer?: string }) => ({
+          url: s.url,
+          quality: s.quality,
+        })
+      );
+      resolve(sources);
+    }
+
+    window.addEventListener('message', handler);
+    console.log('[Stream Provider] Sending ANIME_STREAM_REQUEST:', { title, episode, mode });
+    window.postMessage({
+      type: 'ANIME_STREAM_REQUEST',
+      title,
+      episode,
+      mode,
+    });
+  });
 }

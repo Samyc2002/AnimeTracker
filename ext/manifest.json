@@ -9,11 +9,17 @@
     "notifications"
   ],
   "host_permissions": [
-    "https://sgp.cloud.appwrite.io/*"
+    "https://sgp.cloud.appwrite.io/*",
+    "https://animekai.to/*",
+    "https://raw.githubusercontent.com/*",
+    "https://*.megacloud.club/*",
+    "https://*.megacloud.tv/*",
+    "https://*.rabbitstream.net/*",
+    "https://*.rapid-cloud.co/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://animetracker.lol/*"],
+      "matches": ["https://animetracker.lol/*", "https://*.netlify.app/*"],
       "js": ["content/bridge.js"],
       "run_at": "document_idle"
     }

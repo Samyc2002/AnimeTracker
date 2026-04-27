@@ -68,10 +68,18 @@ export default function VideoPlayer({ sources, onEnded }: VideoPlayerProps) {
         <svg className="w-12 h-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
-        <p className="text-gray-500 text-sm">No stream source available</p>
+        <p className="text-gray-400 text-sm font-medium">Install the Chrome extension to watch</p>
         <p className="text-gray-600 text-xs max-w-sm text-center">
-          Implement the stream API route to enable playback
+          The Anime Tracker extension resolves streams locally so you can watch directly in the browser.
         </p>
+        <a
+          href="https://chromewebstore.google.com/detail/anime-tracker"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium transition-colors"
+        >
+          Get the Extension
+        </a>
       </div>
     );
   }

@@ -43,3 +43,40 @@ window.addEventListener('storage', (e) => {
 });
 
 setInterval(checkAndForward, POLL_INTERVAL_MS);
+
+// --- Stream bridge ---
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  if (event.data?.type !== 'ANIME_STREAM_REQUEST') return;
+
+  const { title, episode, mode } = event.data;
+  console.log('[Anime Tracker Bridge] Stream request received:', { title, episode, mode });
+
+  try {
+    chrome.runtime.sendMessage(
+      { type: 'RESOLVE_STREAM', title, episode, mode },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          window.postMessage({
+            type: 'ANIME_STREAM_RESPONSE',
+            success: false,
+            sources: [],
+            error: chrome.runtime.lastError.message,
+          });
+          return;
+        }
+        console.log('[Anime Tracker Bridge] Stream response from background:', response);
+        window.postMessage({
+          type: 'ANIME_STREAM_RESPONSE',
+          success: response?.success || false,
+          sources: response?.sources || [],
+          error: response?.error || null,
+        });
+      }
+    );
+  } catch {
+    // Extension context invalidated
+  }
+});
+
+window.postMessage({ type: 'ANIME_EXTENSION_READY' });
