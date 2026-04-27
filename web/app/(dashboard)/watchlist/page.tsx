@@ -60,7 +60,7 @@ function WatchlistPage() {
       const param = new URLSearchParams(window.location.search).get('status');
       if (param && [...WATCH_STATUSES, ALL_FILTER].includes(param)) return param as WatchStatus;
     }
-    return ALL_FILTER;
+    return 'Watching';
   });
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== 'undefined') {
