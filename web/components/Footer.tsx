@@ -14,7 +14,7 @@ export default function Footer() {
           <div className="flex items-center gap-6 text-sm">
             <Link href="/" className="text-gray-500 hover:text-gray-300 transition-colors">Home</Link>
             <Link href="/airing" className="text-gray-500 hover:text-gray-300 transition-colors">Airing Schedule</Link>
-            <Link href="/login" className="text-gray-500 hover:text-gray-300 transition-colors">Sign In</Link>
+            {/* <Link href="/login" className="text-gray-500 hover:text-gray-300 transition-colors">Sign In</Link> */}
             <Link href="/privacy" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</Link>
             <a
               href="https://chromewebstore.google.com/detail/anime-tracker/biidimfpepakgljgokmoiljgakehbhod"
