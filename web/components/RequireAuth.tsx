@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useAuth } from '@/app/(dashboard)/layout';
+import { useAuth } from '@/lib/auth-context';
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
   const { authed, loading } = useAuth();

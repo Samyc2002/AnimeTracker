@@ -1,21 +1,13 @@
 'use client';
 
-import { useEffect, useState, createContext, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import { account } from '@/lib/appwrite';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { SfwProvider } from '@/lib/sfw-context';
+import { AuthContext } from '@/lib/auth-context';
 
-interface AuthContextType {
-  authed: boolean;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({ authed: false, loading: true });
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export { useAuth } from '@/lib/auth-context';
 
 export default function DashboardLayout({
   children,

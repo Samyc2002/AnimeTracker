@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchAnimeDetail, mediaToWatchlistEntry } from '@/lib/anilist';
-import { useAuth } from '@/app/(dashboard)/layout';
+import { useAuth } from '@/lib/auth-context';
 import type { AnimeDetail } from '@/lib/types';
 
 const statusLabels: Record<string, { label: string; className: string }> = {

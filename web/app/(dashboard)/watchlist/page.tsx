@@ -28,6 +28,7 @@ interface WatchlistDoc {
   next_airing_episode: number | null;
   watch_status?: WatchStatus;
   is_adult?: boolean;
+  manual_nsfw?: boolean;
 }
 
 interface WatchedDoc {
@@ -127,6 +128,13 @@ function WatchlistPage() {
     loadWatchlist();
   }
 
+  async function toggleManualNsfw(entry: WatchlistDoc) {
+    await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
+      manual_nsfw: !entry.manual_nsfw,
+    });
+    loadWatchlist();
+  }
+
   function handleContextMenu(e: React.MouseEvent, entry: WatchlistDoc) {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, entry });
@@ -145,7 +153,7 @@ function WatchlistPage() {
     );
   }
 
-  const sfwEntries = sfwMode ? entries.filter((e) => !e.is_adult) : entries;
+  const sfwEntries = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;
 
   const filteredEntries = filter === ALL_FILTER
     ? sfwEntries
@@ -221,7 +229,7 @@ function WatchlistPage() {
                   coverUrl={upgradeImageUrl(entry.cover_url)}
                   status={entry.status}
                   episodes={entry.total_episodes}
-                  isAdult={entry.is_adult}
+                  isAdult={entry.is_adult || entry.manual_nsfw}
                   progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
                   onClick={() => router.push(`/anime/${entry.media_id}`)}
                   action={
@@ -248,7 +256,7 @@ function WatchlistPage() {
             return (
               <div
                 key={entry.$id}
-                className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${entry.is_adult ? 'border border-red-500/40' : ''}`}
+                className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${entry.is_adult || entry.manual_nsfw ? 'border border-red-500/40' : ''}`}
                 onClick={() => router.push(`/anime/${entry.media_id}`)}
                 onContextMenu={(e) => handleContextMenu(e, entry)}
               >
@@ -303,6 +311,13 @@ function WatchlistPage() {
                 {(contextMenu.entry.watch_status || 'Watching') === s ? '● ' : '○ '}{s}
               </button>
             ))}
+            <div className="border-t border-[#253040] my-1" />
+            <button
+              onClick={() => { toggleManualNsfw(contextMenu.entry); setContextMenu(null); }}
+              className="w-full text-left px-3 py-1.5 text-sm text-gray-300 hover:bg-[#1c2333] transition-colors"
+            >
+              {contextMenu.entry.manual_nsfw ? 'Unmark NSFW' : 'Mark as NSFW'}
+            </button>
             <div className="border-t border-[#253040] my-1" />
             <button
               onClick={() => { removeFromWatchlist(contextMenu.entry); setContextMenu(null); }}

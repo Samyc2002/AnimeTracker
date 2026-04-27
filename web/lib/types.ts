@@ -98,3 +98,30 @@ export interface WatchedEpisode {
   episode_number: number;
   watched_at?: string;
 }
+
+export interface PublicProfileEntry {
+  media_id: number;
+  title_romaji: string | null;
+  title_english: string | null;
+  cover_url: string;
+  status: string;
+  total_episodes: number | null;
+  watch_status: WatchStatus;
+  episodes_watched: number;
+  is_nsfw: boolean;
+}
+
+export interface PublicProfile {
+  username: string;
+  display_name: string | null;
+  joined_at: string;
+  stats: {
+    total_anime: number;
+    episodes_watched: number;
+    watching: number;
+    completed: number;
+    planned: number;
+    dropped: number;
+  };
+  watchlist: PublicProfileEntry[];
+}

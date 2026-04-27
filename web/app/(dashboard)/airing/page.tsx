@@ -9,7 +9,7 @@ import { fetchWeeklyAiring, mediaToWatchlistEntry } from '@/lib/anilist';
 import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
-import { useAuth } from '@/app/(dashboard)/layout';
+import { useAuth } from '@/lib/auth-context';
 import type { AiringSchedule } from '@/lib/types';
 
 function getWeekRange(offset: number = 0) {

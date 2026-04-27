@@ -13,6 +13,10 @@ interface ProfileDoc {
   display_language: string;
   anilist_user_id?: number;
   anilist_token?: string;
+  username?: string;
+  display_name?: string;
+  is_public?: boolean;
+  hide_nsfw_public?: boolean;
 }
 
 export default function SettingsPageGuarded() {
@@ -33,6 +37,12 @@ function SettingsPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
+  const [hideNsfwPublic, setHideNsfwPublic] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     const anilistParam = searchParams.get('anilist');
@@ -67,6 +77,10 @@ function SettingsPage() {
         const profile = profiles.documents[0] as unknown as ProfileDoc;
         setLanguage(profile.display_language);
         setProfileDocId(profile.$id);
+        if (profile.username) setUsername(profile.username);
+        if (profile.display_name) setDisplayName(profile.display_name);
+        if (profile.is_public) setIsPublic(profile.is_public);
+        if (profile.hide_nsfw_public) setHideNsfwPublic(profile.hide_nsfw_public);
         if (profile.anilist_user_id && profile.anilist_token) {
           setAnilistConnected(true);
           setAnilistUserId(profile.anilist_user_id);
@@ -114,6 +128,52 @@ function SettingsPage() {
     setAnilistUserId(null);
     setAnilistToken(null);
     setToast('AniList disconnected');
+  }
+
+  function validateUsername(value: string): string | null {
+    if (!value) return null;
+    if (value.length < 3) return 'Must be at least 3 characters';
+    if (value.length > 32) return 'Must be 32 characters or fewer';
+    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(value) && value.length >= 3) {
+      return 'Only lowercase letters, numbers, and hyphens (cannot start/end with hyphen)';
+    }
+    return null;
+  }
+
+  async function saveProfile() {
+    if (!profileDocId) return;
+    const validationErr = validateUsername(username);
+    if (username && validationErr) {
+      setUsernameError(validationErr);
+      return;
+    }
+    setUsernameError(null);
+    setSavingProfile(true);
+
+    try {
+      if (username) {
+        const existing = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
+          Query.equal('username', username),
+          Query.limit(1),
+        ]);
+        if (existing.documents.length > 0 && existing.documents[0].$id !== profileDocId) {
+          setUsernameError('Username is already taken');
+          setSavingProfile(false);
+          return;
+        }
+      }
+
+      await databases.updateDocument(DATABASE_ID, PROFILES_COLLECTION_ID, profileDocId, {
+        username: username || null,
+        display_name: displayName || null,
+        is_public: isPublic,
+        hide_nsfw_public: hideNsfwPublic,
+      });
+      setToast('Profile saved!');
+    } catch (err) {
+      setToast(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+    setSavingProfile(false);
   }
 
   async function importWatchlist() {
@@ -258,6 +318,112 @@ function SettingsPage() {
               </button>
             </div>
           )}
+        </div>
+
+        <div className="border-t border-[#253040] pt-6">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Public Profile</h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-gray-300 block mb-1">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+                  setUsernameError(null);
+                }}
+                placeholder="your-username"
+                maxLength={32}
+                className="w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm placeholder:text-gray-600 focus:border-teal-500/50 focus:outline-none"
+              />
+              {usernameError && (
+                <p className="text-xs text-red-400 mt-1">{usernameError}</p>
+              )}
+              {username && !usernameError && (
+                <p className="text-xs text-gray-600 mt-1">animetracker.lol/u/{username}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-300 block mb-1">Display Name</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="How you want to be shown"
+                maxLength={64}
+                className="w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm placeholder:text-gray-600 focus:border-teal-500/50 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-gray-300">Make profile public</label>
+                <p className="text-xs text-gray-600">Others can see your watchlist and stats</p>
+              </div>
+              <button
+                onClick={() => setIsPublic(!isPublic)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  isPublic ? 'bg-teal-600' : 'bg-[#253040]'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                    isPublic ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm text-gray-300">Hide NSFW from public profile</label>
+                <p className="text-xs text-gray-600">NSFW anime will never appear on your public profile</p>
+              </div>
+              <button
+                onClick={() => setHideNsfwPublic(!hideNsfwPublic)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  hideNsfwPublic ? 'bg-teal-600' : 'bg-[#253040]'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                    hideNsfwPublic ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            {isPublic && username && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-teal-600/10 border border-teal-500/20 rounded-lg">
+                <span className="text-xs text-teal-400 truncate flex-1">
+                  animetracker.lol/u/{username}
+                </span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://animetracker.lol/u/${username}`);
+                    setToast('Link copied!');
+                  }}
+                  className="text-xs text-teal-300 hover:text-teal-200 font-medium shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={saveProfile}
+              disabled={savingProfile || (!username && isPublic)}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+            >
+              {savingProfile ? 'Saving...' : 'Save Profile'}
+            </button>
+
+            {!username && isPublic && (
+              <p className="text-xs text-yellow-400">Set a username to make your profile public</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
