@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
   const referer = req.nextUrl.searchParams.get('referer');
@@ -14,7 +16,7 @@ export async function GET(req: NextRequest) {
     };
     if (referer) headers['Referer'] = referer;
 
-    const upstream = await fetch(url, { headers });
+    const upstream = await fetch(url, { headers, cache: 'no-store' });
 
     if (!upstream.ok) {
       return new NextResponse(`Upstream error: ${upstream.status}`, { status: upstream.status });
@@ -27,7 +29,7 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=300',
+        'Cache-Control': 'no-store',
       },
     });
   } catch {
