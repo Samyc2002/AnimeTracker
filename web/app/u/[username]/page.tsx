@@ -8,6 +8,7 @@ import { account } from '@/lib/appwrite';
 import { AuthContext } from '@/lib/auth-context';
 import { SfwProvider, useSfw } from '@/lib/sfw-context';
 import NavBar from '@/components/NavBar';
+import SfwToggle from '@/components/SfwToggle';
 import Footer from '@/components/Footer';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
@@ -86,16 +87,7 @@ function GuestNav({ sfwMode, onToggleSfw }: { sfwMode: boolean; onToggleSfw: () 
         Anime Tracker
       </Link>
       <div className="flex items-center gap-3">
-        <button
-          onClick={onToggleSfw}
-          className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-            sfwMode
-              ? 'bg-teal-600/20 text-teal-400 border border-teal-500/30'
-              : 'bg-red-600/20 text-red-400 border border-red-500/30'
-          }`}
-        >
-          {sfwMode ? 'SFW' : 'NSFW'}
-        </button>
+        <SfwToggle sfwMode={sfwMode} onToggle={onToggleSfw} />
         <Link
           href="/login"
           className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
