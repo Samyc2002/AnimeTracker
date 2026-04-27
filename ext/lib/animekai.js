@@ -246,9 +246,11 @@ export async function searchAnime(query) {
 
 export async function getEpisodes(identifier, lang = 'sub') {
   const watchHtml = await fetchPage(`${BASE_URL}/watch/${identifier}`);
-  const aniIdMatch = watchHtml.match(/class="rate-box"[^>]*data-id="([^"]*)"/);
-  if (!aniIdMatch) throw new Error('Could not find ani_id');
-  const aniId = aniIdMatch[1];
+  const syncMatch = watchHtml.match(/<script id="syncData"[^>]*>(.*?)<\/script>/);
+  if (!syncMatch) throw new Error('Could not find syncData');
+  const syncData = JSON.parse(syncMatch[1]);
+  const aniId = syncData.anime_id;
+  if (!aniId) throw new Error('Could not find ani_id');
 
   const token = await generateToken(aniId);
   const epUrl = `${BASE_URL}/ajax/episodes/list?ani_id=${encodeURIComponent(aniId)}&_=${encodeURIComponent(token)}`;
