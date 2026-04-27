@@ -67,9 +67,9 @@ function AnimeGrid({ entries }: { entries: PublicProfileEntry[] }) {
             </div>
             <div className="p-2">
               <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
-              <p className="text-[10px] text-teal-400 mt-0.5">
-                {entry.episodes_watched}/{entry.total_episodes || '?'} watched
-              </p>
+              {entry.total_episodes && (
+                <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>
+              )}
             </div>
           </Link>
         );
@@ -171,9 +171,8 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
           <p className="text-sm text-gray-500 mt-1">Member since {joinedDate}</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
           <StatCard label="Total Anime" value={sfwWatchlist.length} />
-          <StatCard label="Episodes" value={profile.stats.episodes_watched} />
           <StatCard label="Watching" value={tabCounts['Watching'] || 0} />
           <StatCard label="Completed" value={tabCounts['Completed'] || 0} />
           <StatCard label="Planned" value={tabCounts['Planned'] || 0} />

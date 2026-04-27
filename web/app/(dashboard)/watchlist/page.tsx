@@ -3,8 +3,8 @@
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
+import { Query } from 'appwrite';
+import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
@@ -31,12 +31,6 @@ interface WatchlistDoc {
   manual_nsfw?: boolean;
 }
 
-interface WatchedDoc {
-  $id: string;
-  user_id: string;
-  media_id: number;
-  episode_number: number;
-}
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
 const ALL_FILTER = 'All';
@@ -60,7 +54,6 @@ function WatchlistPage() {
   const searchParams = useSearchParams();
   const { sfwMode } = useSfw();
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
-  const [watchedMap, setWatchedMap] = useState<Record<number, WatchedDoc[]>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(() => {
     if (typeof window !== 'undefined') {
@@ -86,20 +79,8 @@ function WatchlistPage() {
         Query.orderDesc('$createdAt'),
       ]);
 
-      const watched = await databases.listDocuments(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.limit(5000),
-      ]);
-
       const docs = watchlist.documents as unknown as WatchlistDoc[];
       setEntries(docs);
-
-      const map: Record<number, WatchedDoc[]> = {};
-      (watched.documents as unknown as WatchedDoc[]).forEach((w) => {
-        if (!map[w.media_id]) map[w.media_id] = [];
-        map[w.media_id].push(w);
-      });
-      setWatchedMap(map);
     } catch {
       // Not authenticated — layout will redirect
     }
@@ -112,12 +93,6 @@ function WatchlistPage() {
 
   async function removeFromWatchlist(entry: WatchlistDoc) {
     await databases.deleteDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id);
-
-    const episodeDocs = watchedMap[entry.media_id] || [];
-    for (const doc of episodeDocs) {
-      await databases.deleteDocument(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, doc.$id);
-    }
-
     loadWatchlist();
   }
 
@@ -219,7 +194,6 @@ function WatchlistPage() {
       ) : viewMode === 'list' ? (
         <div className="space-y-2">
           {filteredEntries.map((entry) => {
-            const episodeDocs = watchedMap[entry.media_id] || [];
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const watchStatus = entry.watch_status || 'Watching';
             return (
@@ -230,7 +204,6 @@ function WatchlistPage() {
                   status={entry.status}
                   episodes={entry.total_episodes}
                   isAdult={entry.is_adult || entry.manual_nsfw}
-                  progress={`${episodeDocs.length}/${entry.total_episodes || '?'} watched`}
                   onClick={() => router.push(`/anime/${entry.media_id}`)}
                   action={
                     <div className="flex items-center gap-1">
@@ -250,7 +223,6 @@ function WatchlistPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {filteredEntries.map((entry) => {
-            const episodeDocs = watchedMap[entry.media_id] || [];
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const watchStatus = entry.watch_status || 'Watching';
             return (
@@ -279,9 +251,9 @@ function WatchlistPage() {
                 </div>
                 <div className="p-2">
                   <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
-                  <p className="text-[10px] text-teal-400 mt-0.5">
-                    {episodeDocs.length}/{entry.total_episodes || '?'} watched
-                  </p>
+                  {entry.total_episodes && (
+                    <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>
+                  )}
                 </div>
               </div>
             );
