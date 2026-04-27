@@ -21,9 +21,15 @@ export default function DevtoolsGuard() {
       }
     }
 
+    function blockInspect(e: MouseEvent) {
+      e.preventDefault();
+    }
+
     document.addEventListener('keydown', blockDevtoolsKeys);
+    document.addEventListener('contextmenu', blockInspect);
     return () => {
       document.removeEventListener('keydown', blockDevtoolsKeys);
+      document.removeEventListener('contextmenu', blockInspect);
     };
   }, []);
 
