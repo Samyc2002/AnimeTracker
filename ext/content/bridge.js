@@ -54,7 +54,7 @@ window.addEventListener('message', (event) => {
 
   try {
     chrome.runtime.sendMessage(
-      { type: 'RESOLVE_STREAM', title, episode, mode },
+      { type: 'RESOLVE_STREAM', title, episode, mode, appOrigin: window.location.origin },
       (response) => {
         if (chrome.runtime.lastError) {
           window.postMessage({

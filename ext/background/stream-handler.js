@@ -1,9 +1,11 @@
-import { getStreamSources } from '../lib/animekai.js';
+import { getStreamSources, setProxyBase } from '../lib/animekai.js';
 
 export function handleStreamMessage(message, _sender, sendResponse) {
   if (message.type !== 'RESOLVE_STREAM') return false;
 
-  const { title, episode, mode } = message;
+  const { title, episode, mode, appOrigin } = message;
+
+  if (appOrigin) setProxyBase(appOrigin);
 
   getStreamSources(title, episode, mode || 'sub')
     .then((sources) => {

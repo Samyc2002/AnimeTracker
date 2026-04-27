@@ -3,10 +3,21 @@ const AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/2010010
 const DECODE_URL = 'https://raw.githubusercontent.com/sdaqo/anipy-cli/refs/heads/key-gen/scripts/decoder/generated/kai.json';
 
 let cachedDecoders = null;
+let proxyBase = 'https://animetracker.lol';
+
+export function setProxyBase(origin) {
+  proxyBase = origin;
+}
+
+function proxyUrl(url, referer) {
+  const params = new URLSearchParams({ url });
+  if (referer) params.set('referer', referer);
+  return `${proxyBase}/api/proxy?${params}`;
+}
 
 async function fetchDecoders() {
   if (cachedDecoders) return cachedDecoders;
-  const res = await fetch(DECODE_URL, { headers: { 'User-Agent': AGENT } });
+  const res = await fetch(proxyUrl(DECODE_URL));
   cachedDecoders = await res.json();
   return cachedDecoders;
 }
@@ -195,17 +206,13 @@ async function decodeResult(data) {
 }
 
 async function fetchPage(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': AGENT, 'Referer': BASE_URL },
-  });
+  const res = await fetch(proxyUrl(url, BASE_URL));
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
   return res.text();
 }
 
 async function fetchJson(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': AGENT, 'Referer': BASE_URL },
-  });
+  const res = await fetch(proxyUrl(url, BASE_URL));
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
   return res.json();
 }
@@ -308,9 +315,7 @@ export async function getStreamSources(title, episode, mode = 'sub') {
         .filter(t => t.kind === 'captions')
         .map(t => ({ url: t.file, lang: t.label, label: t.label }));
 
-      const m3u8Res = await fetch(sourceFile, {
-        headers: { 'User-Agent': AGENT, 'Referer': BASE_URL },
-      });
+      const m3u8Res = await fetch(proxyUrl(sourceFile, BASE_URL));
       if (!m3u8Res.ok) {
         allSources.push({ url: sourceFile, quality: '1080p', subtitles });
         continue;
