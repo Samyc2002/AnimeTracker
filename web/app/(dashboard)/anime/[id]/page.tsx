@@ -220,16 +220,6 @@ export default function AnimeDetailPage() {
           </div>
         )}
 
-        {anime.description && (
-          <div className="mt-6">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Synopsis</h2>
-            <p
-              className="text-sm text-gray-300 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: anime.description.replace(/\n/g, '') }}
-            />
-          </div>
-        )}
-
         {watchUrl && (
           <div className="mt-6">
             <a
@@ -243,6 +233,16 @@ export default function AnimeDetailPage() {
               </svg>
               Watch on AnimeKai
             </a>
+          </div>
+        )}
+
+        {anime.description && (
+          <div className="mt-6">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Synopsis</h2>
+            <p
+              className="text-sm text-gray-300 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: anime.description.replace(/\n/g, '') }}
+            />
           </div>
         )}
 
