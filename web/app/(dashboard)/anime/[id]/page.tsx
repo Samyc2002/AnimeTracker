@@ -8,6 +8,7 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchAnimeDetail, mediaToWatchlistEntry } from '@/lib/anilist';
 import { useAuth } from '@/lib/auth-context';
+import { getWatchUrl } from '@/lib/stream-provider';
 import EpisodeGrid from '@/components/EpisodeGrid';
 import type { AnimeDetail } from '@/lib/types';
 
@@ -44,6 +45,7 @@ export default function AnimeDetailPage() {
   const [inWatchlist, setInWatchlist] = useState(false);
   const [adding, setAdding] = useState(false);
   const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>([]);
+  const [watchUrl, setWatchUrl] = useState<string | null>(null);
 
   const { authed } = useAuth();
   const id = Number(params.id);
@@ -53,6 +55,9 @@ export default function AnimeDetailPage() {
       try {
         const detail = await fetchAnimeDetail(id);
         setAnime(detail);
+
+        const title = detail.title.romaji || detail.title.english || '';
+        getWatchUrl(title).then(url => setWatchUrl(url));
 
         if (authed) {
           const user = await account.get();
@@ -237,6 +242,22 @@ export default function AnimeDetailPage() {
           </div>
         )}
 
+        {watchUrl && (
+          <div className="mt-6">
+            <a
+              href={watchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white text-sm rounded-lg font-medium transition-all"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              Watch on AnimeKai
+            </a>
+          </div>
+        )}
+
         {(() => {
           const epCount = anime.episodes || (anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : 0);
           if (epCount <= 0) return null;
@@ -246,7 +267,6 @@ export default function AnimeDetailPage() {
               <EpisodeGrid
                 totalEpisodes={epCount}
                 watchedEpisodes={watchedEpisodes}
-                linkPrefix={`/anime/${anime.id}/watch`}
               />
             </div>
           );
