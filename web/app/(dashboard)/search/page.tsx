@@ -1,13 +1,13 @@
 'use client';
 
+import { useTitle } from '@/lib/useTitle';
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { searchAnime, fetchRecommendations, mediaToWatchlistEntry } from '@/lib/anilist';
+import { searchAnime, fetchRecommendations } from '@/lib/anilist';
 import SearchBar from '@/components/SearchBar';
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
+import AddToWatchlist from '@/components/AddToWatchlist';
 import Image from 'next/image';
 import { useSfw } from '@/lib/sfw-context';
 import type { AniListMedia } from '@/lib/types';
@@ -64,10 +64,10 @@ function RecommendationGrid({
 }
 
 export default function SearchPage() {
+  useTitle('Search');
   const router = useRouter();
   const { sfwMode } = useSfw();
   const [results, setResults] = useState<AniListMedia[]>([]);
-  const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [trending, setTrending] = useState<AniListMedia[]>([]);
@@ -94,29 +94,11 @@ export default function SearchPage() {
     try {
       const media = await searchAnime(query);
       setResults(media);
-
-      const user = await account.get();
-      const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.select(['media_id']),
-        Query.limit(500),
-      ]);
-      setAddedIds(new Set(existing.documents.map((d) => (d as unknown as { media_id: number }).media_id)));
     } catch {
       setResults([]);
     }
     setLoading(false);
   }, []);
-
-  async function addToWatchlist(media: AniListMedia) {
-    const user = await account.get();
-    const entry = mediaToWatchlistEntry(media);
-    await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
-      ...entry,
-      user_id: user.$id,
-    });
-    setAddedIds((prev) => new Set(prev).add(media.id));
-  }
 
   const showRecommendations = !searched && !loading;
 
@@ -136,7 +118,6 @@ export default function SearchPage() {
       {!loading && searched && results.length > 0 && (
         <div className="space-y-2">
           {results.filter((m) => !sfwMode || !m.isAdult).map((media) => {
-            const inList = addedIds.has(media.id);
             const title = media.title.english || media.title.romaji;
             return (
               <AnimeCard
@@ -152,13 +133,7 @@ export default function SearchPage() {
                     <div className="opacity-0 group-hover/card:opacity-100 transition-opacity">
                       <AddToPlaylist mediaId={media.id} />
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); addToWatchlist(media); }}
-                      disabled={inList}
-                      className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50"
-                    >
-                      {inList ? 'Added' : '+ Add'}
-                    </button>
+                    <AddToWatchlist media={media} />
                   </div>
                 }
               />

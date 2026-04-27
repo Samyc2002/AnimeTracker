@@ -1,5 +1,6 @@
 'use client';
 
+import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
@@ -31,6 +32,7 @@ export default function PlaylistsPageGuarded() {
 }
 
 function PlaylistsPage() {
+  useTitle('Playlists');
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);

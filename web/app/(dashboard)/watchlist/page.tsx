@@ -1,7 +1,8 @@
 'use client';
 
+import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import AnimeCard from '@/components/AnimeCard';
@@ -53,12 +54,20 @@ export default function WatchlistPageGuarded() {
 }
 
 function WatchlistPage() {
+  useTitle('Watchlist');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { sfwMode } = useSfw();
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [watchedMap, setWatchedMap] = useState<Record<number, WatchedDoc[]>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(ALL_FILTER);
+  const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('status');
+      if (param && [...WATCH_STATUSES, ALL_FILTER].includes(param)) return param as WatchStatus;
+    }
+    return ALL_FILTER;
+  });
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('watchlist_view') as ViewMode) || 'list';
@@ -177,7 +186,15 @@ function WatchlistPage() {
         {[ALL_FILTER, ...WATCH_STATUSES].map((s) => (
           <button
             key={s}
-            onClick={() => setFilter(s as WatchStatus | typeof ALL_FILTER)}
+            onClick={() => {
+              const newFilter = s as WatchStatus | typeof ALL_FILTER;
+              setFilter(newFilter);
+              const params = new URLSearchParams(window.location.search);
+              if (newFilter === ALL_FILTER) params.delete('status');
+              else params.set('status', newFilter);
+              const qs = params.toString();
+              window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
+            }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === s
                 ? 'bg-teal-600 text-white'

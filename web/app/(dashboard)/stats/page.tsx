@@ -1,5 +1,6 @@
 'use client';
 
+import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
 import RequireAuth from '@/components/RequireAuth';
 
@@ -101,6 +102,7 @@ export default function AdminPageGuarded() {
 }
 
 function AdminPage() {
+  useTitle('Analytics');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

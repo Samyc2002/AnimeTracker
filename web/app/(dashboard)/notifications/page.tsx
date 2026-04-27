@@ -1,5 +1,6 @@
 'use client';
 
+import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Query } from 'appwrite';
@@ -33,6 +34,7 @@ function upgradeImageUrl(url: string): string {
 }
 
 function NotificationsPage() {
+  useTitle('Notifications');
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
   const [loading, setLoading] = useState(true);

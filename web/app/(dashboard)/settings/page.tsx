@@ -1,5 +1,6 @@
 'use client';
 
+import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Query, ID } from 'appwrite';
@@ -19,6 +20,7 @@ export default function SettingsPageGuarded() {
 }
 
 function SettingsPage() {
+  useTitle('Settings');
   const searchParams = useSearchParams();
   const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);

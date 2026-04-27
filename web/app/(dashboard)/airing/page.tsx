@@ -1,5 +1,6 @@
 'use client';
 
+import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Query, ID } from 'appwrite';
@@ -51,6 +52,7 @@ function isToday(date: Date) {
 const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6]; // Mon=0 through Sun=6 (offsets from startOfWeek)
 
 export default function AiringPage() {
+  useTitle('Airing Schedule');
   const router = useRouter();
   const { sfwMode } = useSfw();
   const { authed } = useAuth();
