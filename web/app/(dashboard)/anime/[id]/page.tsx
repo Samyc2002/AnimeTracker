@@ -271,12 +271,12 @@ export default function AnimeDetailPage() {
                   </a>
                 )}
               </div>
-              <p className="text-[10px] text-gray-600 mt-2">
+              <p className="text-xs text-gray-400 mt-2">
                 * Streaming links are sourced from third-party databases and may be outdated or region-restricted. If a link doesn&apos;t work, please search for the title on the platform directly.
               </p>
             </>
           ) : (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-400">
               * We couldn&apos;t find streaming links for this title. Please search for it on your preferred streaming platform.
             </p>
           )}
