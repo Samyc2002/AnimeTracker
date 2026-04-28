@@ -10,6 +10,7 @@ import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
 import { useAuth } from '@/lib/auth-context';
+import { enqueueSnackbar } from 'notistack';
 import type { AiringSchedule } from '@/lib/types';
 
 function getWeekRange(offset: number = 0) {
@@ -125,8 +126,9 @@ export default function AiringPage() {
         user_id: user.$id,
       });
       setTrackedIds((prev) => new Set(prev).add(s.mediaId));
+      enqueueSnackbar('Added to watchlist', { variant: 'success' });
     } catch {
-      // Failed
+      enqueueSnackbar('Failed to add to watchlist', { variant: 'error' });
     }
     setTrackingId(null);
   }

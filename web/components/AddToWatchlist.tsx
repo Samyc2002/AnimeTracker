@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ID, Query } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import { mediaToWatchlistEntry } from '@/lib/anilist';
+import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
 
@@ -51,11 +52,13 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         setDocId(doc.$id);
       }
 
+      const wasAdded = added;
       setAdded(true);
       setCurrentStatus(status);
       setShowDropdown(false);
+      enqueueSnackbar(wasAdded ? `Status changed to ${status}` : `Added as ${status}`, { variant: 'success' });
     } catch {
-      // Failed
+      enqueueSnackbar('Failed to update watchlist', { variant: 'error' });
     }
     setUpdating(false);
   }

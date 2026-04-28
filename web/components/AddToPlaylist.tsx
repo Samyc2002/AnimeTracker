@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
+import { enqueueSnackbar } from 'notistack';
 
 interface PlaylistDoc {
   $id: string;
@@ -73,6 +74,10 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
       prev.map((p) =>
         p.$id === playlist.$id ? { ...p, anime_ids: JSON.stringify(updated) } : p
       )
+    );
+    enqueueSnackbar(
+      updated.length > ids.length ? `Added to ${playlist.title}` : `Removed from ${playlist.title}`,
+      { variant: 'success' }
     );
   }
 

@@ -7,6 +7,7 @@ import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID } from '@/lib/appwrite';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { enqueueSnackbar } from 'notistack';
 
 interface NotificationDoc {
   $id: string;
@@ -93,6 +94,7 @@ function NotificationsPage() {
       });
     }
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    enqueueSnackbar('All notifications marked as read', { variant: 'success' });
   }
 
   async function clearAll() {
@@ -100,6 +102,7 @@ function NotificationsPage() {
       await databases.deleteDocument(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, n.$id);
     }
     setNotifications([]);
+    enqueueSnackbar('All notifications cleared', { variant: 'success' });
   }
 
   if (loading) {

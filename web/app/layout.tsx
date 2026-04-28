@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import DevtoolsGuard from "@/components/DevtoolsGuard";
+import SnackbarProvider from "@/components/SnackbarProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -59,8 +60,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#0b0e14] text-gray-200">
-        <DevtoolsGuard />
-        {children}
+        <SnackbarProvider>
+          <DevtoolsGuard />
+          {children}
+        </SnackbarProvider>
       </body>
     </html>
   );

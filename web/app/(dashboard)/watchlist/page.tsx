@@ -8,6 +8,7 @@ import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
+import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import RequireAuth from '@/components/RequireAuth';
 import type { WatchStatus } from '@/lib/types';
@@ -94,6 +95,7 @@ function WatchlistPage() {
 
   async function removeFromWatchlist(entry: WatchlistDoc) {
     await databases.deleteDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id);
+    enqueueSnackbar('Removed from watchlist', { variant: 'success' });
     loadWatchlist();
   }
 
@@ -101,13 +103,16 @@ function WatchlistPage() {
     await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
       watch_status: newStatus,
     });
+    enqueueSnackbar(`Status changed to ${newStatus}`, { variant: 'success' });
     loadWatchlist();
   }
 
   async function toggleManualNsfw(entry: WatchlistDoc) {
+    const next = !entry.manual_nsfw;
     await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
-      manual_nsfw: !entry.manual_nsfw,
+      manual_nsfw: next,
     });
+    enqueueSnackbar(next ? 'Marked as NSFW' : 'Unmarked NSFW', { variant: 'success' });
     loadWatchlist();
   }
 

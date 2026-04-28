@@ -7,6 +7,7 @@ import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/
 import { searchAnime, fetchAnimeDetail } from '@/lib/anilist';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
 
 interface PlaylistDoc {
@@ -76,8 +77,9 @@ function PlaylistsPage() {
       setNewTitle('');
       setNewDescription('');
       loadPlaylists();
+      enqueueSnackbar('Playlist created', { variant: 'success' });
     } catch {
-      // Error creating
+      enqueueSnackbar('Failed to create playlist', { variant: 'error' });
     }
     setCreating(false);
   }
@@ -85,6 +87,7 @@ function PlaylistsPage() {
   async function deletePlaylist(playlist: PlaylistDoc) {
     await databases.deleteDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id);
     setSelectedPlaylist(null);
+    enqueueSnackbar('Playlist deleted', { variant: 'success' });
     loadPlaylists();
   }
 
@@ -92,6 +95,7 @@ function PlaylistsPage() {
     navigator.clipboard.writeText(`${window.location.origin}/playlists/${slug}`);
     setCopiedSlug(slug);
     setTimeout(() => setCopiedSlug(null), 2000);
+    enqueueSnackbar('Link copied!', { variant: 'success' });
   }
 
   if (loading) {
@@ -221,8 +225,9 @@ function PlaylistEditor({
         description: description.trim(),
         anime_ids: JSON.stringify(animeIds),
       });
+      enqueueSnackbar('Playlist saved', { variant: 'success' });
     } catch {
-      // Error saving
+      enqueueSnackbar('Failed to save playlist', { variant: 'error' });
     }
     setSaving(false);
   }
@@ -246,6 +251,7 @@ function PlaylistEditor({
       databases.updateDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id, {
         anime_ids: JSON.stringify(updated),
       });
+      enqueueSnackbar('Added to playlist', { variant: 'success' });
     }
   }
 
@@ -255,6 +261,7 @@ function PlaylistEditor({
     databases.updateDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id, {
       anime_ids: JSON.stringify(updated),
     });
+    enqueueSnackbar('Removed from playlist', { variant: 'success' });
   }
 
   return (

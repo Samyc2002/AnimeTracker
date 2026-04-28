@@ -7,6 +7,7 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anilist';
 import RequireAuth from '@/components/RequireAuth';
+import { enqueueSnackbar } from 'notistack';
 
 interface ProfileDoc {
   $id: string;
@@ -36,7 +37,6 @@ function SettingsPage() {
   const [anilistToken, setAnilistToken] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isPublic, setIsPublic] = useState(false);
@@ -47,20 +47,13 @@ function SettingsPage() {
   useEffect(() => {
     const anilistParam = searchParams.get('anilist');
     if (anilistParam === 'connected') {
-      setToast('AniList account connected successfully!');
+      enqueueSnackbar('AniList account connected successfully!', { variant: 'success' });
       window.history.replaceState({}, '', '/settings');
     } else if (anilistParam === 'error') {
-      setToast('Failed to connect AniList. Please try again.');
+      enqueueSnackbar('Failed to connect AniList. Please try again.', { variant: 'error' });
       window.history.replaceState({}, '', '/settings');
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   useEffect(() => {
     async function load() {
@@ -105,12 +98,13 @@ function SettingsPage() {
       display_language: value,
     });
     setSaving(false);
+    enqueueSnackbar('Language updated', { variant: 'success' });
   }
 
   function connectAniList() {
     const clientId = process.env.NEXT_PUBLIC_ANILIST_CLIENT_ID;
     if (!clientId) {
-      setToast('AniList client ID not configured');
+      enqueueSnackbar('AniList client ID not configured', { variant: 'error' });
       return;
     }
     const redirectUri = `${window.location.origin}/api/auth/anilist/callback`;
@@ -127,7 +121,7 @@ function SettingsPage() {
     setAnilistConnected(false);
     setAnilistUserId(null);
     setAnilistToken(null);
-    setToast('AniList disconnected');
+    enqueueSnackbar('AniList disconnected', { variant: 'success' });
   }
 
   function validateUsername(value: string): string | null {
@@ -169,9 +163,9 @@ function SettingsPage() {
         is_public: isPublic,
         hide_nsfw_public: hideNsfwPublic,
       });
-      setToast('Profile saved!');
+      enqueueSnackbar('Profile saved!', { variant: 'success' });
     } catch (err) {
-      setToast(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      enqueueSnackbar(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`, { variant: 'error' });
     }
     setSavingProfile(false);
   }
@@ -237,6 +231,7 @@ function SettingsPage() {
       }
 
       setImportResult(`Imported ${created} new, updated ${updated} existing anime.`);
+      enqueueSnackbar(`Imported ${created} new, updated ${updated} existing anime`, { variant: 'success' });
     } catch (err) {
       setImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
@@ -246,12 +241,6 @@ function SettingsPage() {
   return (
     <div>
       <h1 className="text-xl font-bold text-gray-200 mb-6">Settings</h1>
-
-      {toast && (
-        <div className="mb-4 px-4 py-2 rounded-lg bg-teal-600/20 border border-teal-500/30 text-teal-300 text-sm">
-          {toast}
-        </div>
-      )}
 
       <div className="space-y-8 max-w-md">
         <div>
@@ -403,7 +392,7 @@ function SettingsPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(`https://animetracker.lol/u/${username}`);
-                    setToast('Link copied!');
+                    enqueueSnackbar('Link copied!', { variant: 'success' });
                   }}
                   className="text-xs text-teal-300 hover:text-teal-200 font-medium shrink-0"
                 >
