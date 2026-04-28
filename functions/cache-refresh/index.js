@@ -133,6 +133,41 @@ module.exports = async ({ req, res, log, error }) => {
       error(`Airing fetch failed: ${err.message}`);
     }
 
+    // Fetch current season anime
+    log('Fetching current season anime...');
+    for (let page = 1; page <= 6; page++) {
+      log(`Fetching season page ${page}...`);
+      try {
+        const seasonData = await jikanFetch(`/seasons/now?page=${page}&limit=25`);
+        for (const item of seasonData.data || []) {
+          try {
+            const existing = await databases.listDocuments(dbId, cacheCol, [
+              Query.equal('mal_id', item.mal_id),
+              Query.limit(1),
+            ]);
+
+            const doc = animeToDoc(item);
+
+            if (existing.documents.length > 0) {
+              await databases.updateDocument(dbId, cacheCol, existing.documents[0].$id, doc);
+              skipped++;
+            } else {
+              await databases.createDocument(dbId, cacheCol, ID.unique(), doc);
+              saved++;
+            }
+          } catch (err) {
+            errors++;
+          }
+        }
+        const hasMore = seasonData.pagination?.has_next_page ?? false;
+        if (!hasMore) break;
+        await delay(1000);
+      } catch (err) {
+        error(`Season page ${page} failed: ${err.message}`);
+        break;
+      }
+    }
+
     log(`Done. Saved: ${saved}, Updated: ${skipped}, Errors: ${errors}`);
     return res.json({ saved, skipped, errors });
   } catch (err) {
