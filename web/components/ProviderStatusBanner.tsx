@@ -31,7 +31,7 @@ export default function ProviderStatusBanner() {
       </p>
       <button
         onClick={() => setDismissed(true)}
-        className="text-amber-400 hover:text-amber-200 flex-shrink-0"
+        className="text-amber-400 hover:text-amber-200 flex-shrink-0 cursor-pointer"
         aria-label="Dismiss"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
