@@ -66,11 +66,18 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
   async function checkIfAdded() {
     try {
       const user = await account.get();
-      const res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+      let res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
         Query.equal('user_id', user.$id),
         Query.equal('media_id', media.id),
         Query.limit(1),
       ]);
+      if (res.documents.length === 0 && media.idMal) {
+        res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+          Query.equal('user_id', user.$id),
+          Query.equal('id_mal', media.idMal),
+          Query.limit(1),
+        ]);
+      }
       if (res.documents.length > 0) {
         setAdded(true);
         setDocId(res.documents[0].$id);
