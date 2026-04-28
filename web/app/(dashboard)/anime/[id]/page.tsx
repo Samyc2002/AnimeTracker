@@ -8,6 +8,7 @@ import { fetchAnimeDetail } from '@/lib/anilist';
 import { useAuth } from '@/lib/auth-context';
 import { getWatchUrl } from '@/lib/stream-provider';
 import AddToWatchlist from '@/components/AddToWatchlist';
+import AddPrequels from '@/components/AddPrequels';
 import type { AnimeDetail } from '@/lib/types';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -142,15 +143,18 @@ export default function AnimeDetailPage() {
             </div>
 
             {authed ? (
-              <AddToWatchlist media={{
-                id: anime.id,
-                idMal: anime.idMal,
-                title: { romaji: anime.title.romaji, english: anime.title.english },
-                coverImage: anime.coverImage,
-                status: anime.status,
-                episodes: anime.episodes,
-                nextAiringEpisode: anime.nextAiringEpisode,
-              }} />
+              <div className="flex items-center gap-2">
+                <AddToWatchlist media={{
+                  id: anime.id,
+                  idMal: anime.idMal,
+                  title: { romaji: anime.title.romaji, english: anime.title.english },
+                  coverImage: anime.coverImage,
+                  status: anime.status,
+                  episodes: anime.episodes,
+                  nextAiringEpisode: anime.nextAiringEpisode,
+                }} />
+                <AddPrequels anime={anime} />
+              </div>
             ) : (
               <Link
                 href="/login"
