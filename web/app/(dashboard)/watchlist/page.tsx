@@ -36,11 +36,12 @@ interface WatchlistDoc {
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
 const ALL_FILTER = 'All';
 
-const statusColors: Record<WatchStatus, string> = {
-  Watching: 'bg-emerald-900/60 text-emerald-300',
-  Planned: 'bg-blue-900/60 text-blue-300',
-  Completed: 'bg-purple-900/60 text-purple-300',
-  Dropped: 'bg-red-900/60 text-red-300',
+const airingStatusLabels: Record<string, { label: string; className: string }> = {
+  RELEASING: { label: 'Airing', className: 'bg-emerald-900/60 text-emerald-300' },
+  FINISHED: { label: 'Finished', className: 'bg-blue-900/60 text-blue-300' },
+  NOT_YET_RELEASED: { label: 'Upcoming', className: 'bg-amber-900/60 text-amber-300' },
+  CANCELLED: { label: 'Cancelled', className: 'bg-red-900/60 text-red-300' },
+  HIATUS: { label: 'Hiatus', className: 'bg-gray-700/60 text-gray-300' },
 };
 
 type ViewMode = 'list' | 'card';
@@ -201,7 +202,7 @@ function WatchlistPage() {
         <div className="space-y-2">
           {filteredEntries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
-            const watchStatus = entry.watch_status || 'Watching';
+            const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
               <div key={entry.$id} className="group/row" onContextMenu={(e) => handleContextMenu(e, entry)}>
                 <AnimeCard
@@ -216,8 +217,8 @@ function WatchlistPage() {
                       <div className="opacity-0 group-hover/row:opacity-100 transition-opacity">
                         <AddToPlaylist mediaId={entry.media_id} />
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${statusColors[watchStatus]}`}>
-                        {watchStatus}
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${airingInfo.className}`}>
+                        {airingInfo.label}
                       </span>
                     </div>
                   }
@@ -230,7 +231,7 @@ function WatchlistPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {filteredEntries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
-            const watchStatus = entry.watch_status || 'Watching';
+            const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
               <div
                 key={entry.$id}
@@ -250,8 +251,8 @@ function WatchlistPage() {
                     <AddToPlaylist mediaId={entry.media_id} />
                   </div>
                   <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${statusColors[watchStatus]}`}>
-                      {watchStatus}
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${airingInfo.className}`}>
+                      {airingInfo.label}
                     </span>
                   </div>
                 </div>
