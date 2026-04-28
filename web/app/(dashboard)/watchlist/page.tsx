@@ -77,6 +77,7 @@ function WatchlistPage() {
       const watchlist = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
         Query.equal('user_id', user.$id),
         Query.orderDesc('$createdAt'),
+        Query.limit(500),
       ]);
 
       const docs = watchlist.documents as unknown as WatchlistDoc[];
