@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "prepare": "cd .. && husky"
   },
   "dependencies": {
     "appwrite": "^24.2.0",
@@ -31,6 +32,7 @@
     "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.0",
     "node-appwrite": "^24.0.0",
     "tailwindcss": "^4",

@@ -1,0 +1,14 @@
+cd web
+
+echo "Running tests with coverage..."
+npx vitest run --coverage 2>&1
+TEST_EXIT=$?
+
+if [ $TEST_EXIT -ne 0 ]; then
+  echo ""
+  echo "❌ Commit blocked: tests failed or coverage below 80%"
+  echo "   Fix the issues above and try again."
+  exit 1
+fi
+
+echo "✅ All tests passed with sufficient coverage."
