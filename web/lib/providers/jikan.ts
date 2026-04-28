@@ -3,9 +3,15 @@ import type { AniListMedia, AnimeDetail, AiringSchedule } from '@/lib/types';
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
 
 let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 333; // ~3 req/sec rate limit
+const MIN_REQUEST_INTERVAL = 1000;
+
+const jikanCache = new Map<string, { data: unknown; ts: number }>();
+const JIKAN_CACHE_TTL = 10 * 60 * 1000;
 
 async function jikanFetch<T>(path: string): Promise<T> {
+  const cached = jikanCache.get(path);
+  if (cached && Date.now() - cached.ts < JIKAN_CACHE_TTL) return cached.data as T;
+
   const now = Date.now();
   const elapsed = now - lastRequestTime;
   if (elapsed < MIN_REQUEST_INTERVAL) {
@@ -14,10 +20,17 @@ async function jikanFetch<T>(path: string): Promise<T> {
   lastRequestTime = Date.now();
 
   const res = await fetch(`${JIKAN_BASE}${path}`);
+  if (res.status === 429) {
+    const retryAfter = parseInt(res.headers.get('Retry-After') || '2');
+    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+    return jikanFetch<T>(path);
+  }
   if (!res.ok) {
     throw new Error(`Jikan API error: ${res.status} ${res.statusText}`);
   }
-  return res.json();
+  const data = await res.json();
+  jikanCache.set(path, { data, ts: Date.now() });
+  return data;
 }
 
 function mapJikanStatus(status: string): AniListMedia['status'] {
