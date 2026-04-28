@@ -99,10 +99,11 @@ describe('mediaToWatchlistEntry', () => {
 });
 
 describe('searchAnime fallback', () => {
-  it('returns cached results if available', async () => {
-    (getCachedSearch as ReturnType<typeof vi.fn>).mockResolvedValueOnce([testMedia]);
+  it('returns cached results if 3 or more available', async () => {
+    const cachedResults = [testMedia, { ...testMedia, id: 2 }, { ...testMedia, id: 3 }];
+    (getCachedSearch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(cachedResults);
     const results = await searchAnime('test');
-    expect(results).toEqual([testMedia]);
+    expect(results).toEqual(cachedResults);
     expect(searchAnilist).not.toHaveBeenCalled();
   });
 
@@ -128,7 +129,7 @@ describe('searchAnime fallback', () => {
     (searchAnilist as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
     (searchJikan as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
     (searchKitsu as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('all down'));
-    await expect(searchAnime('test')).rejects.toThrow('all down');
+    await expect(searchAnime('test')).rejects.toThrow('Search failed across all providers');
   });
 });
 

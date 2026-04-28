@@ -1,0 +1,9 @@
+{
+  "name": "cache-refresh",
+  "version": "1.0.0",
+  "description": "Weekly cron to refresh anime cache from Jikan API",
+  "main": "index.js",
+  "dependencies": {
+    "node-appwrite": "^24.0.0"
+  }
+}

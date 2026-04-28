@@ -31,37 +31,42 @@ async function tryProviders<T>(
 
 export async function searchAnime(search: string): Promise<AniListMedia[]> {
   const cached = await getCachedSearch(search);
-  if (cached.length > 0) return cached;
+  if (cached.length >= 3) return cached;
 
-  const results = await tryProviders(
-    'search',
-    () => searchAnilist(search),
-    () => searchJikan(search),
-    () => searchKitsu(search),
-  );
+  try {
+    const results = await tryProviders(
+      'search',
+      () => searchAnilist(search),
+      () => searchJikan(search),
+      () => searchKitsu(search),
+    );
 
-  const details = results.map(m => ({
-    id: m.id,
-    idMal: m.idMal,
-    title: { romaji: m.title.romaji, english: m.title.english, native: null },
-    coverImage: m.coverImage,
-    bannerImage: null,
-    description: null,
-    status: m.status,
-    episodes: m.episodes,
-    duration: null,
-    season: null,
-    seasonYear: null,
-    genres: [],
-    isAdult: m.isAdult,
-    averageScore: null,
-    studios: { nodes: [] },
-    nextAiringEpisode: m.nextAiringEpisode ? { ...m.nextAiringEpisode, timeUntilAiring: 0 } : null,
-    relations: { edges: [] },
-  } as AnimeDetail));
-  saveMultipleToCache(details).catch(() => {});
+    const details = results.map(m => ({
+      id: m.id,
+      idMal: m.idMal,
+      title: { romaji: m.title.romaji, english: m.title.english, native: null },
+      coverImage: m.coverImage,
+      bannerImage: null,
+      description: null,
+      status: m.status,
+      episodes: m.episodes,
+      duration: null,
+      season: null,
+      seasonYear: null,
+      genres: [],
+      isAdult: m.isAdult,
+      averageScore: null,
+      studios: { nodes: [] },
+      nextAiringEpisode: m.nextAiringEpisode ? { ...m.nextAiringEpisode, timeUntilAiring: 0 } : null,
+      relations: { edges: [] },
+    } as AnimeDetail));
+    saveMultipleToCache(details).catch(() => {});
 
-  return results;
+    return results;
+  } catch {
+    if (cached.length > 0) return cached;
+    throw new Error('Search failed across all providers');
+  }
 }
 
 export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
