@@ -168,7 +168,7 @@ function NotificationsPage() {
               }}
             >
               <Image
-                src={upgradeImageUrl(notif.cover_url) || '/icon-128.png'}
+                src={upgradeImageUrl(notif.cover_url) || '/logo.png'}
                 alt=""
                 width={48}
                 height={68}

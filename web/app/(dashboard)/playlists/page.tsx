@@ -332,7 +332,7 @@ function PlaylistEditor({
               return (
                 <div key={media.id} className="flex items-center gap-3 bg-[#0b0e14] rounded-lg p-2">
                   <Image
-                    src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/icon-128.png'}
+                    src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/logo.png'}
                     alt=""
                     width={36}
                     height={50}

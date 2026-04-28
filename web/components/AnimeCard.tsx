@@ -39,7 +39,7 @@ export default function AnimeCard({
       onClick={onClick}
     >
       <Image
-        src={coverUrl || '/icon-128.png'}
+        src={coverUrl || '/logo.png'}
         alt=""
         width={56}
         height={80}
