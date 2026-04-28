@@ -48,7 +48,7 @@ function mapJikanStatus(status: string): AniListMedia['status'] {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-function buildNextAiring(item: any): AniListMedia['nextAiringEpisode'] {
+function buildNextAiring(item: any): { airingAt: number; episode: number; timeUntilAiring: number } | null {
   if (!item.airing || !item.broadcast?.day || !item.broadcast?.time) return null;
   const airingAt = computeAiringTimestamp(item.broadcast);
   if (!airingAt) return null;
@@ -59,7 +59,7 @@ function buildNextAiring(item: any): AniListMedia['nextAiringEpisode'] {
     const weeksSinceStart = Math.floor((Date.now() - startDate.getTime()) / (7 * 86400000));
     episode = Math.max(1, weeksSinceStart + 1);
   }
-  return { airingAt, episode };
+  return { airingAt, episode, timeUntilAiring: Math.max(0, airingAt - Math.floor(Date.now() / 1000)) };
 }
 
 function mapJikanToMedia(item: any): AniListMedia {
