@@ -2,7 +2,7 @@ import type { AniListMedia, AnimeDetail, AiringSchedule } from '@/lib/types';
 import { searchAnilist, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnilistRecommendations, fetchAnilistViewer, fetchAnilistUserList, fetchAnilistAiringSchedule } from '@/lib/providers/anilist';
 import { searchJikan, fetchJikanDetail, fetchJikanSchedule } from '@/lib/providers/jikan';
 import { searchKitsu, fetchKitsuDetail } from '@/lib/providers/kitsu';
-import { getCachedAnime, getCachedSearch, saveAnimeToCache, saveMultipleToCache } from '@/lib/providers/cache';
+import { getCachedAnime, getCachedSearch, saveAnimeToCache } from '@/lib/providers/cache';
 import { getCachedAiring, saveAiringToCache } from '@/lib/providers/airing-cache';
 
 export type { AniListUserEntry } from '@/lib/providers/anilist';
@@ -40,27 +40,6 @@ export async function searchAnime(search: string): Promise<AniListMedia[]> {
       () => searchJikan(search),
       () => searchKitsu(search),
     );
-
-    const details = results.map(m => ({
-      id: m.id,
-      idMal: m.idMal,
-      title: { romaji: m.title.romaji, english: m.title.english, native: null },
-      coverImage: m.coverImage,
-      bannerImage: null,
-      description: null,
-      status: m.status,
-      episodes: m.episodes,
-      duration: null,
-      season: null,
-      seasonYear: null,
-      genres: [],
-      isAdult: m.isAdult,
-      averageScore: null,
-      studios: { nodes: [] },
-      nextAiringEpisode: m.nextAiringEpisode ? { ...m.nextAiringEpisode, timeUntilAiring: 0 } : null,
-      relations: { edges: [] },
-    } as AnimeDetail));
-    saveMultipleToCache(details).catch(() => {});
 
     return results;
   } catch {
