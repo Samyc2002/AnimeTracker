@@ -172,7 +172,7 @@ function WatchlistPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {[ALL_FILTER, ...WATCH_STATUSES].map((s) => (
           <button
             key={s}

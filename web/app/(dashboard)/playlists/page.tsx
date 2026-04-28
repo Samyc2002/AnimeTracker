@@ -306,7 +306,7 @@ function PlaylistEditor({
 
       <div className="mt-6">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Add Anime</h2>
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <input
             type="text"
             placeholder="Search anime to add..."

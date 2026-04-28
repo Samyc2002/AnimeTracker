@@ -138,13 +138,13 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+      <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
             <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
             Anime Tracker
           </Link>
-          <div className="flex gap-1">
+          <div className="hidden sm:flex gap-1">
             {loggedIn && (
               <>
                 <Link href="/watchlist" className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors">Watchlist</Link>
@@ -203,7 +203,7 @@ export default function LandingPage() {
               {loggedIn ? (
                 <Link
                   href="/watchlist"
-                  className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-lg transition-colors"
+                  className="px-5 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base sm:text-lg transition-colors"
                 >
                   Go to Dashboard
                 </Link>
@@ -211,13 +211,13 @@ export default function LandingPage() {
                 <>
                   <Link
                     href="/signup"
-                    className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-lg transition-colors"
+                    className="px-5 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base sm:text-lg transition-colors"
                   >
                     Get Started
                   </Link>
                   <Link
                     href="/login"
-                    className="px-8 py-3 bg-[#141925] hover:bg-[#1c2333] text-gray-300 rounded-lg font-semibold text-lg border border-[#253040] transition-colors"
+                    className="px-5 sm:px-8 py-2.5 sm:py-3 bg-[#141925] hover:bg-[#1c2333] text-gray-300 rounded-lg font-semibold text-base sm:text-lg border border-[#253040] transition-colors"
                   >
                     Sign In
                   </Link>
@@ -227,7 +227,7 @@ export default function LandingPage() {
                 href="https://chromewebstore.google.com/detail/anime-tracker/biidimfpepakgljgokmoiljgakehbhod"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-8 py-3 bg-[#141925] hover:bg-[#1c2333] text-gray-300 rounded-lg font-semibold text-lg border border-[#253040] transition-colors inline-flex items-center gap-2"
+                className="px-5 sm:px-8 py-2.5 sm:py-3 bg-[#141925] hover:bg-[#1c2333] text-gray-300 rounded-lg font-semibold text-base sm:text-lg border border-[#253040] transition-colors inline-flex items-center gap-2"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -295,14 +295,14 @@ export default function LandingPage() {
             {loggedIn ? (
               <Link
                 href="/watchlist"
-                className="inline-block px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors"
+                className="inline-block px-5 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors"
               >
                 Go to Dashboard
               </Link>
             ) : (
               <Link
                 href="/signup"
-                className="inline-block px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors"
+                className="inline-block px-5 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors"
               >
                 Create Free Account
               </Link>

@@ -171,7 +171,7 @@ export default function AiringPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0 justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-200">Airing Schedule</h1>
         <div className="flex items-center gap-3">
           <button
@@ -200,7 +200,7 @@ export default function AiringPage() {
           <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-2 sm:gap-4">
           {DAYS_OF_WEEK.map((dow) => {
             const dayDate = new Date(startDate);
             dayDate.setDate(startDate.getDate() + dow);

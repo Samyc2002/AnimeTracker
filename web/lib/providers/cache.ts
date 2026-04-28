@@ -144,7 +144,8 @@ export async function getCachedAnime(opts: {
 
     const doc = res.documents[0] as unknown as CacheDoc;
     return { detail: docToDetail(doc), stale: isStale(doc) };
-  } catch {
+  } catch (err) {
+    console.error('[AnimeCache] Read failed:', err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -179,8 +180,8 @@ export async function saveAnimeToCache(anime: AnimeDetail): Promise<void> {
     }
 
     await databases.createDocument(DATABASE_ID, ANIME_CACHE_COLLECTION_ID, ID.unique(), data);
-  } catch {
-    // Cache write failure is non-critical
+  } catch (err) {
+    console.error('[AnimeCache] Write failed:', err instanceof Error ? err.message : err);
   }
 }
 

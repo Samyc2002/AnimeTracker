@@ -27,7 +27,7 @@ function RecommendationGrid({
   return (
     <div className="mb-8">
       <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">{title}</h2>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
         {items.map((media) => {
           const mediaTitle = media.title.english || media.title.romaji;
           return (

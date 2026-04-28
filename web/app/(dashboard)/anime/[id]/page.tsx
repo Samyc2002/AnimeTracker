@@ -105,14 +105,13 @@ export default function AnimeDetailPage() {
         />
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 pt-24">
-        <div className={`flex gap-6 ${anime.bannerImage ? '-mt-20 relative z-10' : 'mt-8'}`}>
-          <div className="flex-shrink-0">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-24">
+        <div className={`flex flex-col items-center sm:flex-row sm:items-start gap-4 sm:gap-6 ${anime.bannerImage ? '-mt-20 relative z-10' : 'mt-8'}`}>
+          <div className="w-[120px] h-[170px] sm:w-[160px] sm:h-[230px] flex-shrink-0 relative">
             <Image
               src={anime.coverImage.extraLarge || anime.coverImage.large || anime.coverImage.medium}
               alt={title}
-              width={160}
-              height={230}
+              fill
               className="rounded-lg shadow-lg object-cover"
               unoptimized
             />
@@ -221,7 +220,7 @@ export default function AnimeDetailPage() {
         {animeRelations.length > 0 && (
           <div className="mt-8 mb-8">
             <h2 className="text-sm font-semibold text-gray-400 uppercase mb-3">Related Anime</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
               {animeRelations.map((edge) => {
                 const rel = edge.node;
                 const relTitle = rel.title.english || rel.title.romaji;

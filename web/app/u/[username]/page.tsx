@@ -82,7 +82,7 @@ function AnimeGrid({ entries }: { entries: PublicProfileEntry[] }) {
 
 function GuestNav({ sfwMode, onToggleSfw }: { sfwMode: boolean; onToggleSfw: () => void }) {
   return (
-    <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       <Link href="/" className="flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
         <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
         Anime Tracker
@@ -156,7 +156,7 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
     <div className="min-h-screen bg-[#0b0e14] flex flex-col">
       {authed ? <NavBar /> : <GuestNav sfwMode={sfwMode} onToggleSfw={onToggleSfw!} />}
 
-      <main className="max-w-5xl mx-auto px-6 py-8 flex-1 w-full">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full">
         <div className="text-center mb-8">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white">
             {displayName.charAt(0).toUpperCase()}

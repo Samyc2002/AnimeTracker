@@ -77,7 +77,7 @@ export default function PublicPlaylistPage() {
 
   return (
     <div className="min-h-screen bg-[#0b0e14]">
-      <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+      <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
           <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
           Anime Tracker
@@ -90,7 +90,7 @@ export default function PublicPlaylistPage() {
         </Link>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-100 mb-2">{playlist.title}</h1>
           {playlist.description && (
