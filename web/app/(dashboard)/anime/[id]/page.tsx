@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchAnimeDetail, mediaToWatchlistEntry } from '@/lib/anilist';
+import { fetchAnimeDetail } from '@/lib/anilist';
 import { useAuth } from '@/lib/auth-context';
 import { getWatchUrl } from '@/lib/stream-provider';
+import AddToWatchlist from '@/components/AddToWatchlist';
 import type { AnimeDetail } from '@/lib/types';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -41,8 +40,6 @@ export default function AnimeDetailPage() {
   const router = useRouter();
   const [anime, setAnime] = useState<AnimeDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [inWatchlist, setInWatchlist] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [watchUrl, setWatchUrl] = useState<string | null>(null);
 
   const { authed } = useAuth();
@@ -56,48 +53,13 @@ export default function AnimeDetailPage() {
 
         const title = detail.title.romaji || detail.title.english || '';
         getWatchUrl(title).then(url => setWatchUrl(url));
-
-        if (authed) {
-          const user = await account.get();
-          const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-            Query.equal('user_id', user.$id),
-            Query.equal('media_id', id),
-            Query.limit(1),
-          ]);
-          setInWatchlist(existing.documents.length > 0);
-        }
       } catch {
         setAnime(null);
       }
       setLoading(false);
     }
     load();
-  }, [id, authed]);
-
-  async function handleAdd() {
-    if (!anime || adding) return;
-    setAdding(true);
-    try {
-      const user = await account.get();
-      const entry = mediaToWatchlistEntry({
-        id: anime.id,
-        idMal: anime.idMal,
-        title: { romaji: anime.title.romaji, english: anime.title.english },
-        coverImage: anime.coverImage,
-        status: anime.status,
-        episodes: anime.episodes,
-        nextAiringEpisode: anime.nextAiringEpisode,
-      });
-      await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
-        ...entry,
-        user_id: user.$id,
-      });
-      setInWatchlist(true);
-    } catch {
-      // Failed to add
-    }
-    setAdding(false);
-  }
+  }, [id]);
 
   useEffect(() => {
     const layoutEl = document.querySelector('[data-dashboard-layout]') as HTMLElement | null;
@@ -180,13 +142,15 @@ export default function AnimeDetailPage() {
             </div>
 
             {authed ? (
-              <button
-                onClick={handleAdd}
-                disabled={inWatchlist || adding}
-                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
-              >
-                {inWatchlist ? 'In Watchlist' : adding ? 'Adding...' : '+ Add to Watchlist'}
-              </button>
+              <AddToWatchlist media={{
+                id: anime.id,
+                idMal: anime.idMal,
+                title: { romaji: anime.title.romaji, english: anime.title.english },
+                coverImage: anime.coverImage,
+                status: anime.status,
+                episodes: anime.episodes,
+                nextAiringEpisode: anime.nextAiringEpisode,
+              }} />
             ) : (
               <Link
                 href="/login"
