@@ -200,7 +200,8 @@ export default function AiringPage() {
           <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-2 sm:gap-4">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-[calc((100vw-64rem)/2+1.5rem)] px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-2 sm:gap-4 max-w-[90rem] mx-auto">
           {DAYS_OF_WEEK.map((dow) => {
             const dayDate = new Date(startDate);
             dayDate.setDate(startDate.getDate() + dow);
@@ -287,6 +288,7 @@ export default function AiringPage() {
               </div>
             );
           })}
+        </div>
         </div>
       )}
     </div>
