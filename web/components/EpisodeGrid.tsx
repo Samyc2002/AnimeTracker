@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 
 interface EpisodeGridProps {
   totalEpisodes: number;
@@ -19,6 +21,8 @@ export default function EpisodeGrid({
   currentEpisode,
   availableUpTo,
 }: EpisodeGridProps) {
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1.5">
       {Array.from({ length: totalEpisodes }, (_, i) => i + 1).map((ep) => {
@@ -42,7 +46,7 @@ export default function EpisodeGrid({
           isCurrent
             ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
             : isWatched
-              ? 'bg-teal-600 text-white hover:bg-teal-700'
+              ? `${theme.btn} text-white`
               : 'bg-[#1e2736] text-gray-500 hover:bg-[#2a3a4d]'
         }`;
 

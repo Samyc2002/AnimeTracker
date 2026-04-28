@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
 import { enqueueSnackbar } from 'notistack';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 
 interface PlaylistDoc {
   $id: string;
@@ -12,6 +14,8 @@ interface PlaylistDoc {
 }
 
 export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [open, setOpen] = useState(false);
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -86,7 +90,7 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
       <button
         ref={btnRef}
         onClick={(e) => { e.stopPropagation(); updatePos(); setOpen(!open); }}
-        className="p-1.5 rounded bg-teal-900 text-teal-300 hover:bg-teal-800 transition-colors"
+        className={`p-1.5 rounded bg-${theme.accent}-900 text-${theme.accent}-300 hover:bg-${theme.accent}-800 transition-colors`}
         title="Add to playlist"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -110,7 +114,7 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
 
           {!loaded ? (
             <div className="p-3 text-center">
-              <div className="w-4 h-4 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin mx-auto" />
+              <div className={`w-4 h-4 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin mx-auto`} />
             </div>
           ) : playlists.length === 0 ? (
             <div className="p-3">
@@ -128,7 +132,7 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
                     className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#1c2333] transition-colors"
                   >
                     <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                      isIn ? 'bg-teal-600 border-teal-600' : 'border-[#253040]'
+                      isIn ? `${theme.activeTab} border-${theme.accent}-600` : 'border-[#253040]'
                     }`}>
                       {isIn && (
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

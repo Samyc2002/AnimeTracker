@@ -7,6 +7,8 @@ import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/
 import { searchAnime, fetchAnimeDetail } from '@/lib/anime-provider';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
 
@@ -34,6 +36,8 @@ export default function PlaylistsPageGuarded() {
 
 function PlaylistsPage() {
   useTitle('Playlists');
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -123,19 +127,19 @@ function PlaylistsPage() {
           placeholder="Playlist title"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          className="w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm mb-2 outline-none focus:border-teal-500"
+          className={`w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm mb-2 outline-none focus:border-${theme.accent}-500`}
         />
         <input
           type="text"
           placeholder="Description (optional)"
           value={newDescription}
           onChange={(e) => setNewDescription(e.target.value)}
-          className="w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm mb-3 outline-none focus:border-teal-500"
+          className={`w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm mb-3 outline-none focus:border-${theme.accent}-500`}
         />
         <button
           onClick={createPlaylist}
           disabled={!newTitle.trim() || creating}
-          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+          className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
         >
           {creating ? 'Creating...' : 'Create'}
         </button>
@@ -192,6 +196,8 @@ function PlaylistEditor({
   onBack: () => void;
   onDelete: () => void;
 }) {
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [title, setTitle] = useState(playlist.title);
   const [description, setDescription] = useState(playlist.description);
   const [animeIds, setAnimeIds] = useState<number[]>(JSON.parse(playlist.anime_ids || '[]'));
@@ -266,7 +272,7 @@ function PlaylistEditor({
 
   return (
     <div>
-      <button onClick={onBack} className="text-teal-400 text-sm mb-4 hover:text-teal-300">
+      <button onClick={onBack} className={`${theme.link} text-sm mb-4`}>
         &larr; Back to playlists
       </button>
 
@@ -313,12 +319,12 @@ function PlaylistEditor({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm outline-none focus:border-teal-500"
+            className={`flex-1 px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm outline-none focus:border-${theme.accent}-500`}
           />
           <button
             onClick={handleSearch}
             disabled={searching}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+            className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
           >
             {searching ? '...' : 'Search'}
           </button>
@@ -343,7 +349,7 @@ function PlaylistEditor({
                   <button
                     onClick={() => addAnime(media.id)}
                     disabled={inPlaylist}
-                    className="px-2 py-1 text-xs bg-teal-600 hover:bg-teal-700 text-white rounded disabled:opacity-50 transition-colors flex-shrink-0"
+                    className={`px-2 py-1 text-xs ${theme.btn} text-white rounded disabled:opacity-50 transition-colors flex-shrink-0`}
                   >
                     {inPlaylist ? 'Added' : '+ Add'}
                   </button>
@@ -379,7 +385,7 @@ function PlaylistEditor({
                       />
                     ) : (
                       <div className="absolute inset-0 bg-[#1e2736] flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
+                        <div className={`w-4 h-4 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
                       </div>
                     )}
                     <button

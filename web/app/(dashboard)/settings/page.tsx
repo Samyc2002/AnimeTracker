@@ -7,6 +7,8 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anime-provider';
 import RequireAuth from '@/components/RequireAuth';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 
 interface ProfileDoc {
@@ -26,6 +28,8 @@ export default function SettingsPageGuarded() {
 
 function SettingsPage() {
   useTitle('Settings');
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const searchParams = useSearchParams();
   const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);
@@ -270,7 +274,7 @@ function SettingsPage() {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-emerald-400 rounded-full" />
                 <span className="text-sm text-gray-300">
-                  Connected as AniList user <span className="text-teal-400 font-medium">#{anilistUserId}</span>
+                  Connected as AniList user <span className={`${theme.btnText} font-medium`}>#{anilistUserId}</span>
                 </span>
               </div>
 
@@ -278,7 +282,7 @@ function SettingsPage() {
                 <button
                   onClick={importWatchlist}
                   disabled={importing}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+                  className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
                 >
                   {importing ? 'Importing...' : 'Import Watchlist'}
                 </button>
@@ -301,7 +305,7 @@ function SettingsPage() {
               </p>
               <button
                 onClick={connectAniList}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium transition-colors"
+                className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium transition-colors`}
               >
                 Connect AniList
               </button>
@@ -324,7 +328,7 @@ function SettingsPage() {
                 }}
                 placeholder="your-username"
                 maxLength={32}
-                className="w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm placeholder:text-gray-600 focus:border-teal-500/50 focus:outline-none"
+                className={`w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm placeholder:text-gray-600 focus:border-${theme.accent}-500/50 focus:outline-none`}
               />
               {usernameError && (
                 <p className="text-xs text-red-400 mt-1">{usernameError}</p>
@@ -342,7 +346,7 @@ function SettingsPage() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="How you want to be shown"
                 maxLength={64}
-                className="w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm placeholder:text-gray-600 focus:border-teal-500/50 focus:outline-none"
+                className={`w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm placeholder:text-gray-600 focus:border-${theme.accent}-500/50 focus:outline-none`}
               />
             </div>
 
@@ -354,7 +358,7 @@ function SettingsPage() {
               <button
                 onClick={() => setIsPublic(!isPublic)}
                 className={`relative w-11 h-6 rounded-full transition-colors ${
-                  isPublic ? 'bg-teal-600' : 'bg-[#253040]'
+                  isPublic ? theme.activeTab : 'bg-[#253040]'
                 }`}
               >
                 <span
@@ -373,7 +377,7 @@ function SettingsPage() {
               <button
                 onClick={() => setHideNsfwPublic(!hideNsfwPublic)}
                 className={`relative w-11 h-6 rounded-full transition-colors ${
-                  hideNsfwPublic ? 'bg-teal-600' : 'bg-[#253040]'
+                  hideNsfwPublic ? theme.activeTab : 'bg-[#253040]'
                 }`}
               >
                 <span
@@ -385,8 +389,8 @@ function SettingsPage() {
             </div>
 
             {isPublic && username && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-teal-600/10 border border-teal-500/20 rounded-lg">
-                <span className="text-xs text-teal-400 truncate flex-1">
+              <div className={`flex items-center gap-2 px-3 py-2 ${theme.btnBg} border ${theme.btnBorder} rounded-lg`}>
+                <span className={`text-xs ${theme.btnText} truncate flex-1`}>
                   animetracker.lol/u/{username}
                 </span>
                 <button
@@ -394,7 +398,7 @@ function SettingsPage() {
                     navigator.clipboard.writeText(`https://animetracker.lol/u/${username}`);
                     enqueueSnackbar('Link copied!', { variant: 'success' });
                   }}
-                  className="text-xs text-teal-300 hover:text-teal-200 font-medium shrink-0"
+                  className={`text-xs ${theme.link} font-medium shrink-0`}
                 >
                   Copy
                 </button>
@@ -404,7 +408,7 @@ function SettingsPage() {
             <button
               onClick={saveProfile}
               disabled={savingProfile || (!username && isPublic)}
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+              className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
             >
               {savingProfile ? 'Saving...' : 'Save Profile'}
             </button>

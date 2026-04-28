@@ -10,6 +10,7 @@ import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import RequireAuth from '@/components/RequireAuth';
 import type { WatchStatus } from '@/lib/types';
 
@@ -56,6 +57,7 @@ function WatchlistPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(() => {
@@ -154,7 +156,7 @@ function WatchlistPage() {
         <div className="flex gap-1 bg-[#141925] rounded-lg p-0.5 border border-[#253040]">
           <button
             onClick={() => { setViewMode('list'); localStorage.setItem('watchlist_view', 'list'); }}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-teal-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? `${theme.activeTab} text-white` : 'text-gray-500 hover:text-gray-300'}`}
             title="List view"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -163,7 +165,7 @@ function WatchlistPage() {
           </button>
           <button
             onClick={() => { setViewMode('card'); localStorage.setItem('watchlist_view', 'card'); }}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'card' ? 'bg-teal-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`p-1.5 rounded transition-colors ${viewMode === 'card' ? `${theme.activeTab} text-white` : 'text-gray-500 hover:text-gray-300'}`}
             title="Card view"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -188,7 +190,7 @@ function WatchlistPage() {
             }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === s
-                ? 'bg-teal-600 text-white'
+                ? `${theme.activeTab} text-white`
                 : 'bg-[#141925] text-gray-400 hover:text-gray-200'
             }`}
           >
@@ -285,7 +287,7 @@ function WatchlistPage() {
                 key={s}
                 onClick={() => { updateWatchStatus(contextMenu.entry, s); setContextMenu(null); }}
                 className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#1c2333] transition-colors ${
-                  (contextMenu.entry.watch_status || 'Watching') === s ? 'text-teal-400' : 'text-gray-300'
+                  (contextMenu.entry.watch_status || 'Watching') === s ? theme.btnText : 'text-gray-300'
                 }`}
               >
                 {(contextMenu.entry.watch_status || 'Watching') === s ? '● ' : '○ '}{s}

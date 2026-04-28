@@ -5,6 +5,8 @@ import { ID, Query } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
 
@@ -18,6 +20,8 @@ const statusColors: Record<WatchStatus, string> = {
 };
 
 export default function AddToWatchlist({ media }: { media: AniListMedia }) {
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [added, setAdded] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<WatchStatus>('Watching');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -100,7 +104,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         <button
           onClick={() => setShowDropdown(!showDropdown)}
           disabled={updating}
-          className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors"
+          className={`px-3 py-1.5 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
         >
           {updating ? '...' : '+ Add'}
         </button>

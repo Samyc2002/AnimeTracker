@@ -7,6 +7,8 @@ import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID } from '@/lib/appwrite';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 
 interface NotificationDoc {
@@ -37,6 +39,8 @@ function upgradeImageUrl(url: string): string {
 function NotificationsPage() {
   useTitle('Notifications');
   const router = useRouter();
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
@@ -108,7 +112,7 @@ function NotificationsPage() {
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
-        <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
+        <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
       </div>
     );
   }
@@ -121,7 +125,7 @@ function NotificationsPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-gray-200">Notifications</h1>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 bg-teal-600 text-white text-xs font-semibold rounded-full">
+            <span className={`px-2 py-0.5 ${theme.activeTab} text-white text-xs font-semibold rounded-full`}>
               {unreadCount} new
             </span>
           )}
@@ -133,7 +137,7 @@ function NotificationsPage() {
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+              className={`text-xs ${theme.link} transition-colors`}
             >
               Mark all read
             </button>
@@ -160,7 +164,7 @@ function NotificationsPage() {
             <div
               key={notif.$id}
               className={`flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors ${
-                !notif.is_read ? 'border-l-2 border-teal-500' : ''
+                !notif.is_read ? `border-l-2 border-${theme.accent}-500` : ''
               }`}
               onClick={() => {
                 markAsRead(notif);
@@ -185,7 +189,7 @@ function NotificationsPage() {
               </div>
               {!notif.is_read && (
                 <div className="flex items-center">
-                  <span className="w-2 h-2 bg-teal-400 rounded-full" />
+                  <span className={`w-2 h-2 ${theme.pulse} rounded-full`} />
                 </div>
               )}
             </div>

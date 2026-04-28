@@ -1,6 +1,8 @@
 'use client';
 
 import Image from 'next/image';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 
 interface AnimeCardProps {
   title: string;
@@ -31,6 +33,8 @@ export default function AnimeCard({
   onClick,
   isAdult,
 }: AnimeCardProps) {
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const statusInfo = statusLabels[status] || statusLabels.FINISHED;
 
   return (
@@ -55,7 +59,7 @@ export default function AnimeCard({
           </span>
           {episodes && <span className="text-gray-500">{episodes} eps</span>}
         </div>
-        {progress && <p className="text-xs text-teal-400">{progress}</p>}
+        {progress && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
       </div>
       {action && <div className="flex items-center flex-shrink-0">{action}</div>}
     </div>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -8,6 +10,8 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({ onSearch, placeholder = 'Search anime...' }: SearchBarProps) {
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -26,11 +30,11 @@ export default function SearchBar({ onSearch, placeholder = 'Search anime...' }:
           if (e.key === 'Enter' && query.trim()) onSearch(query.trim());
         }}
         placeholder={placeholder}
-        className="flex-1 px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
+        className={`flex-1 px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-${theme.accent}-500 outline-none`}
       />
       <button
         onClick={() => query.trim() && onSearch(query.trim())}
-        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium"
+        className={`px-4 py-2 ${theme.btn} text-white rounded-lg font-medium`}
       >
         Search
       </button>

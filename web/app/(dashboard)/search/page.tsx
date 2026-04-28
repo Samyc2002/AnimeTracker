@@ -11,6 +11,7 @@ import AddToPlaylist from '@/components/AddToPlaylist';
 import AddToWatchlist from '@/components/AddToWatchlist';
 import Image from 'next/image';
 import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import type { AniListMedia } from '@/lib/types';
 
 function RecommendationGrid({
@@ -68,6 +69,7 @@ export default function SearchPage() {
   useTitle('Search');
   const router = useRouter();
   const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -147,7 +149,7 @@ export default function SearchPage() {
       {showRecommendations && (
         recsLoading ? (
           <div className="flex justify-center mt-8">
-            <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
+            <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
           </div>
         ) : (
           <>
