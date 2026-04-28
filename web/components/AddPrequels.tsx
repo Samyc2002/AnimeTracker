@@ -38,6 +38,8 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [adding, setAdding] = useState(false);
   const [hasPrequels, setHasPrequels] = useState<boolean | null>(null);
+  const [allAdded, setAllAdded] = useState(false);
+  const [checking, setChecking] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
   const addingRef = useRef(false);
 
@@ -46,6 +48,34 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
       (e) => e.relationType === 'PREQUEL' && e.node.type === 'ANIME'
     );
     setHasPrequels(has);
+    if (!has) {
+      setChecking(false);
+      return;
+    }
+
+    async function checkPrequels() {
+      try {
+        const user = await account.get();
+        const prequels = await collectPrequels(anime.id);
+        if (prequels.length === 0) {
+          setAllAdded(true);
+          setChecking(false);
+          return;
+        }
+        const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+          Query.equal('user_id', user.$id),
+          Query.limit(500),
+        ]);
+        const existingIds = new Set(
+          existing.documents.map((d) => (d as unknown as { media_id: number }).media_id)
+        );
+        setAllAdded(prequels.every((p) => existingIds.has(p.id)));
+      } catch {
+        // Can't check — leave enabled
+      }
+      setChecking(false);
+    }
+    checkPrequels();
   }, [anime]);
 
   useEffect(() => {
@@ -133,9 +163,8 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
 
       if (added > 0) {
         enqueueSnackbar(`Added ${added} prequel${added > 1 ? 's' : ''} as ${status}`, { variant: 'success' });
-      } else {
-        enqueueSnackbar('All prequels already in watchlist', { variant: 'info' });
       }
+      setAllAdded(true);
     } catch {
       enqueueSnackbar('Failed to add prequels', { variant: 'error' });
     }
@@ -146,11 +175,11 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
   return (
     <div ref={ref} className="relative inline-block">
       <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        disabled={adding}
+        onClick={() => !allAdded && setShowDropdown(!showDropdown)}
+        disabled={adding || allAdded || checking}
         className="px-3 py-1.5 bg-[#141925] border border-[#253040] text-sm rounded-lg font-medium text-gray-300 hover:bg-[#1c2333] transition-colors disabled:opacity-50"
       >
-        {adding ? 'Adding...' : '+ Add Prequels'}
+        {checking ? '...' : adding ? 'Adding...' : allAdded ? 'Prequels Added' : '+ Add Prequels'}
       </button>
       {showDropdown && (
         <div className="absolute left-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden">
