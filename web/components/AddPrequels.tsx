@@ -71,10 +71,13 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
           Query.equal('user_id', user.$id),
           Query.limit(500),
         ]);
-        const existingIds = new Set(
-          existing.documents.map((d) => (d as unknown as { media_id: number }).media_id)
-        );
-        setAllAdded(prequels.every((p) => existingIds.has(p.id)));
+        const existingIds = new Set<number>();
+        for (const d of existing.documents) {
+          const doc = d as unknown as { media_id: number; id_mal: number | null };
+          existingIds.add(doc.media_id);
+          if (doc.id_mal) existingIds.add(doc.id_mal);
+        }
+        setAllAdded(prequels.every((p) => existingIds.has(p.id) || (p.idMal && existingIds.has(p.idMal))));
       } catch {
         // Can't check — leave enabled
       }
@@ -142,13 +145,16 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
         Query.equal('user_id', user.$id),
         Query.limit(500),
       ]);
-      const existingIds = new Set(
-        existing.documents.map((d) => (d as unknown as { media_id: number }).media_id)
-      );
+      const existingIds = new Set<number>();
+      for (const d of existing.documents) {
+        const doc = d as unknown as { media_id: number; id_mal: number | null };
+        existingIds.add(doc.media_id);
+        if (doc.id_mal) existingIds.add(doc.id_mal);
+      }
 
       let added = 0;
       for (const prequel of prequels) {
-        if (existingIds.has(prequel.id)) continue;
+        if (existingIds.has(prequel.id) || (prequel.idMal && existingIds.has(prequel.idMal))) continue;
         const entry = mediaToWatchlistEntry({
           id: prequel.id,
           idMal: prequel.idMal,
