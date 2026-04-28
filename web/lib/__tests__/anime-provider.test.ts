@@ -149,10 +149,11 @@ describe('fetchAnimeDetail fallback', () => {
     relations: { edges: [] },
   };
 
-  it('returns cached detail if not stale', async () => {
+  it('returns cached detail if not stale and complete', async () => {
     (getCachedAnime as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       detail: testDetail,
       stale: false,
+      complete: true,
     });
     const result = await fetchAnimeDetail(1);
     expect(result).toEqual(testDetail);

@@ -50,7 +50,7 @@ export async function searchAnime(search: string): Promise<AniListMedia[]> {
 
 export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
   const cached = await getCachedAnime({ anilistId: id }) || await getCachedAnime({ malId: id });
-  if (cached && !cached.stale) return cached.detail;
+  if (cached && !cached.stale && cached.complete) return cached.detail;
 
   const detail = await tryProviders(
     'detail',

@@ -125,7 +125,7 @@ export async function getCachedAnime(opts: {
   anilistId?: number;
   malId?: number;
   title?: string;
-}): Promise<{ detail: AnimeDetail; stale: boolean } | null> {
+}): Promise<{ detail: AnimeDetail; stale: boolean; complete: boolean } | null> {
   try {
     const queries = [];
     if (opts.anilistId) {
@@ -143,7 +143,7 @@ export async function getCachedAnime(opts: {
     if (res.documents.length === 0) return null;
 
     const doc = res.documents[0] as unknown as CacheDoc;
-    return { detail: docToDetail(doc), stale: isStale(doc) };
+    return { detail: docToDetail(doc), stale: isStale(doc), complete: doc.relations_json !== null };
   } catch (err) {
     console.error('[AnimeCache] Read failed:', err instanceof Error ? err.message : err);
     return null;
