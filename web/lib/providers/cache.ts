@@ -118,7 +118,9 @@ function detailToDoc(anime: AnimeDetail): Record<string, unknown> {
 }
 
 function isStale(doc: CacheDoc): boolean {
-  return Date.now() - new Date(doc.updated_at).getTime() > STALE_MS;
+  if (Date.now() - new Date(doc.updated_at).getTime() > STALE_MS) return true;
+  if (!doc.description && !doc.relations_json) return true;
+  return false;
 }
 
 export async function getCachedAnime(opts: {
