@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ID, Query } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { mediaToWatchlistEntry } from '@/lib/anilist';
+import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anilist';
 import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
@@ -57,8 +57,8 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
       setCurrentStatus(status);
       setShowDropdown(false);
       enqueueSnackbar(wasAdded ? `Status changed to ${status}` : `Added as ${status}`, { variant: 'success' });
-    } catch {
-      enqueueSnackbar('Failed to update watchlist', { variant: 'error' });
+    } catch (err) {
+      enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
     }
     setUpdating(false);
   }

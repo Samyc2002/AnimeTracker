@@ -1,5 +1,11 @@
 import type { AniListMedia, AiringSchedule, AnimeDetail } from './types';
 
+export function getErrorMessage(err: unknown): string {
+  if (!(err instanceof Error)) return 'Something went wrong';
+  if (err.message.includes('Rate limited')) return 'Too many requests — please wait a moment and try again';
+  return err.message;
+}
+
 const ANILIST_API = 'https://graphql.anilist.co';
 
 const SEARCH_QUERY = `

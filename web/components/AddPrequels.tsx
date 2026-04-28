@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ID, Query } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchAnimeDetail, mediaToWatchlistEntry } from '@/lib/anilist';
+import { fetchAnimeDetail, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anilist';
 import { enqueueSnackbar } from 'notistack';
 import type { AnimeDetail } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
@@ -170,8 +170,8 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
         enqueueSnackbar(`Added ${added} prequel${added > 1 ? 's' : ''} as ${status}`, { variant: 'success' });
       }
       setAllAdded(true);
-    } catch {
-      enqueueSnackbar('Failed to add prequels', { variant: 'error' });
+    } catch (err) {
+      enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
     }
     setAdding(false);
     addingRef.current = false;

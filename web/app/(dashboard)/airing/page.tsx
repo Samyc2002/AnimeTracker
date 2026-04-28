@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchWeeklyAiring, mediaToWatchlistEntry } from '@/lib/anilist';
+import { fetchWeeklyAiring, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anilist';
 import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
@@ -127,8 +127,8 @@ export default function AiringPage() {
       });
       setTrackedIds((prev) => new Set(prev).add(s.mediaId));
       enqueueSnackbar('Added to watchlist', { variant: 'success' });
-    } catch {
-      enqueueSnackbar('Failed to add to watchlist', { variant: 'error' });
+    } catch (err) {
+      enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
     }
     setTrackingId(null);
   }

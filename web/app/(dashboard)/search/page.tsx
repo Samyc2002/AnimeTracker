@@ -3,7 +3,8 @@
 import { useTitle } from '@/lib/useTitle';
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { searchAnime, fetchRecommendations } from '@/lib/anilist';
+import { searchAnime, fetchRecommendations, getErrorMessage } from '@/lib/anilist';
+import { enqueueSnackbar } from 'notistack';
 import SearchBar from '@/components/SearchBar';
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
@@ -94,8 +95,9 @@ export default function SearchPage() {
     try {
       const media = await searchAnime(query);
       setResults(media);
-    } catch {
+    } catch (err) {
       setResults([]);
+      enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
     }
     setLoading(false);
   }, []);

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { fetchAnimeDetail } from '@/lib/anilist';
+import { fetchAnimeDetail, getErrorMessage } from '@/lib/anilist';
+import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
 import { getWatchUrl } from '@/lib/stream-provider';
 import AddToWatchlist from '@/components/AddToWatchlist';
@@ -54,8 +55,9 @@ export default function AnimeDetailPage() {
 
         const title = detail.title.romaji || detail.title.english || '';
         getWatchUrl(title).then(url => setWatchUrl(url));
-      } catch {
+      } catch (err) {
         setAnime(null);
+        enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
       }
       setLoading(false);
     }
