@@ -201,7 +201,29 @@ export default function AiringPage() {
         </div>
       ) : (
         <div className="-mx-4 sm:-mx-6 lg:-mx-[calc((100vw-64rem)/2+1.5rem)] px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-2 sm:gap-4 max-w-[90rem] mx-auto">
+        <div className="max-w-[90rem] mx-auto">
+          <div className="hidden lg:grid grid-cols-7 gap-2 sm:gap-4 sticky top-[57px] z-30 bg-[#0b0e14] pb-2 pt-1">
+            {DAYS_OF_WEEK.map((dow) => {
+              const dayDate = new Date(startDate);
+              dayDate.setDate(startDate.getDate() + dow);
+              const { day, date } = formatDayHeader(dayDate);
+              const today = isToday(dayDate);
+              return (
+                <div
+                  key={dow}
+                  className={`text-center py-2 rounded-lg ${
+                    today
+                      ? 'bg-teal-600/20 border border-teal-500/40'
+                      : 'bg-[#141925]'
+                  }`}
+                >
+                  <div className={`text-sm font-semibold ${today ? 'text-teal-400' : 'text-gray-300'}`}>{day}</div>
+                  <div className="text-xs text-gray-500">{date}</div>
+                </div>
+              );
+            })}
+          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-2 sm:gap-4">
           {DAYS_OF_WEEK.map((dow) => {
             const dayDate = new Date(startDate);
             dayDate.setDate(startDate.getDate() + dow);
@@ -212,7 +234,7 @@ export default function AiringPage() {
             return (
               <div key={dow} className="min-w-0">
                 <div
-                  className={`text-center py-2 mb-3 rounded-lg ${
+                  className={`text-center py-2 mb-3 rounded-lg lg:hidden ${
                     today
                       ? 'bg-teal-600/20 border border-teal-500/40'
                       : 'bg-[#141925]'
@@ -288,6 +310,7 @@ export default function AiringPage() {
               </div>
             );
           })}
+        </div>
         </div>
         </div>
       )}
