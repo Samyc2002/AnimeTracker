@@ -238,40 +238,49 @@ export default function AnimeDetailPage() {
           </div>
         )}
 
-        {(watchUrl || streamingLinks.length > 0) && (
-          <div className="mt-6">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Watch</h2>
-            <div className="flex flex-wrap gap-2">
-              {streamingLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#141925] border border-[#253040] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg font-medium transition-colors"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  {link.name}
-                </a>
-              ))}
-              {watchUrl && (
-                <a
-                  href={watchUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white text-sm rounded-lg font-medium transition-all"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  AnimeKai
-                </a>
-              )}
-            </div>
-          </div>
-        )}
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Watch</h2>
+          {(watchUrl || streamingLinks.length > 0) ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {streamingLinks.map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#141925] border border-[#253040] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg font-medium transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    {link.name}
+                  </a>
+                ))}
+                {watchUrl && (
+                  <a
+                    href={watchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white text-sm rounded-lg font-medium transition-all"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    AnimeKai
+                  </a>
+                )}
+              </div>
+              <p className="text-[10px] text-gray-600 mt-2">
+                * Streaming links are sourced from third-party databases and may be outdated or region-restricted. If a link doesn&apos;t work, please search for the title on the platform directly.
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-gray-500">
+              * We couldn&apos;t find streaming links for this title. Please search for it on your preferred streaming platform.
+            </p>
+          )}
+        </div>
 
         {anime.description && (
           <div className="mt-6">
