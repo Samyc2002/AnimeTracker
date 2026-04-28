@@ -190,15 +190,29 @@ function computeAiringTimestamp(broadcast: { day?: string; time?: string; timezo
 
 export async function fetchJikanSchedule(dayOfWeek?: string): Promise<AiringSchedule[]> {
   try {
-    const filter = dayOfWeek ? `?filter=${dayOfWeek.toLowerCase()}` : '';
-    const data = await jikanFetch<{ data: any[] }>(`/schedules${filter}`);
+    const allItems: AiringSchedule[] = [];
+    let page = 1;
+    let hasMore = true;
 
-    return (data.data ?? []).map((item: any) => ({
-      mediaId: item.mal_id,
-      episode: item.episodes ?? 0,
-      airingAt: computeAiringTimestamp(item.broadcast),
-      media: mapJikanToMedia(item),
-    }));
+    while (hasMore && page <= 10) {
+      const filter = dayOfWeek ? `filter=${dayOfWeek.toLowerCase()}&` : '';
+      const data = await jikanFetch<{
+        data: any[];
+        pagination: { has_next_page: boolean };
+      }>(`/schedules?${filter}page=${page}&limit=25`);
+
+      const items = (data.data ?? []).map((item: any) => ({
+        mediaId: item.mal_id,
+        episode: item.episodes ?? 0,
+        airingAt: computeAiringTimestamp(item.broadcast),
+        media: mapJikanToMedia(item),
+      }));
+      allItems.push(...items);
+      hasMore = data.pagination?.has_next_page ?? false;
+      page++;
+    }
+
+    return allItems;
   } catch (err) {
     throw new Error(`Jikan schedule fetch failed: ${err instanceof Error ? err.message : String(err)}`);
   }
