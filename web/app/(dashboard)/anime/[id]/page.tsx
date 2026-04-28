@@ -44,6 +44,7 @@ export default function AnimeDetailPage() {
   const [anime, setAnime] = useState<AnimeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [watchUrl, setWatchUrl] = useState<string | null>(null);
+  const [streamingLinks, setStreamingLinks] = useState<{ name: string; url: string }[]>([]);
 
   const { authed } = useAuth();
   const id = Number(params.id);
@@ -56,6 +57,12 @@ export default function AnimeDetailPage() {
 
         const title = detail.title.romaji || detail.title.english || '';
         getWatchUrl(title).then(url => setWatchUrl(url));
+
+        const malId = detail.idMal || id;
+        fetch(`https://api.jikan.moe/v4/anime/${malId}/streaming`)
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d?.data) setStreamingLinks(d.data); })
+          .catch(() => {});
       } catch (err) {
         setAnime(null);
         enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
@@ -231,19 +238,38 @@ export default function AnimeDetailPage() {
           </div>
         )}
 
-        {watchUrl && (
+        {(watchUrl || streamingLinks.length > 0) && (
           <div className="mt-6">
-            <a
-              href={watchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white text-sm rounded-lg font-medium transition-all"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              Watch on AnimeKai
-            </a>
+            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Watch</h2>
+            <div className="flex flex-wrap gap-2">
+              {streamingLinks.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#141925] border border-[#253040] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg font-medium transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  {link.name}
+                </a>
+              ))}
+              {watchUrl && (
+                <a
+                  href={watchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white text-sm rounded-lg font-medium transition-all"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  AnimeKai
+                </a>
+              )}
+            </div>
           </div>
         )}
 
