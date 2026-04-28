@@ -5,8 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchAnimeDetail, getErrorMessage } from '@/lib/anime-provider';
-import { getCachedAnime, saveAnimeToCache } from '@/lib/providers/cache';
-import { fetchJikanDetail } from '@/lib/providers/jikan';
+import { getCachedAnime } from '@/lib/providers/cache';
 import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
 import { getWatchUrl } from '@/lib/stream-provider';
@@ -97,14 +96,11 @@ export default function AnimeDetailPage() {
       }
 
       if (uncachedIds.length > 0) {
-        (async () => {
-          for (const malId of uncachedIds.slice(0, 6)) {
-            try {
-              const detail = await fetchJikanDetail(malId);
-              await saveAnimeToCache(detail);
-            } catch { /* non-critical */ }
-          }
-        })();
+        fetch('/api/cache-relations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ malIds: uncachedIds }),
+        }).catch(() => {});
       }
     }
     enrichRelations();
