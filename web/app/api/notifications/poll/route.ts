@@ -18,12 +18,21 @@ query AiringSchedule($mediaIds: [Int], $from: Int, $to: Int) {
   }
 }`;
 
+const pollCache = new Map<string, number>();
+const POLL_COOLDOWN = 10 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
+
+    const lastPoll = pollCache.get(userId) || 0;
+    if (Date.now() - lastPoll < POLL_COOLDOWN) {
+      return NextResponse.json({ created: 0, cached: true });
+    }
+    pollCache.set(userId, Date.now());
 
     const client = new Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
@@ -58,6 +67,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!anilistRes.ok) {
+      pollCache.delete(userId);
       return NextResponse.json({ error: 'AniList API error' }, { status: 502 });
     }
 
