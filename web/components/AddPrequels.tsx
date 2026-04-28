@@ -39,6 +39,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
   const [adding, setAdding] = useState(false);
   const [hasPrequels, setHasPrequels] = useState<boolean | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const addingRef = useRef(false);
 
   useEffect(() => {
     const has = anime.relations.edges.some(
@@ -55,10 +56,40 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showDropdown]);
 
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (addingRef.current) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
+  useEffect(() => {
+    if (!adding) return;
+    const originalPushState = history.pushState.bind(history);
+    const originalReplaceState = history.replaceState.bind(history);
+
+    history.pushState = function (...args) {
+      if (addingRef.current && !confirm('Prequels are still being added. Leave anyway?')) return;
+      return originalPushState(...args);
+    };
+    history.replaceState = function (...args) {
+      return originalReplaceState(...args);
+    };
+
+    return () => {
+      history.pushState = originalPushState;
+      history.replaceState = originalReplaceState;
+    };
+  }, [adding]);
+
   if (!hasPrequels) return null;
 
   async function handleAdd(status: WatchStatus) {
     setAdding(true);
+    addingRef.current = true;
     setShowDropdown(false);
 
     try {
@@ -68,6 +99,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
       if (prequels.length === 0) {
         enqueueSnackbar('No prequels found', { variant: 'info' });
         setAdding(false);
+        addingRef.current = false;
         return;
       }
 
@@ -108,6 +140,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
       enqueueSnackbar('Failed to add prequels', { variant: 'error' });
     }
     setAdding(false);
+    addingRef.current = false;
   }
 
   return (
