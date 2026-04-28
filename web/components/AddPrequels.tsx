@@ -10,6 +10,10 @@ import type { WatchStatus } from '@/lib/types';
 
 const STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function collectPrequels(animeId: number): Promise<AnimeDetail[]> {
   const prequels: AnimeDetail[] = [];
   const visited = new Set<number>();
@@ -26,6 +30,7 @@ async function collectPrequels(animeId: number): Promise<AnimeDetail[]> {
 
     if (!prequelEdge) break;
 
+    await delay(500);
     const prequelDetail = await fetchAnimeDetail(prequelEdge.node.id);
     prequels.unshift(prequelDetail);
     currentId = prequelEdge.node.id;

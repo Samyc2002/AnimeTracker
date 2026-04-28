@@ -145,25 +145,43 @@ query AnimeDetail($id: Int) {
   }
 }`;
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function gql<T>(query: string, variables: Record<string, unknown> = {}, token?: string): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(ANILIST_API, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ query, variables }),
-  });
+  const maxRetries = 3;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(ANILIST_API, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ query, variables }),
+    });
 
-  if (!res.ok) {
-    throw new Error(`AniList API error: ${res.status}`);
+    if (res.status === 429) {
+      const retryAfter = parseInt(res.headers.get('Retry-After') || '0') || (attempt + 1) * 2;
+      if (attempt < maxRetries) {
+        await delay(retryAfter * 1000);
+        continue;
+      }
+      throw new Error('Rate limited by AniList. Please wait a moment and try again.');
+    }
+
+    if (!res.ok) {
+      throw new Error(`AniList API error: ${res.status}`);
+    }
+
+    const json = await res.json();
+    if (json.errors) {
+      throw new Error(json.errors[0].message);
+    }
+    return json.data;
   }
 
-  const json = await res.json();
-  if (json.errors) {
-    throw new Error(json.errors[0].message);
-  }
-  return json.data;
+  throw new Error('Max retries exceeded');
 }
 
 export async function searchAnime(search: string): Promise<AniListMedia[]> {
@@ -258,8 +276,15 @@ export async function fetchUserList(userId: number, token: string): Promise<AniL
   return entries;
 }
 
+const detailCache = new Map<number, { data: AnimeDetail; ts: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
 export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
+  const cached = detailCache.get(id);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
+
   const data = await gql<{ Media: AnimeDetail }>(ANIME_DETAIL_QUERY, { id });
+  detailCache.set(id, { data: data.Media, ts: Date.now() });
   return data.Media;
 }
 
