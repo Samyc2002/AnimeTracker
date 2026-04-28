@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
 import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import SfwToggle from '@/components/SfwToggle';
 import { useAuth } from '@/lib/auth-context';
 
@@ -26,6 +27,7 @@ export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { sfwMode, setSfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const { authed, loading } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export default function NavBar() {
     <nav ref={mobileMenuRef} className="relative bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       {/* Left side: Logo + desktop nav links */}
       <div className="flex items-center gap-6">
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
+        <Link href="/" className={`flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r ${theme.gradient}`}>
           <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
           Anime Tracker
         </Link>
@@ -113,7 +115,7 @@ export default function NavBar() {
               href={href}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 pathname === href
-                  ? 'bg-teal-600 text-white'
+                  ? `${theme.activeTab} text-white`
                   : 'text-gray-400 hover:text-gray-200 hover:bg-[#1c2333]'
               }`}
             >
@@ -131,7 +133,7 @@ export default function NavBar() {
               href="/notifications"
               className={`relative p-1.5 rounded transition-colors ${
                 pathname === '/notifications'
-                  ? 'bg-teal-600 text-white'
+                  ? `${theme.activeTab} text-white`
                   : 'text-gray-400 hover:text-gray-200 hover:bg-[#1c2333]'
               }`}
             >
@@ -168,7 +170,7 @@ export default function NavBar() {
         ) : (
           <Link
             href="/login"
-            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium transition-colors"
+            className={`px-3 py-1.5 ${theme.btn} text-white text-sm rounded-lg font-medium transition-colors`}
           >
             Sign In
           </Link>
@@ -207,7 +209,7 @@ export default function NavBar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   pathname === href
-                    ? 'bg-teal-600 text-white'
+                    ? `${theme.activeTab} text-white`
                     : 'text-gray-400 hover:text-gray-200 hover:bg-[#1c2333]'
                 }`}
               >
@@ -225,7 +227,7 @@ export default function NavBar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   pathname === '/notifications'
-                    ? 'bg-teal-600 text-white'
+                    ? `${theme.activeTab} text-white`
                     : 'text-gray-400 hover:text-gray-200 hover:bg-[#1c2333]'
                 }`}
               >
@@ -280,7 +282,7 @@ export default function NavBar() {
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-teal-400 hover:text-teal-300 hover:bg-[#1c2333] transition-colors"
+                  className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${theme.link} hover:bg-[#1c2333] transition-colors`}
                 >
                   Sign In
                 </Link>

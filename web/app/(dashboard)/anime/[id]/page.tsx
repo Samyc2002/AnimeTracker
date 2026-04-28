@@ -8,6 +8,8 @@ import { fetchAnimeDetail, getErrorMessage } from '@/lib/anime-provider';
 import { getCachedAnime } from '@/lib/providers/cache';
 import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
+import { useSfw } from '@/lib/sfw-context';
+import { getTheme } from '@/lib/theme';
 import { getWatchUrl } from '@/lib/stream-provider';
 import AddToWatchlist from '@/components/AddToWatchlist';
 import AddPrequels from '@/components/AddPrequels';
@@ -47,6 +49,8 @@ export default function AnimeDetailPage() {
   const [streamingLinks, setStreamingLinks] = useState<{ name: string; url: string }[]>([]);
 
   const { authed } = useAuth();
+  const { sfwMode } = useSfw();
+  const theme = getTheme(sfwMode);
   const id = Number(params.id);
 
   useEffect(() => {
@@ -124,7 +128,7 @@ export default function AnimeDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
-        <div className="w-6 h-6 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
+        <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
       </div>
     );
   }
@@ -208,7 +212,7 @@ export default function AnimeDetailPage() {
             ) : (
               <Link
                 href="/login"
-                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg font-medium transition-colors inline-block"
+                className={`px-5 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium transition-colors inline-block`}
               >
                 Sign in to track
               </Link>
@@ -218,10 +222,10 @@ export default function AnimeDetailPage() {
 
         {anime.nextAiringEpisode && (
           <div className="mt-6 bg-[#141925] rounded-lg p-4 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className={`w-2 h-2 rounded-full ${theme.pulse} animate-pulse`} />
             <span className="text-sm text-gray-300">
               Episode {anime.nextAiringEpisode.episode} airing in{' '}
-              <span className="text-teal-400 font-semibold">
+              <span className={`${theme.btnText} font-semibold`}>
                 {formatCountdown(anime.nextAiringEpisode.timeUntilAiring)}
               </span>
             </span>
@@ -262,7 +266,7 @@ export default function AnimeDetailPage() {
                     href={watchUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white text-sm rounded-lg font-medium transition-all"
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${theme.gradientBold} ${theme.gradientHover} text-white text-sm rounded-lg font-medium transition-all`}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M8 5v14l11-7z" />
