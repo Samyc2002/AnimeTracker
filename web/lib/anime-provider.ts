@@ -3,6 +3,7 @@ import { searchAnilist, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnili
 import { searchJikan, fetchJikanDetail, fetchJikanSchedule } from '@/lib/providers/jikan';
 import { searchKitsu, fetchKitsuDetail } from '@/lib/providers/kitsu';
 import { getCachedAnime, getCachedSearch, saveAnimeToCache, saveMultipleToCache } from '@/lib/providers/cache';
+import { getCachedAiring, saveAiringToCache } from '@/lib/providers/airing-cache';
 
 export type { AniListUserEntry } from '@/lib/providers/anilist';
 export { ANILIST_STATUS_MAP } from '@/lib/providers/anilist';
@@ -95,6 +96,8 @@ export async function fetchAiringSchedule(
 ): Promise<AiringSchedule[]> {
   return fetchAnilistAiringSchedule(mediaIds, fromTimestamp, toTimestamp);
 }
+
+export { getCachedAiring, saveAiringToCache } from '@/lib/providers/airing-cache';
 
 export async function fetchWeeklyAiring(
   fromTimestamp: number,

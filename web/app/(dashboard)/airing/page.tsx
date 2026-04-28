@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchWeeklyAiring, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
+import { fetchWeeklyAiring, getCachedAiring, saveAiringToCache, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
@@ -69,6 +69,16 @@ export default function AiringPage() {
     async function load() {
       setLoading(true);
       const { from, to } = getWeekRange(weekOffset);
+
+      const cached = await getCachedAiring(from);
+      if (cached && !cached.stale) {
+        if (!cancelled) {
+          setSchedules(cached.schedules);
+          setLoading(false);
+        }
+        return;
+      }
+
       const allSchedules: AiringSchedule[] = [];
       let page = 1;
       let hasMore = true;
@@ -82,12 +92,15 @@ export default function AiringPage() {
           page++;
         }
       } catch {
-        // AniList rate limit or network error — show what we have
+        // Rate limit or network error — show what we have
       }
 
       if (!cancelled) {
-        setSchedules(allSchedules);
+        setSchedules(allSchedules.length > 0 ? allSchedules : (cached?.schedules || []));
         setLoading(false);
+        if (allSchedules.length > 0) {
+          saveAiringToCache(from, allSchedules).catch(() => {});
+        }
       }
     }
     load();

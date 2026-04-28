@@ -28,6 +28,11 @@ vi.mock('@/lib/providers/cache', () => ({
   saveMultipleToCache: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('@/lib/providers/airing-cache', () => ({
+  getCachedAiring: vi.fn().mockResolvedValue(null),
+  saveAiringToCache: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { searchAnime, fetchAnimeDetail, getErrorMessage, mediaToWatchlistEntry } from '@/lib/anime-provider';
 import { searchAnilist, fetchAnilistDetail } from '@/lib/providers/anilist';
 import { searchJikan, fetchJikanDetail } from '@/lib/providers/jikan';
