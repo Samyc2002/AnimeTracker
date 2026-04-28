@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { account } from '@/lib/appwrite';
 import NavBar from '@/components/NavBar';
+import ProviderStatusBanner from '@/components/ProviderStatusBanner';
 import Footer from '@/components/Footer';
 import { SfwProvider } from '@/lib/sfw-context';
 import { AuthContext } from '@/lib/auth-context';
@@ -91,6 +92,7 @@ export default function DashboardLayout({
     <AuthContext.Provider value={{ authed, loading }}>
       <SfwProvider>
         <div data-dashboard-layout className="min-h-screen bg-[#0b0e14] flex flex-col">
+          <ProviderStatusBanner />
           <NavBar />
           <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1 w-full">{children}</main>
           <Footer />
