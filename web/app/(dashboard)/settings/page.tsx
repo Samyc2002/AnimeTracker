@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anilist';
+import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anime-provider';
 import RequireAuth from '@/components/RequireAuth';
 import { enqueueSnackbar } from 'notistack';
 

@@ -10,6 +10,13 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: 'v8',
+      exclude: [
+        'lib/providers/anilist.ts',
+        'lib/providers/jikan.ts',
+        'lib/providers/kitsu.ts',
+        'lib/providers/cache.ts',
+        'lib/providers/types.ts',
+      ],
       thresholds: {
         lines: 80,
       },

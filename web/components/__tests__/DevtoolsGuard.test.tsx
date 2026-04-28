@@ -11,7 +11,7 @@ describe('DevtoolsGuard', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    process.env.NODE_ENV = originalNodeEnv;
+    (process.env as Record<string, string>).NODE_ENV = originalNodeEnv;
   });
 
   function setWindowDimensions(
@@ -27,7 +27,7 @@ describe('DevtoolsGuard', () => {
   }
 
   it('returns null in development mode', () => {
-    process.env.NODE_ENV = 'development';
+    (process.env as Record<string, string>).NODE_ENV = 'development';
     setWindowDimensions(1400, 1000, 900, 800);
 
     const { container } = render(<DevtoolsGuard />);
@@ -40,7 +40,7 @@ describe('DevtoolsGuard', () => {
   });
 
   it('returns null when window dimensions are normal', () => {
-    process.env.NODE_ENV = 'production';
+    (process.env as Record<string, string>).NODE_ENV = 'production';
     setWindowDimensions(1024, 1024, 768, 768);
 
     const { container } = render(<DevtoolsGuard />);
@@ -53,7 +53,7 @@ describe('DevtoolsGuard', () => {
   });
 
   it('shows overlay when width gap exceeds threshold', () => {
-    process.env.NODE_ENV = 'production';
+    (process.env as Record<string, string>).NODE_ENV = 'production';
     setWindowDimensions(1400, 1000, 800, 800);
 
     const { getByText } = render(<DevtoolsGuard />);
@@ -66,7 +66,7 @@ describe('DevtoolsGuard', () => {
   });
 
   it('shows overlay when height gap exceeds threshold', () => {
-    process.env.NODE_ENV = 'production';
+    (process.env as Record<string, string>).NODE_ENV = 'production';
     setWindowDimensions(1024, 1024, 1000, 700);
 
     const { getByText } = render(<DevtoolsGuard />);

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { fetchAnimeDetail } from '@/lib/anilist';
+import { fetchAnimeDetail } from '@/lib/anime-provider';
 import Footer from '@/components/Footer';
 import type { AnimeDetail } from '@/lib/types';
 

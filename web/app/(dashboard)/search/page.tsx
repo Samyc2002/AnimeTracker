@@ -3,7 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { searchAnime, fetchRecommendations, getErrorMessage } from '@/lib/anilist';
+import { searchAnime, fetchRecommendations, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
 import SearchBar from '@/components/SearchBar';
 import AnimeCard from '@/components/AnimeCard';

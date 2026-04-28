@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ID, Query } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchAnimeDetail, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anilist';
+import { fetchAnimeDetail, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
 import type { AnimeDetail } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';

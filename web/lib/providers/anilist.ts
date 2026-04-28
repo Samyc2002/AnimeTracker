@@ -1,0 +1,299 @@
+import type { AniListMedia, AiringSchedule, AnimeDetail } from '@/lib/types';
+
+const ANILIST_API = 'https://graphql.anilist.co';
+
+const SEARCH_QUERY = `
+query SearchAnime($search: String) {
+  Page(perPage: 10) {
+    media(search: $search, type: ANIME) {
+      id
+      idMal
+      title { romaji english }
+      coverImage { extraLarge large medium }
+      status
+      episodes
+      nextAiringEpisode {
+        airingAt
+        episode
+      }
+    }
+  }
+}`;
+
+const AIRING_QUERY = `
+query AiringSchedule($mediaIds: [Int], $from: Int, $to: Int) {
+  Page(perPage: 50) {
+    airingSchedules(
+      mediaId_in: $mediaIds,
+      airingAt_greater: $from,
+      airingAt_lesser: $to
+    ) {
+      mediaId
+      episode
+      airingAt
+    }
+  }
+}`;
+
+const WEEKLY_AIRING_QUERY = `
+query WeeklyAiring($from: Int, $to: Int, $page: Int) {
+  Page(page: $page, perPage: 50) {
+    pageInfo {
+      hasNextPage
+    }
+    airingSchedules(airingAt_greater: $from, airingAt_lesser: $to, sort: TIME) {
+      mediaId
+      episode
+      airingAt
+      media {
+        id
+        idMal
+        title { romaji english }
+        coverImage { extraLarge large medium }
+        status
+        episodes
+        isAdult
+      }
+    }
+  }
+}`;
+
+const TRENDING_QUERY = `
+query TrendingAnime {
+  trending: Page(perPage: 10) {
+    media(type: ANIME, sort: TRENDING_DESC) {
+      id
+      idMal
+      title { romaji english }
+      coverImage { extraLarge large medium }
+      status
+      episodes
+      isAdult
+      nextAiringEpisode { airingAt episode }
+    }
+  }
+  popular: Page(perPage: 10) {
+    media(type: ANIME, sort: POPULARITY_DESC, status: RELEASING) {
+      id
+      idMal
+      title { romaji english }
+      coverImage { extraLarge large medium }
+      status
+      episodes
+      isAdult
+      nextAiringEpisode { airingAt episode }
+    }
+  }
+}`;
+
+const VIEWER_QUERY = `query { Viewer { id name } }`;
+
+const USER_LIST_QUERY = `
+query UserList($userId: Int) {
+  MediaListCollection(userId: $userId, type: ANIME, status_in: [CURRENT, PLANNING, COMPLETED, DROPPED, PAUSED]) {
+    lists {
+      entries {
+        progress
+        status
+        media {
+          id
+          idMal
+          title { romaji english }
+          coverImage { extraLarge large medium }
+          status
+          episodes
+          isAdult
+      nextAiringEpisode { airingAt episode }
+        }
+      }
+    }
+  }
+}`;
+
+const ANIME_DETAIL_QUERY = `
+query AnimeDetail($id: Int) {
+  Media(id: $id, type: ANIME) {
+    id
+    idMal
+    title { romaji english native }
+    coverImage { extraLarge large medium }
+    bannerImage
+    description(asHtml: false)
+    status
+    episodes
+    duration
+    season
+    seasonYear
+    genres
+    isAdult
+    averageScore
+    studios(isMain: true) { nodes { name } }
+    nextAiringEpisode { airingAt episode timeUntilAiring }
+    relations {
+      edges {
+        relationType
+        node {
+          id
+          title { romaji english }
+          coverImage { extraLarge large medium }
+          type
+          status
+          isAdult
+        }
+      }
+    }
+  }
+}`;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function gql<T>(query: string, variables: Record<string, unknown> = {}, token?: string): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const maxRetries = 3;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(ANILIST_API, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ query, variables }),
+    });
+
+    if (res.status === 429) {
+      const retryAfter = parseInt(res.headers.get('Retry-After') || '0') || (attempt + 1) * 2;
+      if (attempt < maxRetries) {
+        await delay(retryAfter * 1000);
+        continue;
+      }
+      throw new Error('Rate limited by AniList. Please wait a moment and try again.');
+    }
+
+    if (!res.ok) {
+      throw new Error(`AniList API error: ${res.status}`);
+    }
+
+    const json = await res.json();
+    if (json.errors) {
+      throw new Error(json.errors[0].message);
+    }
+    return json.data;
+  }
+
+  throw new Error('Max retries exceeded');
+}
+
+const queryCache = new Map<string, { data: unknown; ts: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+function cacheKey(label: string, args: unknown): string {
+  return `${label}:${JSON.stringify(args)}`;
+}
+
+async function cachedGql<T>(label: string, args: unknown, query: string, variables: Record<string, unknown> = {}, token?: string): Promise<T> {
+  const key = cacheKey(label, args);
+  const cached = queryCache.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data as T;
+
+  const data = await gql<T>(query, variables, token);
+  queryCache.set(key, { data, ts: Date.now() });
+  return data;
+}
+
+export async function searchAnilist(search: string): Promise<AniListMedia[]> {
+  const data = await cachedGql<{ Page: { media: AniListMedia[] } }>('search', search, SEARCH_QUERY, { search });
+  return data.Page.media;
+}
+
+export async function fetchAnilistAiringSchedule(
+  mediaIds: number[],
+  fromTimestamp: number,
+  toTimestamp: number
+): Promise<AiringSchedule[]> {
+  if (mediaIds.length === 0) return [];
+  const data = await cachedGql<{ Page: { airingSchedules: AiringSchedule[] } }>(
+    'airing', { mediaIds, from: fromTimestamp, to: toTimestamp },
+    AIRING_QUERY, { mediaIds, from: fromTimestamp, to: toTimestamp },
+  );
+  return data.Page.airingSchedules;
+}
+
+export async function fetchAnilistWeeklyAiring(
+  fromTimestamp: number,
+  toTimestamp: number,
+  page: number = 1
+): Promise<{ schedules: AiringSchedule[]; hasNextPage: boolean }> {
+  const data = await cachedGql<{
+    Page: {
+      pageInfo: { hasNextPage: boolean };
+      airingSchedules: AiringSchedule[];
+    };
+  }>('weeklyAiring', { from: fromTimestamp, to: toTimestamp, page },
+    WEEKLY_AIRING_QUERY, { from: fromTimestamp, to: toTimestamp, page });
+  return {
+    schedules: data.Page.airingSchedules,
+    hasNextPage: data.Page.pageInfo.hasNextPage,
+  };
+}
+
+export async function fetchAnilistRecommendations(): Promise<{ trending: AniListMedia[]; popular: AniListMedia[] }> {
+  const data = await cachedGql<{
+    trending: { media: AniListMedia[] };
+    popular: { media: AniListMedia[] };
+  }>('recommendations', null, TRENDING_QUERY);
+  return {
+    trending: data.trending.media,
+    popular: data.popular.media,
+  };
+}
+
+export async function fetchAnilistViewer(token: string): Promise<{ id: number; name: string }> {
+  const data = await gql<{ Viewer: { id: number; name: string } }>(VIEWER_QUERY, {}, token);
+  return data.Viewer;
+}
+
+export const ANILIST_STATUS_MAP: Record<string, string> = {
+  CURRENT: 'Watching',
+  PLANNING: 'Planned',
+  COMPLETED: 'Completed',
+  DROPPED: 'Dropped',
+  PAUSED: 'Dropped',
+};
+
+export interface AniListUserEntry {
+  media: AniListMedia;
+  progress: number;
+  watchStatus: string;
+}
+
+export async function fetchAnilistUserList(userId: number, token: string): Promise<AniListUserEntry[]> {
+  const data = await gql<{
+    MediaListCollection: {
+      lists: {
+        entries: {
+          progress: number;
+          status: string;
+          media: AniListMedia;
+        }[];
+      }[];
+    };
+  }>(USER_LIST_QUERY, { userId }, token);
+
+  const entries: AniListUserEntry[] = [];
+  for (const list of data.MediaListCollection.lists) {
+    for (const entry of list.entries) {
+      entries.push({
+        media: entry.media,
+        progress: entry.progress,
+        watchStatus: ANILIST_STATUS_MAP[entry.status] || 'Watching',
+      });
+    }
+  }
+  return entries;
+}
+
+export async function fetchAnilistDetail(id: number): Promise<AnimeDetail> {
+  const data = await cachedGql<{ Media: AnimeDetail }>('detail', id, ANIME_DETAIL_QUERY, { id });
+  return data.Media;
+}

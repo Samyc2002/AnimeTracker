@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchWeeklyAiring, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anilist';
+import { fetchWeeklyAiring, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';

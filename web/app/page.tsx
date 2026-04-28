@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { account } from '@/lib/appwrite';
-import { fetchRecommendations } from '@/lib/anilist';
+import { fetchRecommendations } from '@/lib/anime-provider';
 import Footer from '@/components/Footer';
 import type { AniListMedia } from '@/lib/types';
 

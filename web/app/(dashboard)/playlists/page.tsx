@@ -4,7 +4,7 @@ import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
-import { searchAnime, fetchAnimeDetail } from '@/lib/anilist';
+import { searchAnime, fetchAnimeDetail } from '@/lib/anime-provider';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import { enqueueSnackbar } from 'notistack';
