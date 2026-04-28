@@ -242,7 +242,7 @@ function WatchlistPage() {
               >
                 <div className="relative w-full aspect-[3/4]">
                   <Image
-                    src={upgradeImageUrl(entry.cover_url) || '/logo.png'}
+                    src={upgradeImageUrl(entry.cover_url) || '/placeholder-cover.svg'}
                     alt={title}
                     fill
                     className="object-cover"

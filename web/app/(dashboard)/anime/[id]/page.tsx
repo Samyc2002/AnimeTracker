@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchAnimeDetail, getErrorMessage } from '@/lib/anime-provider';
-import { getCachedAnime } from '@/lib/providers/cache';
+import { getCachedAnime, saveAnimeToCache } from '@/lib/providers/cache';
+import { fetchJikanDetail } from '@/lib/providers/jikan';
 import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
 import { getWatchUrl } from '@/lib/stream-provider';
@@ -72,24 +73,38 @@ export default function AnimeDetailPage() {
     if (!needsCovers) return;
 
     async function enrichRelations() {
-      let updated = false;
       const newEdges = [...anime!.relations.edges];
+      const uncachedIds: number[] = [];
+      let updated = false;
+
       for (let i = 0; i < newEdges.length; i++) {
         const edge = newEdges[i];
         if (edge.node.type !== 'ANIME') continue;
         const hasImage = [edge.node.coverImage?.extraLarge, edge.node.coverImage?.large, edge.node.coverImage?.medium].some(u => u && u.length > 0);
         if (hasImage) continue;
+
         const cached = await getCachedAnime({ malId: edge.node.id });
         if (cached?.detail?.coverImage) {
-          newEdges[i] = {
-            ...edge,
-            node: { ...edge.node, coverImage: cached.detail.coverImage },
-          };
+          newEdges[i] = { ...edge, node: { ...edge.node, coverImage: cached.detail.coverImage } };
           updated = true;
+        } else {
+          uncachedIds.push(edge.node.id);
         }
       }
+
       if (updated) {
         setAnime(prev => prev ? { ...prev, relations: { edges: newEdges } } : prev);
+      }
+
+      if (uncachedIds.length > 0) {
+        (async () => {
+          for (const malId of uncachedIds.slice(0, 6)) {
+            try {
+              const detail = await fetchJikanDetail(malId);
+              await saveAnimeToCache(detail);
+            } catch { /* non-critical */ }
+          }
+        })();
       }
     }
     enrichRelations();
@@ -263,7 +278,7 @@ export default function AnimeDetailPage() {
                   >
                     <div className="relative w-full aspect-[3/4]">
                       <Image
-                        src={[rel.coverImage?.extraLarge, rel.coverImage?.large, rel.coverImage?.medium].find(u => u && u.length > 0) || '/logo.png'}
+                        src={[rel.coverImage?.extraLarge, rel.coverImage?.large, rel.coverImage?.medium].find(u => u && u.length > 0) || '/placeholder-cover.svg'}
                         alt={relTitle}
                         fill
                         className="object-cover"
