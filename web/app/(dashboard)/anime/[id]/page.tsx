@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchAnimeDetail, getErrorMessage } from '@/lib/anime-provider';
+import { getCachedAnime } from '@/lib/providers/cache';
 import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
 import { getWatchUrl } from '@/lib/stream-provider';
@@ -63,6 +64,36 @@ export default function AnimeDetailPage() {
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (!anime) return;
+    const edges = anime.relations.edges.filter(e => e.node.type === 'ANIME');
+    const needsCovers = edges.some(e => !e.node.coverImage?.extraLarge && !e.node.coverImage?.large && !e.node.coverImage?.medium);
+    if (!needsCovers) return;
+
+    async function enrichRelations() {
+      let updated = false;
+      const newEdges = [...anime!.relations.edges];
+      for (let i = 0; i < newEdges.length; i++) {
+        const edge = newEdges[i];
+        if (edge.node.type !== 'ANIME') continue;
+        const hasImage = [edge.node.coverImage?.extraLarge, edge.node.coverImage?.large, edge.node.coverImage?.medium].some(u => u && u.length > 0);
+        if (hasImage) continue;
+        const cached = await getCachedAnime({ malId: edge.node.id });
+        if (cached?.detail?.coverImage) {
+          newEdges[i] = {
+            ...edge,
+            node: { ...edge.node, coverImage: cached.detail.coverImage },
+          };
+          updated = true;
+        }
+      }
+      if (updated) {
+        setAnime(prev => prev ? { ...prev, relations: { edges: newEdges } } : prev);
+      }
+    }
+    enrichRelations();
+  }, [anime?.id]);
 
   useEffect(() => {
     const layoutEl = document.querySelector('[data-dashboard-layout]') as HTMLElement | null;

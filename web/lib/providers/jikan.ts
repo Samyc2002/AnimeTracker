@@ -129,36 +129,21 @@ export async function fetchJikanDetail(malId: number): Promise<AnimeDetail> {
 
     const relations: AnimeDetail['relations']['edges'] = [];
     if (Array.isArray(item.relations)) {
-      const animeEntries: { relationType: string; mal_id: number; name: string }[] = [];
       for (const rel of item.relations) {
         const relationType = mapJikanRelationType(rel.relation ?? '');
         for (const entry of rel.entry ?? []) {
           if (entry.type !== 'anime') continue;
-          animeEntries.push({ relationType, mal_id: entry.mal_id, name: entry.name ?? '' });
+          relations.push({
+            relationType,
+            node: {
+              id: entry.mal_id,
+              title: { romaji: entry.name ?? '', english: null },
+              coverImage: { extraLarge: '', large: '', medium: '' },
+              type: 'ANIME',
+              status: '',
+            },
+          });
         }
-      }
-
-      for (const entry of animeEntries.slice(0, 6)) {
-        let coverImage = { extraLarge: '', large: '', medium: '' };
-        try {
-          const relData = await jikanFetch<{ data: any }>(`/anime/${entry.mal_id}`);
-          coverImage = {
-            extraLarge: relData.data?.images?.jpg?.large_image_url ?? '',
-            large: relData.data?.images?.jpg?.large_image_url ?? '',
-            medium: relData.data?.images?.jpg?.image_url ?? '',
-          };
-        } catch { /* skip — will show placeholder */ }
-
-        relations.push({
-          relationType: entry.relationType,
-          node: {
-            id: entry.mal_id,
-            title: { romaji: entry.name, english: null },
-            coverImage,
-            type: 'ANIME',
-            status: '',
-          },
-        });
       }
     }
 
