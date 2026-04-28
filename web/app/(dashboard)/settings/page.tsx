@@ -7,7 +7,6 @@ import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anime-provider';
 import RequireAuth from '@/components/RequireAuth';
-import DatabaseSeed from '@/components/DatabaseSeed';
 import { enqueueSnackbar } from 'notistack';
 
 interface ProfileDoc {
@@ -416,7 +415,6 @@ function SettingsPage() {
           </div>
         </div>
 
-        <DatabaseSeed />
       </div>
     </div>
   );
