@@ -73,7 +73,16 @@ export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
     () => fetchAnilistDetail(id),
     async () => {
       const malId = cached?.detail?.idMal || id;
-      return fetchJikanDetail(malId);
+      try {
+        return await fetchJikanDetail(malId);
+      } catch {
+        const title = cached?.detail?.title?.romaji;
+        if (title) {
+          const results = await searchJikan(title);
+          if (results.length > 0) return fetchJikanDetail(results[0].idMal || results[0].id);
+        }
+        throw new Error('Not found on Jikan');
+      }
     },
     async () => {
       const title = cached?.detail?.title?.romaji;

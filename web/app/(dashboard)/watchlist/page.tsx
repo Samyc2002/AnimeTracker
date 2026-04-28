@@ -21,6 +21,7 @@ interface WatchlistDoc {
   $id: string;
   user_id: string;
   media_id: number;
+  id_mal: number | null;
   title_romaji: string;
   title_english: string;
   cover_url: string;
@@ -211,7 +212,7 @@ function WatchlistPage() {
                   status={entry.status}
                   episodes={entry.total_episodes}
                   isAdult={entry.is_adult || entry.manual_nsfw}
-                  onClick={() => router.push(`/anime/${entry.media_id}`)}
+                  onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                   action={
                     <div className="flex items-center gap-1">
                       <div className="opacity-0 group-hover/row:opacity-100 transition-opacity">
@@ -236,7 +237,7 @@ function WatchlistPage() {
               <div
                 key={entry.$id}
                 className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${entry.is_adult || entry.manual_nsfw ? 'border border-red-500/40' : ''}`}
-                onClick={() => router.push(`/anime/${entry.media_id}`)}
+                onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                 onContextMenu={(e) => handleContextMenu(e, entry)}
               >
                 <div className="relative w-full aspect-[3/4]">
