@@ -101,10 +101,16 @@ export default function AiringPage() {
         const user = await account.get();
         const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
           Query.equal('user_id', user.$id),
-          Query.select(['media_id']),
+          Query.select(['media_id', 'id_mal']),
           Query.limit(500),
         ]);
-        setTrackedIds(new Set(existing.documents.map((d) => (d as unknown as { media_id: number }).media_id)));
+        const ids = new Set<number>();
+        for (const d of existing.documents) {
+          const doc = d as unknown as { media_id: number; id_mal: number | null };
+          ids.add(doc.media_id);
+          if (doc.id_mal) ids.add(doc.id_mal);
+        }
+        setTrackedIds(ids);
       } catch {
         // Not logged in or error
       }
