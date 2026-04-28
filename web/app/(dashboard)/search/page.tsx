@@ -81,8 +81,8 @@ export default function SearchPage() {
         const recs = await fetchRecommendations();
         setTrending(recs.trending);
         setPopular(recs.popular);
-      } catch {
-        // Non-critical
+      } catch (err) {
+        enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
       }
       setRecsLoading(false);
     }
