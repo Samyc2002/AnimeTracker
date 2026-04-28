@@ -1,6 +1,6 @@
 import type { AniListMedia, AnimeDetail, AiringSchedule } from '@/lib/types';
 import { searchAnilist, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnilistRecommendations, fetchAnilistViewer, fetchAnilistUserList, fetchAnilistAiringSchedule } from '@/lib/providers/anilist';
-import { searchJikan, fetchJikanDetail } from '@/lib/providers/jikan';
+import { searchJikan, fetchJikanDetail, fetchJikanSchedule } from '@/lib/providers/jikan';
 import { searchKitsu, fetchKitsuDetail } from '@/lib/providers/kitsu';
 import { getCachedAnime, getCachedSearch, saveAnimeToCache, saveMultipleToCache } from '@/lib/providers/cache';
 
@@ -100,7 +100,17 @@ export async function fetchWeeklyAiring(
   toTimestamp: number,
   page: number = 1,
 ): Promise<{ schedules: AiringSchedule[]; hasNextPage: boolean }> {
-  return fetchAnilistWeeklyAiring(fromTimestamp, toTimestamp, page);
+  try {
+    return await fetchAnilistWeeklyAiring(fromTimestamp, toTimestamp, page);
+  } catch {
+    if (page > 1) return { schedules: [], hasNextPage: false };
+    try {
+      const schedules = await fetchJikanSchedule();
+      return { schedules, hasNextPage: false };
+    } catch {
+      return { schedules: [], hasNextPage: false };
+    }
+  }
 }
 
 export async function fetchRecommendations(): Promise<{ trending: AniListMedia[]; popular: AniListMedia[] }> {

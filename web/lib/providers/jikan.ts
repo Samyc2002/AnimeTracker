@@ -161,6 +161,33 @@ export async function fetchJikanDetail(malId: number): Promise<AnimeDetail> {
   }
 }
 
+const DAY_MAP: Record<string, number> = {
+  'Sundays': 0, 'Mondays': 1, 'Tuesdays': 2, 'Wednesdays': 3,
+  'Thursdays': 4, 'Fridays': 5, 'Saturdays': 6,
+};
+
+function computeAiringTimestamp(broadcast: { day?: string; time?: string; timezone?: string } | null): number {
+  if (!broadcast?.day || !broadcast?.time) return 0;
+  const dayNum = DAY_MAP[broadcast.day];
+  if (dayNum === undefined) return 0;
+
+  const [hours, minutes] = broadcast.time.split(':').map(Number);
+  const now = new Date();
+  const currentDay = now.getDay();
+  let diff = dayNum - currentDay;
+  if (diff < 0) diff += 7;
+
+  const airDate = new Date(now);
+  airDate.setDate(now.getDate() + diff);
+  airDate.setHours(hours, minutes, 0, 0);
+
+  const jstOffset = 9 * 60;
+  const localOffset = airDate.getTimezoneOffset();
+  airDate.setMinutes(airDate.getMinutes() - jstOffset - localOffset);
+
+  return Math.floor(airDate.getTime() / 1000);
+}
+
 export async function fetchJikanSchedule(dayOfWeek?: string): Promise<AiringSchedule[]> {
   try {
     const filter = dayOfWeek ? `?filter=${dayOfWeek.toLowerCase()}` : '';
@@ -169,9 +196,7 @@ export async function fetchJikanSchedule(dayOfWeek?: string): Promise<AiringSche
     return (data.data ?? []).map((item: any) => ({
       mediaId: item.mal_id,
       episode: item.episodes ?? 0,
-      airingAt: item.aired?.from
-        ? Math.floor(new Date(item.aired.from).getTime() / 1000)
-        : 0,
+      airingAt: computeAiringTimestamp(item.broadcast),
       media: mapJikanToMedia(item),
     }));
   } catch (err) {
