@@ -48,6 +48,20 @@ function mapJikanStatus(status: string): AniListMedia['status'] {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+function buildNextAiring(item: any): AniListMedia['nextAiringEpisode'] {
+  if (!item.airing || !item.broadcast?.day || !item.broadcast?.time) return null;
+  const airingAt = computeAiringTimestamp(item.broadcast);
+  if (!airingAt) return null;
+  const aired = item.aired?.prop?.from;
+  let episode = 1;
+  if (aired?.year && aired?.month && aired?.day) {
+    const startDate = new Date(aired.year, aired.month - 1, aired.day);
+    const weeksSinceStart = Math.floor((Date.now() - startDate.getTime()) / (7 * 86400000));
+    episode = Math.max(1, weeksSinceStart + 1);
+  }
+  return { airingAt, episode };
+}
+
 function mapJikanToMedia(item: any): AniListMedia {
   return {
     id: item.mal_id,
@@ -64,7 +78,7 @@ function mapJikanToMedia(item: any): AniListMedia {
     status: mapJikanStatus(item.status ?? ''),
     episodes: item.episodes ?? null,
     isAdult: typeof item.rating === 'string' && item.rating.includes('Rx'),
-    nextAiringEpisode: null,
+    nextAiringEpisode: buildNextAiring(item),
   };
 }
 
@@ -166,7 +180,7 @@ export async function fetchJikanDetail(malId: number): Promise<AnimeDetail> {
       studios: {
         nodes: (item.studios ?? []).slice(0, 1).map((s: any) => ({ name: s.name ?? '' })),
       },
-      nextAiringEpisode: null,
+      nextAiringEpisode: buildNextAiring(item),
       relations: { edges: relations },
     };
   } catch (err) {
