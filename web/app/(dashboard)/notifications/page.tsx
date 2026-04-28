@@ -168,7 +168,7 @@ function NotificationsPage() {
               }}
             >
               <Image
-                src={upgradeImageUrl(notif.cover_url) || '/placeholder-cover.svg'}
+                src={upgradeImageUrl(notif.cover_url) || '/placeholder.png'}
                 alt=""
                 width={48}
                 height={68}

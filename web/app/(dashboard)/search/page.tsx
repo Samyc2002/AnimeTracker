@@ -38,7 +38,7 @@ function RecommendationGrid({
             >
               <div className="relative w-full aspect-[3/4]">
                 <Image
-                  src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/placeholder-cover.svg'}
+                  src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/placeholder.png'}
                   alt={mediaTitle}
                   fill
                   className="object-cover"

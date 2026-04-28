@@ -278,7 +278,7 @@ export default function AnimeDetailPage() {
                   >
                     <div className="relative w-full aspect-[3/4]">
                       <Image
-                        src={[rel.coverImage?.extraLarge, rel.coverImage?.large, rel.coverImage?.medium].find(u => u && u.length > 0) || '/placeholder-cover.svg'}
+                        src={[rel.coverImage?.extraLarge, rel.coverImage?.large, rel.coverImage?.medium].find(u => u && u.length > 0) || '/placeholder.png'}
                         alt={relTitle}
                         fill
                         className="object-cover"

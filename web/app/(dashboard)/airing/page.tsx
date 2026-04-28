@@ -241,7 +241,7 @@ export default function AiringPage() {
                         >
                           <div className="relative w-full aspect-[3/4]">
                             <Image
-                              src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/placeholder-cover.svg'}
+                              src={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/placeholder.png'}
                               alt={title}
                               fill
                               className="object-cover"
