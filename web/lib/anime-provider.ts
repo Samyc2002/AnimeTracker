@@ -64,22 +64,23 @@ export async function searchAnime(search: string): Promise<AniListMedia[]> {
 }
 
 export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
-  const cached = await getCachedAnime({ anilistId: id });
+  const cached = await getCachedAnime({ anilistId: id }) || await getCachedAnime({ malId: id });
   if (cached && !cached.stale) return cached.detail;
 
   const detail = await tryProviders(
     'detail',
     () => fetchAnilistDetail(id),
     async () => {
-      if (cached?.detail?.idMal) return fetchJikanDetail(cached.detail.idMal);
-      const searchResults = await searchJikan(cached?.detail?.title?.romaji || String(id));
-      if (searchResults.length === 0) throw new Error('Not found on Jikan');
-      return fetchJikanDetail(searchResults[0].idMal || searchResults[0].id);
+      const malId = cached?.detail?.idMal || id;
+      return fetchJikanDetail(malId);
     },
     async () => {
-      const searchResults = await searchKitsu(cached?.detail?.title?.romaji || String(id));
-      if (searchResults.length === 0) throw new Error('Not found on Kitsu');
-      return fetchKitsuDetail(String(searchResults[0].id));
+      const title = cached?.detail?.title?.romaji;
+      if (title) {
+        const results = await searchKitsu(title);
+        if (results.length > 0) return fetchKitsuDetail(String(results[0].id));
+      }
+      throw new Error('Not found on Kitsu');
     },
   );
 
