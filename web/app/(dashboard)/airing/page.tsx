@@ -135,8 +135,15 @@ export default function AiringPage() {
 
   const { startDate } = getWeekRange(weekOffset);
 
+  const seen = new Set<number>();
+  const deduped = schedules.filter((s) => {
+    if (seen.has(s.mediaId)) return false;
+    seen.add(s.mediaId);
+    return true;
+  });
+
   const grouped = new Map<number, AiringSchedule[]>();
-  for (const s of schedules) {
+  for (const s of deduped) {
     const jsDay = new Date(s.airingAt * 1000).getDay();
     const monBasedDay = jsDay === 0 ? 6 : jsDay - 1;
     if (!grouped.has(monBasedDay)) grouped.set(monBasedDay, []);
