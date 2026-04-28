@@ -190,8 +190,25 @@ async function gql<T>(query: string, variables: Record<string, unknown> = {}, to
   throw new Error('Max retries exceeded');
 }
 
+const queryCache = new Map<string, { data: unknown; ts: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+function cacheKey(label: string, args: unknown): string {
+  return `${label}:${JSON.stringify(args)}`;
+}
+
+async function cachedGql<T>(label: string, args: unknown, query: string, variables: Record<string, unknown> = {}, token?: string): Promise<T> {
+  const key = cacheKey(label, args);
+  const cached = queryCache.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data as T;
+
+  const data = await gql<T>(query, variables, token);
+  queryCache.set(key, { data, ts: Date.now() });
+  return data;
+}
+
 export async function searchAnime(search: string): Promise<AniListMedia[]> {
-  const data = await gql<{ Page: { media: AniListMedia[] } }>(SEARCH_QUERY, { search });
+  const data = await cachedGql<{ Page: { media: AniListMedia[] } }>('search', search, SEARCH_QUERY, { search });
   return data.Page.media;
 }
 
@@ -201,11 +218,10 @@ export async function fetchAiringSchedule(
   toTimestamp: number
 ): Promise<AiringSchedule[]> {
   if (mediaIds.length === 0) return [];
-  const data = await gql<{ Page: { airingSchedules: AiringSchedule[] } }>(AIRING_QUERY, {
-    mediaIds,
-    from: fromTimestamp,
-    to: toTimestamp,
-  });
+  const data = await cachedGql<{ Page: { airingSchedules: AiringSchedule[] } }>(
+    'airing', { mediaIds, from: fromTimestamp, to: toTimestamp },
+    AIRING_QUERY, { mediaIds, from: fromTimestamp, to: toTimestamp },
+  );
   return data.Page.airingSchedules;
 }
 
@@ -214,12 +230,13 @@ export async function fetchWeeklyAiring(
   toTimestamp: number,
   page: number = 1
 ): Promise<{ schedules: AiringSchedule[]; hasNextPage: boolean }> {
-  const data = await gql<{
+  const data = await cachedGql<{
     Page: {
       pageInfo: { hasNextPage: boolean };
       airingSchedules: AiringSchedule[];
     };
-  }>(WEEKLY_AIRING_QUERY, { from: fromTimestamp, to: toTimestamp, page });
+  }>('weeklyAiring', { from: fromTimestamp, to: toTimestamp, page },
+    WEEKLY_AIRING_QUERY, { from: fromTimestamp, to: toTimestamp, page });
   return {
     schedules: data.Page.airingSchedules,
     hasNextPage: data.Page.pageInfo.hasNextPage,
@@ -227,10 +244,10 @@ export async function fetchWeeklyAiring(
 }
 
 export async function fetchRecommendations(): Promise<{ trending: AniListMedia[]; popular: AniListMedia[] }> {
-  const data = await gql<{
+  const data = await cachedGql<{
     trending: { media: AniListMedia[] };
     popular: { media: AniListMedia[] };
-  }>(TRENDING_QUERY);
+  }>('recommendations', null, TRENDING_QUERY);
   return {
     trending: data.trending.media,
     popular: data.popular.media,
@@ -282,15 +299,8 @@ export async function fetchUserList(userId: number, token: string): Promise<AniL
   return entries;
 }
 
-const detailCache = new Map<number, { data: AnimeDetail; ts: number }>();
-const CACHE_TTL = 5 * 60 * 1000;
-
 export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
-  const cached = detailCache.get(id);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
-
-  const data = await gql<{ Media: AnimeDetail }>(ANIME_DETAIL_QUERY, { id });
-  detailCache.set(id, { data: data.Media, ts: Date.now() });
+  const data = await cachedGql<{ Media: AnimeDetail }>('detail', id, ANIME_DETAIL_QUERY, { id });
   return data.Media;
 }
 
