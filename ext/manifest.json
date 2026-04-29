@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Anime Tracker",
-  "version": "1.0.0",
-  "description": "Track your anime watchlist and get notified when new episodes drop.",
+  "version": "1.1.0",
+  "description": "Track your anime watchlist, get airing notifications, and sync with animetracker.lol. Works even when AniList is down.",
   "permissions": [
     "storage",
     "alarms",
@@ -10,18 +10,12 @@
   ],
   "host_permissions": [
     "https://sgp.cloud.appwrite.io/*",
-    "https://animekai.to/*",
-    "https://raw.githubusercontent.com/*",
-    "https://*.megacloud.club/*",
-    "https://*.megacloud.tv/*",
-    "https://*.rabbitstream.net/*",
-    "https://*.rapid-cloud.co/*",
     "https://api.jikan.moe/*",
     "https://kitsu.io/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://animetracker.lol/*", "https://*.netlify.app/*"],
+      "matches": ["https://animetracker.lol/*"],
       "js": ["content/bridge.js"],
       "run_at": "document_idle"
     }
