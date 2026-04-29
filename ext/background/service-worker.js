@@ -11,7 +11,6 @@ import {
 } from '../lib/storage.js';
 import { diffAiring } from '../lib/differ.js';
 import { setAuth, clearAuth } from '../lib/auth.js';
-import { handleStreamMessage } from './stream-handler.js';
 
 const ALARM_NAME = 'anime-poll';
 
@@ -44,8 +43,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // --- Message handler (from popup and content script) ---
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (handleStreamMessage(msg, sender, sendResponse)) return true;
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'UPDATE_ALARM') {
     setupAlarm(msg.interval).then(() => sendResponse({ ok: true }));
     return true;
