@@ -10,3 +10,4 @@ export const DATABASE_ID = 'your-database-id';
 export const WATCHLIST_COLLECTION_ID = 'watchlist_entries';
 export const WATCHED_EPISODES_COLLECTION_ID = 'watched_episodes';
 export const PROFILES_COLLECTION_ID = 'profiles';
+export const ANIME_CACHE_COLLECTION_ID = 'anime_cache';

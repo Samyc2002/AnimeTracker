@@ -15,7 +15,9 @@
     "https://*.megacloud.club/*",
     "https://*.megacloud.tv/*",
     "https://*.rabbitstream.net/*",
-    "https://*.rapid-cloud.co/*"
+    "https://*.rapid-cloud.co/*",
+    "https://api.jikan.moe/*",
+    "https://kitsu.io/*"
   ],
   "content_scripts": [
     {

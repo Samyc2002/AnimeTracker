@@ -1,4 +1,4 @@
-import { searchAnime, mediaToWatchlistEntry } from '../lib/anilist.js';
+import { searchAnime, mediaToWatchlistEntry } from '../lib/anime-provider.js';
 import {
   init,
   getWatchlist,

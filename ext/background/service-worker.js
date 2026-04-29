@@ -1,4 +1,4 @@
-import { fetchAiringSchedule } from '../lib/anilist.js';
+import { fetchAiringSchedule } from '../lib/anime-provider.js';
 import {
   init,
   getWatchlist,
