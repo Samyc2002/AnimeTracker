@@ -11,6 +11,7 @@ import { SfwProvider, useSfw } from '@/lib/sfw-context';
 import NavBar from '@/components/NavBar';
 import SfwToggle from '@/components/SfwToggle';
 import Footer from '@/components/Footer';
+import { getTheme } from '@/lib/theme';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Completed', 'Planned', 'Dropped'];
@@ -27,10 +28,10 @@ function upgradeImageUrl(url: string): string {
   return url.replace(/\/(?:small|medium)\//, '/large/');
 }
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+function StatCard({ label, value, gradient }: { label: string; value: number | string; gradient?: string }) {
   return (
     <div className="bg-[#141925] rounded-lg p-4 text-center border border-[#253040]/50">
-      <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
+      <p className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${gradient || 'from-teal-400 to-blue-400'}`}>
         {value}
       </p>
       <p className="text-xs text-gray-500 mt-1">{label}</p>
@@ -111,6 +112,7 @@ function GuestProfileContent({ profile }: { profile: PublicProfile }) {
 }
 
 function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: PublicProfile; sfwMode: boolean; authed: boolean; onToggleSfw?: () => void }) {
+  const theme = getTheme(sfwMode);
   useTitle(`Profile | ${profile.display_name || profile.username}`);
 
   const [activeTab, setActiveTab] = useState<WatchStatus | 'All'>(() => {
@@ -158,7 +160,7 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white">
+          <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${theme.gradientBold} mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white`}>
             {displayName.charAt(0).toUpperCase()}
           </div>
           <h1 className="text-2xl font-bold text-gray-100">{displayName}</h1>
@@ -166,11 +168,11 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
-          <StatCard label="Total Anime" value={sfwWatchlist.length} />
-          <StatCard label="Watching" value={tabCounts['Watching'] || 0} />
-          <StatCard label="Completed" value={tabCounts['Completed'] || 0} />
-          <StatCard label="Planned" value={tabCounts['Planned'] || 0} />
-          <StatCard label="Dropped" value={tabCounts['Dropped'] || 0} />
+          <StatCard label="Total Anime" value={sfwWatchlist.length} gradient={theme.gradient} />
+          <StatCard label="Watching" value={tabCounts['Watching'] || 0} gradient={theme.gradient} />
+          <StatCard label="Completed" value={tabCounts['Completed'] || 0} gradient={theme.gradient} />
+          <StatCard label="Planned" value={tabCounts['Planned'] || 0} gradient={theme.gradient} />
+          <StatCard label="Dropped" value={tabCounts['Dropped'] || 0} gradient={theme.gradient} />
         </div>
 
         <div className="flex gap-2 mb-4 flex-wrap">
@@ -180,7 +182,7 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
               onClick={() => updateTab(tab)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab
-                  ? 'bg-teal-600 text-white'
+                  ? `${theme.activeTab} text-white`
                   : 'bg-[#141925] text-gray-400 hover:text-gray-200'
               }`}
             >
@@ -236,7 +238,7 @@ export default function PublicProfilePage() {
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#253040] border-t-teal-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#253040] border-t-gray-400 rounded-full animate-spin" />
       </div>
     );
   }
@@ -245,7 +247,7 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen bg-[#0b0e14] flex flex-col items-center justify-center gap-4">
         <p className="text-gray-400">{error || 'Profile not found'}</p>
-        <Link href="/signup" className="text-teal-400 text-sm hover:text-teal-300">
+        <Link href="/signup" className="text-gray-400 text-sm hover:text-gray-300">
           Create your own profile
         </Link>
       </div>
