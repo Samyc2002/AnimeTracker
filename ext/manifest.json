@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Anime Tracker",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Track your anime watchlist, get airing notifications, and sync with animetracker.lol. Works even when AniList is down.",
   "permissions": [
     "storage",
