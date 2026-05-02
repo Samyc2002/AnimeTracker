@@ -1,0 +1,6 @@
+{
+  "name": "series-backfill",
+  "version": "1.0.0",
+  "description": "Triggers series_id backfill via the web app API",
+  "main": "index.js"
+}
