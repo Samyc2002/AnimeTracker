@@ -39,13 +39,12 @@ export default function SeriesBackfill() {
       }
 
       const entries = allDocs;
-      const needsBackfill = entries.filter((e) => !e.series_id);
 
-      setProgress(`Resolving series for ${needsBackfill.length} entries...`);
+      setProgress(`Resolving series for ${entries.length} entries...`);
 
-      for (let i = 0; i < needsBackfill.length; i++) {
-        const entry = needsBackfill[i];
-        setProgress(`Resolving ${i + 1}/${needsBackfill.length}...`);
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        setProgress(`Resolving ${i + 1}/${entries.length}...`);
         try {
           const seriesId = await getSeriesId(entry.media_id);
           await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
