@@ -35,7 +35,7 @@ export async function getSeriesId(animeId: number): Promise<number> {
 export async function backfillSeriesId(
   docId: string,
   animeId: number,
-  updateFn: (docId: string, data: Record<string, unknown>) => Promise<void>,
+  updateFn: (docId: string, data: Record<string, unknown>) => Promise<unknown>,
 ): Promise<void> {
   try {
     const seriesId = await getSeriesId(animeId);
