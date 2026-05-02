@@ -36,6 +36,8 @@ interface WatchlistDoc {
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
 const ALL_FILTER = 'All';
+const ALL_AIRING = 'All';
+const AIRING_STATUSES = ['RELEASING', 'FINISHED', 'NOT_YET_RELEASED', 'CANCELLED', 'HIATUS'] as const;
 const PAGE_SIZE = 30;
 
 const airingStatusLabels: Record<string, { label: string; className: string }> = {
@@ -81,6 +83,12 @@ function WatchlistPage() {
       return (localStorage.getItem('watchlist_view') as ViewMode) || 'list';
     }
     return 'list';
+  });
+  const [airingFilter, setAiringFilter] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('airing') || ALL_AIRING;
+    }
+    return ALL_AIRING;
   });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: WatchlistDoc } | null>(null);
 
@@ -149,6 +157,15 @@ function WatchlistPage() {
     window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
   }
 
+  function updateAiringFilter(newAiring: string) {
+    setAiringFilter(newAiring);
+    const params = new URLSearchParams(window.location.search);
+    if (newAiring === ALL_AIRING) params.delete('airing');
+    else params.set('airing', newAiring);
+    const qs = params.toString();
+    window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
+  }
+
   function updatePage(newPage: number) {
     setPage(newPage);
     const params = new URLSearchParams(window.location.search);
@@ -192,6 +209,9 @@ function WatchlistPage() {
   }
 
   const sfwEntries = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;
+  const airingFiltered = airingFilter === ALL_AIRING
+    ? sfwEntries
+    : sfwEntries.filter((e) => e.status === airingFilter);
   const totalPages = Math.ceil(totalEntries / PAGE_SIZE);
 
   return (
@@ -236,13 +256,33 @@ function WatchlistPage() {
         ))}
       </div>
 
-      {sfwEntries.length === 0 ? (
+      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+        <span className="text-xs text-gray-600 self-center mr-1 whitespace-nowrap">Airing:</span>
+        {[ALL_AIRING, ...AIRING_STATUSES].map((s) => {
+          const label = s === ALL_AIRING ? 'All' : (airingStatusLabels[s]?.label || s);
+          return (
+            <button
+              key={s}
+              onClick={() => updateAiringFilter(s)}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                airingFilter === s
+                  ? 'bg-[#253040] text-gray-200'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {airingFiltered.length === 0 ? (
         <p className="text-gray-500 text-center mt-8">
-          {totalEntries === 0 ? 'No anime tracked yet.' : `No anime with status "${filter}"`}
+          {totalEntries === 0 ? 'No anime tracked yet.' : `No anime matching these filters`}
         </p>
       ) : viewMode === 'list' ? (
         <div className="space-y-2">
-          {sfwEntries.map((entry) => {
+          {airingFiltered.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
@@ -271,7 +311,7 @@ function WatchlistPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {sfwEntries.map((entry) => {
+          {airingFiltered.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
