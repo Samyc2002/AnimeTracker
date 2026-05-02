@@ -6,7 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anime-provider';
+import { backfillSeriesId } from '@/lib/series-resolver';
 import RequireAuth from '@/components/RequireAuth';
+import SeriesBackfill from '@/components/SeriesBackfill';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
@@ -208,7 +210,8 @@ function SettingsPage() {
           await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, existingDocId, docData);
           updated++;
         } else {
-          await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), docData);
+          const newDoc = await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), docData);
+          backfillSeriesId(newDoc.$id, entry.media.id, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
           created++;
         }
 
@@ -419,6 +422,7 @@ function SettingsPage() {
           </div>
         </div>
 
+        <SeriesBackfill />
       </div>
     </div>
   );

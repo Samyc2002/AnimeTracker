@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ID, Query } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchAnimeDetail, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
+import { backfillSeriesId } from '@/lib/series-resolver';
 import { enqueueSnackbar } from 'notistack';
 import type { AnimeDetail } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
@@ -164,11 +165,12 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
           episodes: prequel.episodes,
           nextAiringEpisode: prequel.nextAiringEpisode,
         });
-        await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
+        const newDoc = await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
           ...entry,
           user_id: user.$id,
           watch_status: status,
         });
+        backfillSeriesId(newDoc.$id, prequel.id, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
         added++;
       }
 

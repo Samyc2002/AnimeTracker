@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Query, ID } from 'appwrite';
 import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
 import { fetchWeeklyAiring, getCachedAiring, saveAiringToCache, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
+import { backfillSeriesId } from '@/lib/series-resolver';
 import Image from 'next/image';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
@@ -142,10 +143,11 @@ export default function AiringPage() {
     try {
       const user = await account.get();
       const entry = mediaToWatchlistEntry(media);
-      await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
+      const doc = await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
         ...entry,
         user_id: user.$id,
       });
+      backfillSeriesId(doc.$id, s.mediaId, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
       setTrackedIds((prev) => new Set(prev).add(s.mediaId));
       enqueueSnackbar('Added to watchlist', { variant: 'success' });
     } catch (err) {

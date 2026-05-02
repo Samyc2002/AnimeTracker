@@ -7,6 +7,7 @@ import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
+import { backfillSeriesId } from '@/lib/series-resolver';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
 
@@ -54,6 +55,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
           watch_status: status,
         });
         setDocId(doc.$id);
+        backfillSeriesId(doc.$id, media.id, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
       }
 
       const wasAdded = added;
