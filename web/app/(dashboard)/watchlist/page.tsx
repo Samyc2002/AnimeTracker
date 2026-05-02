@@ -113,8 +113,8 @@ function WatchlistPage() {
       }
 
       if (sfwMode) {
-        queries.push(Query.equal('is_adult', false) as unknown as string);
-        queries.push(Query.equal('manual_nsfw', false) as unknown as string);
+        queries.push(Query.notEqual('is_adult', true) as unknown as string);
+        queries.push(Query.notEqual('manual_nsfw', true) as unknown as string);
       }
 
       const watchlist = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, queries as unknown as string[]);
@@ -125,7 +125,7 @@ function WatchlistPage() {
 
       // Fetch counts for each status (with SFW filter applied)
       const sfwQueries = sfwMode
-        ? [Query.equal('is_adult', false), Query.equal('manual_nsfw', false)]
+        ? [Query.notEqual('is_adult', true), Query.notEqual('manual_nsfw', true)]
         : [];
 
       const countQueries = await Promise.all(
