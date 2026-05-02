@@ -109,7 +109,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
           {updating ? '...' : '+ Add'}
         </button>
         {showDropdown && (
-          <div className="absolute right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden">
+          <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden">
             {STATUSES.map((s) => (
               <button
                 key={s}

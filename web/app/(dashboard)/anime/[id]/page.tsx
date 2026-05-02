@@ -148,7 +148,7 @@ export default function AnimeDetailPage() {
   const backdropImage = anime.bannerImage || anime.coverImage.extraLarge || anime.coverImage.large || anime.coverImage.medium;
 
   return (
-    <div className="-mx-6 -mt-8 relative min-h-screen">
+    <div className="-mx-4 sm:-mx-6 -mt-6 sm:-mt-8 relative min-h-screen">
       <div className="fixed inset-0 -z-10 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -170,13 +170,13 @@ export default function AnimeDetailPage() {
             />
           </div>
 
-          <div className="flex-1 min-w-0 pt-4">
-            <h1 className="text-2xl font-bold text-gray-100 mb-1">{title}</h1>
+          <div className="flex-1 min-w-0 pt-4 text-center sm:text-left">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-100 mb-1">{title}</h1>
             {anime.title.native && (
               <p className="text-sm text-gray-500 mb-3">{anime.title.native}</p>
             )}
 
-            <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-4">
               <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${statusInfo.className}`}>
                 {statusInfo.label}
               </span>
@@ -188,7 +188,7 @@ export default function AnimeDetailPage() {
               {studio && <span className="text-sm text-gray-400">{studio}</span>}
             </div>
 
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-400 mb-4">
+            <div className="flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-1 text-sm text-gray-400 mb-4">
               {anime.episodes && <span>{anime.episodes} episodes</span>}
               {anime.duration && <span>{anime.duration} min/ep</span>}
               {anime.season && anime.seasonYear && (
@@ -197,7 +197,7 @@ export default function AnimeDetailPage() {
             </div>
 
             {authed ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
                 <AddToWatchlist media={{
                   id: anime.id,
                   idMal: anime.idMal,

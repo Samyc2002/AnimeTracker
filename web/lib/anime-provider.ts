@@ -30,19 +30,15 @@ async function tryProviders<T>(
 }
 
 export async function searchAnime(search: string): Promise<AniListMedia[]> {
-  const cached = await getCachedSearch(search);
-  if (cached.length >= 3) return cached;
-
   try {
-    const results = await tryProviders(
+    return await tryProviders(
       'search',
       () => searchAnilist(search),
       () => searchJikan(search),
       () => searchKitsu(search),
     );
-
-    return results;
   } catch {
+    const cached = await getCachedSearch(search);
     if (cached.length > 0) return cached;
     throw new Error('Search failed across all providers');
   }

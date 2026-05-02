@@ -34,9 +34,9 @@ interface WatchlistDoc {
   manual_nsfw?: boolean;
 }
 
-
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
 const ALL_FILTER = 'All';
+const PAGE_SIZE = 30;
 
 const airingStatusLabels: Record<string, { label: string; className: string }> = {
   RELEASING: { label: 'Airing', className: 'bg-emerald-900/60 text-emerald-300' },
@@ -59,13 +59,22 @@ function WatchlistPage() {
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
+  const [totalEntries, setTotalEntries] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(() => {
     if (typeof window !== 'undefined') {
       const param = new URLSearchParams(window.location.search).get('status');
       if (param && [...WATCH_STATUSES, ALL_FILTER].includes(param)) return param as WatchStatus;
     }
     return 'Watching';
+  });
+  const [page, setPage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('page');
+      return p ? Math.max(0, parseInt(p) - 1) : 0;
+    }
+    return 0;
   });
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== 'undefined') {
@@ -76,26 +85,79 @@ function WatchlistPage() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: WatchlistDoc } | null>(null);
 
   const loadWatchlist = useCallback(async () => {
+    setLoading(true);
     try {
       const user = await account.get();
 
-      const watchlist = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.orderDesc('$createdAt'),
-        Query.limit(500),
-      ]);
+      const queries: string[] = [
+        Query.equal('user_id', user.$id) as unknown as string,
+        Query.orderDesc('$createdAt') as unknown as string,
+        Query.limit(PAGE_SIZE) as unknown as string,
+        Query.offset(page * PAGE_SIZE) as unknown as string,
+      ];
+
+      if (filter !== ALL_FILTER) {
+        queries.push(Query.equal('watch_status', filter) as unknown as string);
+      }
+
+      const watchlist = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, queries as unknown as string[]);
 
       const docs = watchlist.documents as unknown as WatchlistDoc[];
       setEntries(docs);
+      setTotalEntries(watchlist.total);
+
+      // Fetch counts for each status (lightweight queries)
+      const countQueries = await Promise.all(
+        WATCH_STATUSES.map(async (s) => {
+          const res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+            Query.equal('user_id', user.$id),
+            Query.equal('watch_status', s),
+            Query.limit(1),
+          ]);
+          return [s, res.total] as [string, number];
+        })
+      );
+
+      const allRes = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+        Query.equal('user_id', user.$id),
+        Query.limit(1),
+      ]);
+
+      const newCounts: Record<string, number> = { [ALL_FILTER]: allRes.total };
+      for (const [s, count] of countQueries) {
+        newCounts[s] = count;
+      }
+      setCounts(newCounts);
     } catch {
       // Not authenticated — layout will redirect
     }
     setLoading(false);
-  }, []);
+  }, [filter, page]);
 
   useEffect(() => {
     loadWatchlist();
   }, [loadWatchlist]);
+
+  function updateFilter(newFilter: WatchStatus | typeof ALL_FILTER) {
+    setFilter(newFilter);
+    setPage(0);
+    const params = new URLSearchParams(window.location.search);
+    if (newFilter === ALL_FILTER) params.delete('status');
+    else params.set('status', newFilter);
+    params.delete('page');
+    const qs = params.toString();
+    window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
+  }
+
+  function updatePage(newPage: number) {
+    setPage(newPage);
+    const params = new URLSearchParams(window.location.search);
+    if (newPage === 0) params.delete('page');
+    else params.set('page', String(newPage + 1));
+    const qs = params.toString();
+    window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   async function removeFromWatchlist(entry: WatchlistDoc) {
     await databases.deleteDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id);
@@ -129,25 +191,8 @@ function WatchlistPage() {
     return <p className="text-gray-500 text-center mt-12">Loading watchlist...</p>;
   }
 
-  if (entries.length === 0) {
-    return (
-      <div className="text-center text-gray-500 mt-12">
-        <p>No anime tracked yet.</p>
-        <p className="mt-1">Use the <strong>Search</strong> tab to find and add anime.</p>
-      </div>
-    );
-  }
-
   const sfwEntries = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;
-
-  const filteredEntries = filter === ALL_FILTER
-    ? sfwEntries
-    : sfwEntries.filter((e) => (e.watch_status || 'Watching') === filter);
-
-  const counts: Record<string, number> = {
-    [ALL_FILTER]: sfwEntries.length,
-    ...Object.fromEntries(WATCH_STATUSES.map((s) => [s, sfwEntries.filter((e) => (e.watch_status || 'Watching') === s).length])),
-  };
+  const totalPages = Math.ceil(totalEntries / PAGE_SIZE);
 
   return (
     <div>
@@ -179,16 +224,8 @@ function WatchlistPage() {
         {[ALL_FILTER, ...WATCH_STATUSES].map((s) => (
           <button
             key={s}
-            onClick={() => {
-              const newFilter = s as WatchStatus | typeof ALL_FILTER;
-              setFilter(newFilter);
-              const params = new URLSearchParams(window.location.search);
-              if (newFilter === ALL_FILTER) params.delete('status');
-              else params.set('status', newFilter);
-              const qs = params.toString();
-              window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
-            }}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            onClick={() => updateFilter(s as WatchStatus | typeof ALL_FILTER)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
               filter === s
                 ? `${theme.activeTab} text-white`
                 : 'bg-[#141925] text-gray-400 hover:text-gray-200'
@@ -199,11 +236,13 @@ function WatchlistPage() {
         ))}
       </div>
 
-      {filteredEntries.length === 0 ? (
-        <p className="text-gray-500 text-center mt-8">No anime with status &ldquo;{filter}&rdquo;</p>
+      {sfwEntries.length === 0 ? (
+        <p className="text-gray-500 text-center mt-8">
+          {totalEntries === 0 ? 'No anime tracked yet.' : `No anime with status "${filter}"`}
+        </p>
       ) : viewMode === 'list' ? (
         <div className="space-y-2">
-          {filteredEntries.map((entry) => {
+          {sfwEntries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
@@ -232,7 +271,7 @@ function WatchlistPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {filteredEntries.map((entry) => {
+          {sfwEntries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
@@ -271,12 +310,35 @@ function WatchlistPage() {
         </div>
       )}
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            onClick={() => updatePage(page - 1)}
+            disabled={page === 0}
+            className="px-3 py-1.5 text-sm bg-[#141925] border border-[#253040] rounded-lg text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Prev
+          </button>
+          <span className="text-sm text-gray-500">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            onClick={() => updatePage(page + 1)}
+            disabled={page >= totalPages - 1}
+            className="px-3 py-1.5 text-sm bg-[#141925] border border-[#253040] rounded-lg text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
       {contextMenu && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }} />
           <div
             className="fixed z-50 bg-[#141925] border border-[#253040] rounded-lg shadow-xl py-1 min-w-[160px]"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
+            style={{ left: Math.min(contextMenu.x, window.innerWidth - 176), top: Math.min(contextMenu.y, window.innerHeight - 250) }}
           >
             <p className="px-3 py-1.5 text-xs text-gray-500 truncate max-w-[200px]">
               {contextMenu.entry.title_english || contextMenu.entry.title_romaji}
@@ -287,7 +349,7 @@ function WatchlistPage() {
                 key={s}
                 onClick={() => { updateWatchStatus(contextMenu.entry, s); setContextMenu(null); }}
                 className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#1c2333] transition-colors ${
-                  (contextMenu.entry.watch_status || 'Watching') === s ? theme.btnText : 'text-gray-300'
+                  (contextMenu.entry.watch_status || 'Watching') === s ? `${theme.btnText}` : 'text-gray-300'
                 }`}
               >
                 {(contextMenu.entry.watch_status || 'Watching') === s ? '● ' : '○ '}{s}

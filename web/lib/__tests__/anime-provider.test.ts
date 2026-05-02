@@ -99,12 +99,14 @@ describe('mediaToWatchlistEntry', () => {
 });
 
 describe('searchAnime fallback', () => {
-  it('returns cached results if 3 or more available', async () => {
+  it('uses cache as fallback when all providers fail', async () => {
     const cachedResults = [testMedia, { ...testMedia, id: 2 }, { ...testMedia, id: 3 }];
+    (searchAnilist as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (searchJikan as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (searchKitsu as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
     (getCachedSearch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(cachedResults);
     const results = await searchAnime('test');
     expect(results).toEqual(cachedResults);
-    expect(searchAnilist).not.toHaveBeenCalled();
   });
 
   it('falls back from AniList to Jikan on failure', async () => {
@@ -125,10 +127,11 @@ describe('searchAnime fallback', () => {
     expect(searchKitsu).toHaveBeenCalled();
   });
 
-  it('throws when all providers fail', async () => {
+  it('throws when all providers and cache fail', async () => {
     (searchAnilist as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
     (searchJikan as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
     (searchKitsu as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('all down'));
+    (getCachedSearch as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
     await expect(searchAnime('test')).rejects.toThrow('Search failed across all providers');
   });
 });
