@@ -7,21 +7,41 @@ module.exports = async ({ req, res, log, error }) => {
     return res.json({ error: 'CRON_SECRET not configured' }, 500);
   }
 
+  let totalUpdated = 0;
+  let batches = 0;
+  const maxBatches = 50;
+
   try {
-    log('Triggering series backfill...');
+    log('Starting series backfill...');
 
-    const response = await fetch(`${appUrl}/api/backfill-series`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${cronSecret}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    while (batches < maxBatches) {
+      const response = await fetch(`${appUrl}/api/backfill-series`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cronSecret}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    const body = await response.json();
-    log(`Backfill complete: ${JSON.stringify(body)}`);
+      const body = await response.json();
+      batches++;
 
-    return res.json(body);
+      if (!response.ok) {
+        error(`Batch ${batches} failed: ${JSON.stringify(body)}`);
+        break;
+      }
+
+      totalUpdated += body.updated || 0;
+      log(`Batch ${batches}: updated ${body.updated}, remaining ${body.remaining}`);
+
+      if (body.done) {
+        log('All entries processed.');
+        break;
+      }
+    }
+
+    log(`Done. Total updated: ${totalUpdated} in ${batches} batches.`);
+    return res.json({ totalUpdated, batches });
   } catch (err) {
     error(`Backfill failed: ${err.message}`);
     return res.json({ error: err.message }, 500);

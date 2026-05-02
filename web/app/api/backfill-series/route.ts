@@ -9,26 +9,25 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchRelations(malId: number): Promise<number[]> {
+async function fetchPrequelId(malId: number): Promise<number | null> {
   try {
-    const res = await fetch(`${JIKAN_BASE}/anime/${malId}/full`, {
+    const res = await fetch(`${JIKAN_BASE}/anime/${malId}/relations`, {
       headers: { 'User-Agent': 'AnimeTracker/1.0' },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const { data } = await res.json();
-    if (!data?.relations) return [];
+    if (!Array.isArray(data)) return null;
 
-    const prequelIds: number[] = [];
-    for (const rel of data.relations) {
+    for (const rel of data) {
       if (rel.relation === 'Prequel') {
         for (const entry of rel.entry || []) {
-          if (entry.type === 'anime') prequelIds.push(entry.mal_id);
+          if (entry.type === 'anime') return entry.mal_id;
         }
       }
     }
-    return prequelIds;
+    return null;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -41,9 +40,9 @@ async function resolveSeriesRoot(malId: number): Promise<number> {
     visited.add(currentId);
 
     await delay(1000);
-    const prequelIds = await fetchRelations(currentId);
-    if (prequelIds.length === 0) break;
-    currentId = prequelIds[0];
+    const prequelId = await fetchPrequelId(currentId);
+    if (!prequelId) break;
+    currentId = prequelId;
   }
 
   return currentId;
@@ -56,6 +55,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const batchSize = 5;
+
   try {
     const client = new Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
@@ -66,40 +67,32 @@ export async function POST(req: NextRequest) {
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
     const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
 
-    let offset = 0;
+    // Find entries without series_id
+    const res = await databases.listDocuments(dbId, watchlistCol, [
+      Query.isNull('series_id'),
+      Query.limit(batchSize),
+    ]);
+
     let updated = 0;
-    let processed = 0;
-    let hasMore = true;
 
-    while (hasMore) {
-      const res = await databases.listDocuments(dbId, watchlistCol, [
-        Query.limit(100),
-        Query.offset(offset),
-      ]);
+    for (const doc of res.documents) {
+      const malId = (doc.id_mal as number) || (doc.media_id as number);
+      if (!malId) continue;
 
-      for (const doc of res.documents) {
-        processed++;
-        const malId = (doc.id_mal as number) || (doc.media_id as number);
-        if (!malId) continue;
-
-        try {
-          const seriesId = await resolveSeriesRoot(malId);
-          if (seriesId !== (doc.series_id as number | null)) {
-            await databases.updateDocument(dbId, watchlistCol, doc.$id, {
-              series_id: seriesId,
-            });
-            updated++;
-          }
-        } catch {
-          // Skip failed entries
-        }
+      try {
+        const seriesId = await resolveSeriesRoot(malId);
+        await databases.updateDocument(dbId, watchlistCol, doc.$id, {
+          series_id: seriesId,
+        });
+        updated++;
+      } catch {
+        // Skip failed entries
       }
-
-      offset += 100;
-      hasMore = res.documents.length === 100;
     }
 
-    return NextResponse.json({ processed, updated });
+    const remaining = res.total - res.documents.length;
+
+    return NextResponse.json({ updated, remaining, done: remaining === 0 });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Backfill failed' },
