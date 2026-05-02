@@ -108,6 +108,10 @@ function WatchlistPage() {
         queries.push(Query.equal('watch_status', filter) as unknown as string);
       }
 
+      if (airingFilter !== ALL_AIRING) {
+        queries.push(Query.equal('status', airingFilter) as unknown as string);
+      }
+
       const watchlist = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, queries as unknown as string[]);
 
       const docs = watchlist.documents as unknown as WatchlistDoc[];
@@ -140,7 +144,7 @@ function WatchlistPage() {
       // Not authenticated — layout will redirect
     }
     setLoading(false);
-  }, [filter, page]);
+  }, [filter, airingFilter, page]);
 
   useEffect(() => {
     loadWatchlist();
@@ -159,9 +163,11 @@ function WatchlistPage() {
 
   function updateAiringFilter(newAiring: string) {
     setAiringFilter(newAiring);
+    setPage(0);
     const params = new URLSearchParams(window.location.search);
     if (newAiring === ALL_AIRING) params.delete('airing');
     else params.set('airing', newAiring);
+    params.delete('page');
     const qs = params.toString();
     window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
   }
@@ -209,9 +215,6 @@ function WatchlistPage() {
   }
 
   const sfwEntries = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;
-  const airingFiltered = airingFilter === ALL_AIRING
-    ? sfwEntries
-    : sfwEntries.filter((e) => e.status === airingFilter);
   const totalPages = Math.ceil(totalEntries / PAGE_SIZE);
 
   return (
@@ -276,13 +279,13 @@ function WatchlistPage() {
         })}
       </div>
 
-      {airingFiltered.length === 0 ? (
+      {sfwEntries.length === 0 ? (
         <p className="text-gray-500 text-center mt-8">
           {totalEntries === 0 ? 'No anime tracked yet.' : `No anime matching these filters`}
         </p>
       ) : viewMode === 'list' ? (
         <div className="space-y-2">
-          {airingFiltered.map((entry) => {
+          {sfwEntries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
@@ -311,7 +314,7 @@ function WatchlistPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {airingFiltered.map((entry) => {
+          {sfwEntries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
