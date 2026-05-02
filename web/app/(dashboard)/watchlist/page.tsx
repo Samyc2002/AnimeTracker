@@ -112,18 +112,28 @@ function WatchlistPage() {
         queries.push(Query.equal('status', airingFilter) as unknown as string);
       }
 
+      if (sfwMode) {
+        queries.push(Query.equal('is_adult', false) as unknown as string);
+        queries.push(Query.equal('manual_nsfw', false) as unknown as string);
+      }
+
       const watchlist = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, queries as unknown as string[]);
 
       const docs = watchlist.documents as unknown as WatchlistDoc[];
       setEntries(docs);
       setTotalEntries(watchlist.total);
 
-      // Fetch counts for each status (lightweight queries)
+      // Fetch counts for each status (with SFW filter applied)
+      const sfwQueries = sfwMode
+        ? [Query.equal('is_adult', false), Query.equal('manual_nsfw', false)]
+        : [];
+
       const countQueries = await Promise.all(
         WATCH_STATUSES.map(async (s) => {
           const res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
             Query.equal('user_id', user.$id),
             Query.equal('watch_status', s),
+            ...sfwQueries,
             Query.limit(1),
           ]);
           return [s, res.total] as [string, number];
@@ -132,6 +142,7 @@ function WatchlistPage() {
 
       const allRes = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
         Query.equal('user_id', user.$id),
+        ...sfwQueries,
         Query.limit(1),
       ]);
 
@@ -144,7 +155,7 @@ function WatchlistPage() {
       // Not authenticated — layout will redirect
     }
     setLoading(false);
-  }, [filter, airingFilter, page]);
+  }, [filter, airingFilter, sfwMode, page]);
 
   useEffect(() => {
     loadWatchlist();
@@ -214,7 +225,6 @@ function WatchlistPage() {
     return <p className="text-gray-500 text-center mt-12">Loading watchlist...</p>;
   }
 
-  const sfwEntries = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;
   const totalPages = Math.ceil(totalEntries / PAGE_SIZE);
 
   return (
@@ -279,13 +289,13 @@ function WatchlistPage() {
         })}
       </div>
 
-      {sfwEntries.length === 0 ? (
+      {entries.length === 0 ? (
         <p className="text-gray-500 text-center mt-8">
           {totalEntries === 0 ? 'No anime tracked yet.' : `No anime matching these filters`}
         </p>
       ) : viewMode === 'list' ? (
         <div className="space-y-2">
-          {sfwEntries.map((entry) => {
+          {entries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
@@ -314,7 +324,7 @@ function WatchlistPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {sfwEntries.map((entry) => {
+          {entries.map((entry) => {
             const title = entry.title_english || entry.title_romaji || 'Unknown';
             const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
             return (
