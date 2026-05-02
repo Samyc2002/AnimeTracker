@@ -24,12 +24,21 @@ export default function SeriesBackfill() {
       const user = await account.get();
       setProgress('Fetching watchlist...');
 
-      const res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.limit(500),
-      ]);
+      const allDocs: { $id: string; media_id: number; series_id?: number | null }[] = [];
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
+          Query.equal('user_id', user.$id),
+          Query.limit(100),
+          Query.offset(offset),
+        ]);
+        allDocs.push(...(res.documents as unknown as { $id: string; media_id: number; series_id?: number | null }[]));
+        offset += 100;
+        hasMore = res.documents.length === 100;
+      }
 
-      const entries = res.documents as unknown as { $id: string; media_id: number; series_id?: number | null }[];
+      const entries = allDocs;
       const needsBackfill = entries.filter((e) => !e.series_id);
 
       setProgress(`Resolving series for ${needsBackfill.length} entries...`);
