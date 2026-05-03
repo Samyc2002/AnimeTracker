@@ -91,7 +91,7 @@ function WatchlistPage() {
     }
     return ALL_AIRING;
   });
-  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
+  const [selectedFolder, setSelectedFolder] = useState<{ seriesId: number; seriesName: string; entries: WatchlistDoc[] } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: WatchlistDoc } | null>(null);
 
   const loadWatchlist = useCallback(async () => {
@@ -262,13 +262,8 @@ function WatchlistPage() {
     return result;
   })();
 
-  function toggleFolder(seriesId: number) {
-    setExpandedFolders(prev => {
-      const next = new Set(prev);
-      if (next.has(seriesId)) next.delete(seriesId);
-      else next.add(seriesId);
-      return next;
-    });
+  function openFolder(folder: { seriesId: number; seriesName: string; entries: WatchlistDoc[] }) {
+    setSelectedFolder(folder);
   }
 
   return (
@@ -369,60 +364,28 @@ function WatchlistPage() {
             }
 
             const folder = item;
-            const isExpanded = expandedFolders.has(folder.seriesId);
             return (
-              <div key={`folder-${folder.seriesId}`}>
-                <div
-                  className="flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors border border-[#253040]/50"
-                  onClick={() => toggleFolder(folder.seriesId)}
-                >
-                  <div className="relative w-14 h-20 flex-shrink-0">
-                    {folder.entries.slice(0, 3).reverse().map((e, i) => (
-                      <div key={e.$id} className="absolute rounded overflow-hidden" style={{ top: i * 3, left: i * 3, width: 48, height: 68, zIndex: 3 - i }}>
-                        <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover" sizes="48px" unoptimized />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                    <p className="text-sm font-semibold text-gray-200 truncate">{folder.seriesName}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">{folder.entries.length} entries</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
+              <div
+                key={`folder-${folder.seriesId}`}
+                className="flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors border border-[#253040]/50"
+                onClick={() => openFolder(folder)}
+              >
+                <div className="relative w-14 h-20 flex-shrink-0">
+                  {folder.entries.slice(0, 3).reverse().map((e, i) => (
+                    <div key={e.$id} className="absolute rounded overflow-hidden" style={{ top: i * 3, left: i * 3, width: 48, height: 68, zIndex: 3 - i }}>
+                      <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover" sizes="48px" unoptimized />
                     </div>
-                  </div>
+                  ))}
                 </div>
-                {isExpanded && (
-                  <div className="ml-4 mt-1 space-y-1.5 border-l-2 border-[#253040] pl-3">
-                    {folder.entries.map((entry) => {
-                      const title = entry.title_english || entry.title_romaji || 'Unknown';
-                      const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
-                      return (
-                        <div key={entry.$id} className="group/row" onContextMenu={(e) => handleContextMenu(e, entry)}>
-                          <AnimeCard
-                            title={title}
-                            coverUrl={upgradeImageUrl(entry.cover_url)}
-                            status={entry.status}
-                            episodes={entry.total_episodes}
-                            isAdult={entry.is_adult || entry.manual_nsfw}
-                            onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
-                            action={
-                              <div className="flex items-center gap-1">
-                                <div className="opacity-0 group-hover/row:opacity-100 transition-opacity">
-                                  <AddToPlaylist mediaId={entry.media_id} />
-                                </div>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${airingInfo.className}`}>
-                                  {airingInfo.label}
-                                </span>
-                              </div>
-                            }
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                  <p className="text-sm font-semibold text-gray-200 truncate">{folder.seriesName}</p>
+                  <span className="text-xs text-gray-500">{folder.entries.length} entries</span>
+                </div>
+                <div className="flex items-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-500">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
               </div>
             );
           })}
@@ -459,54 +422,11 @@ function WatchlistPage() {
             }
 
             const folder = item;
-            const isExpanded = expandedFolders.has(folder.seriesId);
-
-            if (isExpanded) {
-              return (
-                <div key={`folder-${folder.seriesId}`} className="col-span-full">
-                  <div
-                    className="flex items-center gap-2 mb-2 cursor-pointer"
-                    onClick={() => toggleFolder(folder.seriesId)}
-                  >
-                    <span className="text-sm font-semibold text-gray-300">{folder.seriesName}</span>
-                    <span className="text-xs text-gray-500">({folder.entries.length})</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-500 rotate-180">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3">
-                    {folder.entries.map((entry) => {
-                      const title = entry.title_english || entry.title_romaji || 'Unknown';
-                      const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
-                      return (
-                        <div
-                          key={entry.$id}
-                          className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${entry.is_adult || entry.manual_nsfw ? 'border border-red-500/40' : ''}`}
-                          onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
-                          onContextMenu={(e) => handleContextMenu(e, entry)}
-                        >
-                          <div className="relative w-full aspect-[3/4]">
-                            <Image src={upgradeImageUrl(entry.cover_url) || '/placeholder.png'} alt={title} fill className="object-cover" unoptimized />
-                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${airingInfo.className}`}>{airingInfo.label}</span>
-                            </div>
-                          </div>
-                          <div className="p-2">
-                            <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
-
             return (
               <div
                 key={`folder-${folder.seriesId}`}
                 className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors border border-[#253040]/50"
-                onClick={() => toggleFolder(folder.seriesId)}
+                onClick={() => openFolder(folder)}
               >
                 <div className="relative w-full aspect-[3/4]">
                   {folder.entries.slice(0, 3).reverse().map((e, i) => (
@@ -556,6 +476,63 @@ function WatchlistPage() {
         <p className="text-[10px] text-gray-600 mt-4 text-center">
           * Counts include all entries. Some may be hidden by SFW mode.
         </p>
+      )}
+
+      {selectedFolder && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedFolder(null)} />
+          <div className="fixed inset-x-0 bottom-0 z-50 animate-slide-up">
+            <div className="bg-[#141925] rounded-t-2xl border-t border-x border-[#253040] max-h-[70vh] flex flex-col mx-auto max-w-lg">
+              <div className="flex items-center justify-between p-4 border-b border-[#253040] flex-shrink-0">
+                <div className="flex-1 min-w-0 mr-3">
+                  <h3 className="text-sm font-semibold text-gray-200 truncate">{selectedFolder.seriesName}</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">{selectedFolder.entries.length} entries</p>
+                </div>
+                <button
+                  onClick={() => setSelectedFolder(null)}
+                  className="p-1.5 rounded-lg hover:bg-[#253040] transition-colors text-gray-400"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {selectedFolder.entries.map((entry) => {
+                  const title = entry.title_english || entry.title_romaji || 'Unknown';
+                  const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
+                  return (
+                    <div
+                      key={entry.$id}
+                      className="group/row"
+                      onContextMenu={(e) => { handleContextMenu(e, entry); setSelectedFolder(null); }}
+                    >
+                      <AnimeCard
+                        title={title}
+                        coverUrl={upgradeImageUrl(entry.cover_url)}
+                        status={entry.status}
+                        episodes={entry.total_episodes}
+                        isAdult={entry.is_adult || entry.manual_nsfw}
+                        onClick={() => { setSelectedFolder(null); router.push(`/anime/${entry.id_mal || entry.media_id}`); }}
+                        action={
+                          <div className="flex items-center gap-1">
+                            <div className="opacity-0 group-hover/row:opacity-100 transition-opacity">
+                              <AddToPlaylist mediaId={entry.media_id} />
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${airingInfo.className}`}>
+                              {airingInfo.label}
+                            </span>
+                          </div>
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-3 mt-1" />
+            </div>
+          </div>
+        </>
       )}
 
       {contextMenu && (
