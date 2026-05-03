@@ -238,9 +238,8 @@ export default function LandingPage() {
                 </svg>
                 Chrome Extension
               </a>
-              {/* TODO: Uncomment when Discord server is created
               <a
-                href="https://discord.gg/YOUR_INVITE_CODE"
+                href="https://discord.gg/7PFY2Hwb"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 sm:px-8 py-2.5 sm:py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-lg font-semibold text-base sm:text-lg transition-colors inline-flex items-center gap-2"
@@ -250,7 +249,6 @@ export default function LandingPage() {
                 </svg>
                 Join Discord
               </a>
-              */}
             </div>
           </div>
 

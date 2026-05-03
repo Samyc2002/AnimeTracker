@@ -24,16 +24,14 @@ export default function Footer() {
             >
               Chrome Extension
             </a>
-            {/* TODO: Uncomment when Discord server is created
             <a
-              href="https://discord.gg/YOUR_INVITE_CODE"
+              href="https://discord.gg/7PFY2Hwb"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-300 transition-colors"
             >
               Discord
             </a>
-            */}
           </div>
         </div>
 
