@@ -37,19 +37,15 @@
 }
 
 .thin-scrollbar {
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
 .thin-scrollbar:hover {
-  scrollbar-width: thin;
   scrollbar-color: #253040 transparent;
 }
 
 .thin-scrollbar::-webkit-scrollbar {
-  height: 0;
-}
-
-.thin-scrollbar:hover::-webkit-scrollbar {
   height: 4px;
 }
 
@@ -58,6 +54,10 @@
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb {
-  background: #253040;
+  background: transparent;
   border-radius: 2px;
+}
+
+.thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #253040;
 }
