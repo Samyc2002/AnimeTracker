@@ -8,12 +8,14 @@ vi.mock('@/lib/providers/anilist', () => ({
   fetchAnilistViewer: vi.fn(),
   fetchAnilistUserList: vi.fn(),
   fetchAnilistAiringSchedule: vi.fn(),
+  searchAnilistFiltered: vi.fn(),
   ANILIST_STATUS_MAP: {},
 }));
 
 vi.mock('@/lib/providers/jikan', () => ({
   searchJikan: vi.fn(),
   fetchJikanDetail: vi.fn(),
+  fetchJikanSchedule: vi.fn(),
 }));
 
 vi.mock('@/lib/providers/kitsu', () => ({
@@ -33,8 +35,8 @@ vi.mock('@/lib/providers/airing-cache', () => ({
   saveAiringToCache: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { searchAnime, fetchAnimeDetail, getErrorMessage, mediaToWatchlistEntry } from '@/lib/anime-provider';
-import { searchAnilist, fetchAnilistDetail } from '@/lib/providers/anilist';
+import { searchAnime, fetchAnimeDetail, fetchWeeklyAiring, fetchRecommendations, searchAnimeFiltered, getErrorMessage, mediaToWatchlistEntry } from '@/lib/anime-provider';
+import { searchAnilist, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnilistRecommendations, searchAnilistFiltered } from '@/lib/providers/anilist';
 import { searchJikan, fetchJikanDetail } from '@/lib/providers/jikan';
 import { searchKitsu } from '@/lib/providers/kitsu';
 import { getCachedSearch, getCachedAnime } from '@/lib/providers/cache';
@@ -184,5 +186,122 @@ describe('fetchAnimeDetail fallback', () => {
     const result = await fetchAnimeDetail(1);
     expect(result).toEqual(testDetail);
     expect(fetchJikanDetail).toHaveBeenCalledWith(100);
+  });
+
+  it('falls back to Jikan title search when Jikan ID lookup fails', async () => {
+    (getCachedAnime as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      detail: { ...testDetail, idMal: 100, title: { romaji: 'Test Anime', english: null, native: null } },
+      stale: true,
+    });
+    (fetchAnilistDetail as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('down'));
+    (fetchJikanDetail as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('not found'))
+      .mockResolvedValueOnce(testDetail);
+    (searchJikan as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ ...testMedia, idMal: 200 }]);
+    const result = await fetchAnimeDetail(1);
+    expect(result).toEqual(testDetail);
+    expect(searchJikan).toHaveBeenCalledWith('Test Anime');
+    expect(fetchJikanDetail).toHaveBeenCalledWith(200);
+  });
+
+  it('falls back to Kitsu when AniList and Jikan both fail', async () => {
+    const { fetchKitsuDetail } = await import('@/lib/providers/kitsu');
+    (getCachedAnime as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      detail: { ...testDetail, title: { romaji: 'Test Anime', english: null, native: null } },
+      stale: true,
+    });
+    (fetchAnilistDetail as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('down'));
+    (fetchJikanDetail as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('down'));
+    (searchJikan as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+    (searchKitsu as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ ...testMedia, id: 55 }]);
+    (fetchKitsuDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(testDetail);
+    const result = await fetchAnimeDetail(1);
+    expect(result).toEqual(testDetail);
+  });
+});
+
+describe('fetchWeeklyAiring', () => {
+  it('returns AniList data on success', async () => {
+    (fetchAnilistWeeklyAiring as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ schedules: [], hasNextPage: false });
+    const result = await fetchWeeklyAiring(0, 1000);
+    expect(result).toEqual({ schedules: [], hasNextPage: false });
+  });
+
+  it('returns empty for page > 1 when AniList fails', async () => {
+    (fetchAnilistWeeklyAiring as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    const result = await fetchWeeklyAiring(0, 1000, 2);
+    expect(result).toEqual({ schedules: [], hasNextPage: false });
+  });
+});
+
+describe('fetchRecommendations', () => {
+  it('returns AniList recommendations on success', async () => {
+    const data = { trending: [testMedia], popular: [testMedia] };
+    (fetchAnilistRecommendations as ReturnType<typeof vi.fn>).mockResolvedValueOnce(data);
+    const result = await fetchRecommendations();
+    expect(result).toEqual(data);
+  });
+
+  it('returns empty on total failure', async () => {
+    (fetchAnilistRecommendations as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error('network')));
+    const result = await fetchRecommendations();
+    expect(result).toEqual({ trending: [], popular: [] });
+  });
+});
+
+describe('searchAnimeFiltered', () => {
+  it('filters out excluded media IDs', async () => {
+    (searchAnilistFiltered as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      media: [testMedia, { ...testMedia, id: 2 }, { ...testMedia, id: 3 }],
+      hasNextPage: false,
+    });
+    const result = await searchAnimeFiltered({
+      genres: ['Action'],
+      status: null,
+      minScore: 60,
+      maxEpisodes: null,
+      sort: 'SCORE_DESC',
+      excludeMediaIds: [1, 3],
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(2);
+  });
+
+  it('filters by maxEpisodes', async () => {
+    (searchAnilistFiltered as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      media: [
+        { ...testMedia, id: 1, episodes: 12 },
+        { ...testMedia, id: 2, episodes: 50 },
+        { ...testMedia, id: 3, episodes: null },
+      ],
+      hasNextPage: false,
+    });
+    const result = await searchAnimeFiltered({
+      genres: ['Action'],
+      status: null,
+      minScore: 60,
+      maxEpisodes: 13,
+      sort: 'SCORE_DESC',
+      excludeMediaIds: [],
+    });
+    expect(result).toHaveLength(2);
+    expect(result.map((m) => m.id)).toEqual([1, 3]);
+  });
+
+  it('falls back to unfiltered search when genres return no results', async () => {
+    (searchAnilistFiltered as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ media: [], hasNextPage: false })
+      .mockResolvedValueOnce({ media: [testMedia], hasNextPage: false });
+    const result = await searchAnimeFiltered({
+      genres: ['Obscure'],
+      status: null,
+      minScore: 60,
+      maxEpisodes: null,
+      sort: 'SCORE_DESC',
+      excludeMediaIds: [],
+    });
+    expect(result).toHaveLength(1);
+    expect(searchAnilistFiltered).toHaveBeenCalledTimes(2);
   });
 });
