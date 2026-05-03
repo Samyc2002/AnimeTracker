@@ -239,7 +239,7 @@ export default function LandingPage() {
                 Chrome Extension
               </a>
               <a
-                href="https://discord.gg/7PFY2Hwb"
+                href="https://discord.gg/AtDUykhnG4"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 sm:px-8 py-2.5 sm:py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-lg font-semibold text-base sm:text-lg transition-colors inline-flex items-center gap-2"

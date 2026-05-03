@@ -25,7 +25,7 @@ export default function Footer() {
               Chrome Extension
             </a>
             <a
-              href="https://discord.gg/7PFY2Hwb"
+              href="https://discord.gg/AtDUykhnG4"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-300 transition-colors"
