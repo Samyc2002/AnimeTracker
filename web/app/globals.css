@@ -35,3 +35,29 @@
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+.thin-scrollbar {
+  scrollbar-width: none;
+}
+
+.thin-scrollbar:hover {
+  scrollbar-width: thin;
+  scrollbar-color: #253040 transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  height: 0;
+}
+
+.thin-scrollbar:hover::-webkit-scrollbar {
+  height: 4px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #253040;
+  border-radius: 2px;
+}
