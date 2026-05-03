@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Query } from 'appwrite';
 import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
 import { useSfw } from '@/lib/sfw-context';
@@ -33,8 +33,7 @@ export default function NavBar() {
   const { authed, loading } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const navItems = loading ? [] : authed ? authNavItems : publicNavItems;
 
@@ -79,21 +78,8 @@ export default function NavBar() {
     loadProfile();
   }, [authed]);
 
-  // Close mobile menu when clicking outside
   useEffect(() => {
-    if (!mobileMenuOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
-        setMobileMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [mobileMenuOpen]);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
+    setMoreOpen(false);
   }, [pathname]);
 
   async function handleSignOut() {
@@ -103,7 +89,8 @@ export default function NavBar() {
   }
 
   return (
-    <nav ref={mobileMenuRef} className="relative bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <>
+    <nav className="relative bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       {/* Left side: Logo + desktop nav links */}
       <div className="flex items-center gap-6">
         <Link href="/" className={`flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r ${theme.gradient}`}>
@@ -179,120 +166,129 @@ export default function NavBar() {
         ))}
       </div>
 
-      {/* Mobile hamburger button */}
-      <button
-        className="sm:hidden p-1.5 rounded text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors"
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-      >
-        {mobileMenuOpen ? (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        )}
-      </button>
-
-      {/* Mobile dropdown menu */}
-      {mobileMenuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-[#141925] border-b border-white/5 px-6 py-4 sm:hidden">
-          {/* Nav links */}
-          <div className="flex flex-col gap-1">
-            {navItems.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === href
-                    ? `${theme.activeTab} text-white`
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-[#1c2333]'
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-          {authed && (
-            <>
-              <div className="border-t border-[#253040] my-2" />
-              {/* Notifications */}
-              <Link
-                href="/notifications"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === '/notifications'
-                    ? `${theme.activeTab} text-white`
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-[#1c2333]'
-                }`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                Notifications
-                {unreadCount > 0 && (
-                  <span className="ml-auto w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </Link>
-              {/* Profile */}
-              <Link
-                href={profileUsername ? `/u/${profileUsername}` : '/settings'}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                {profileUsername ? 'View Profile' : 'Set Up Profile'}
-              </Link>
-            </>
-          )}
-
-          <div className="border-t border-[#253040] my-2" />
-
-          {/* SFW toggle */}
-          <div className="px-3 py-2">
-            <SfwToggle sfwMode={sfwMode} onToggle={() => setSfwMode(!sfwMode)} />
-          </div>
-
-          {/* Sign in / Sign out */}
-          {!loading && (
-            <>
-              <div className="border-t border-[#253040] my-2" />
-              {authed ? (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleSignOut();
-                  }}
-                  className="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors"
-                >
-                  Sign out
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${theme.link} hover:bg-[#1c2333] transition-colors`}
-                >
-                  Sign In
-                </Link>
-              )}
-            </>
-          )}
-        </div>
+      {/* Mobile: Sign In button only (no hamburger) */}
+      {!loading && !authed && (
+        <Link
+          href="/login"
+          className={`sm:hidden px-3 py-1.5 ${theme.btn} text-white text-sm rounded-lg font-medium transition-colors`}
+        >
+          Sign In
+        </Link>
       )}
     </nav>
+
+    {/* Mobile bottom navigation bar */}
+    {authed && (
+      <nav className="fixed bottom-0 inset-x-0 z-50 sm:hidden bg-[#141925]/95 backdrop-blur-xl border-t border-white/5 h-14 flex items-center justify-around px-2 safe-bottom">
+        {[
+          { href: '/watchlist', label: 'Watchlist', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          )},
+          { href: '/search', label: 'Search', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          )},
+          { href: '/airing', label: 'Airing', icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+          )},
+          { href: '/notifications', label: 'Alerts', icon: (
+            <div className="relative">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
+          )},
+        ].map(({ href, label, icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-lg transition-colors ${
+              pathname === href ? `${theme.btnText}` : 'text-gray-500'
+            }`}
+          >
+            {icon}
+            <span className="text-[10px] font-medium">{label}</span>
+          </Link>
+        ))}
+        <button
+          onClick={() => setMoreOpen(true)}
+          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-lg transition-colors ${
+            moreOpen ? `${theme.btnText}` : 'text-gray-500'
+          }`}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
+          </svg>
+          <span className="text-[10px] font-medium">More</span>
+        </button>
+      </nav>
+    )}
+
+    {/* More bottom sheet */}
+    {moreOpen && (
+      <>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm sm:hidden" onClick={() => setMoreOpen(false)} />
+        <div className="fixed inset-x-0 bottom-0 z-50 animate-slide-up sm:hidden">
+          <div className="bg-[#141925] rounded-t-2xl border-t border-x border-[#253040] mx-auto max-w-lg">
+            <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mt-3 mb-2" />
+            <div className="px-4 pb-4 space-y-1">
+              {[
+                { href: '/recommend', label: 'For You', icon: '✦' },
+                { href: '/playlists', label: 'Playlists', icon: '▶' },
+                { href: '/buddies', label: 'Buddies', icon: '♥' },
+                { href: profileUsername ? `/u/${profileUsername}` : '/settings', label: profileUsername ? 'Profile' : 'Set Up Profile', icon: '●' },
+                { href: '/settings', label: 'Settings', icon: '⚙' },
+              ].map(({ href, label, icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMoreOpen(false)}
+                  className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    pathname === href
+                      ? `${theme.activeTab} text-white`
+                      : 'text-gray-300 hover:bg-[#1c2333]'
+                  }`}
+                >
+                  <span className="w-5 text-center text-gray-500">{icon}</span>
+                  {label}
+                </Link>
+              ))}
+
+              <div className="border-t border-[#253040] my-2" />
+
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-sm font-medium text-gray-300">SFW Mode</span>
+                <SfwToggle sfwMode={sfwMode} onToggle={() => setSfwMode(!sfwMode)} />
+              </div>
+
+              <div className="border-t border-[#253040] my-2" />
+
+              <button
+                onClick={() => {
+                  setMoreOpen(false);
+                  handleSignOut();
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-[#1c2333] transition-colors"
+              >
+                <span className="w-5 text-center">↪</span>
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+    </>
   );
 }

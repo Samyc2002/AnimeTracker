@@ -31,3 +31,7 @@
 @utility animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

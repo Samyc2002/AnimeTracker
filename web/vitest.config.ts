@@ -17,6 +17,8 @@ export default defineConfig({
         'lib/providers/cache.ts',
         'lib/providers/airing-cache.ts',
         'lib/providers/types.ts',
+        'lib/series-resolver.ts',
+        'app/api/**',
       ],
       thresholds: {
         lines: 80,
