@@ -20,6 +20,7 @@ interface NotificationDoc {
   airing_at: number;
   is_read: boolean;
   created_at: string;
+  type?: string;
 }
 
 function formatTimeAgo(timestamp: number): string {
@@ -50,7 +51,7 @@ function NotificationsPage() {
       const user = await account.get();
       const res = await databases.listDocuments(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, [
         Query.equal('user_id', user.$id),
-        Query.orderDesc('airing_at'),
+        Query.orderDesc('$createdAt'),
         Query.limit(100),
       ]);
       setNotifications(res.documents as unknown as NotificationDoc[]);
@@ -156,7 +157,7 @@ function NotificationsPage() {
       {notifications.length === 0 ? (
         <div className="text-center text-gray-500 mt-12">
           <p>No notifications yet.</p>
-          <p className="mt-1 text-sm">New episode alerts will appear here for anime in your watchlist.</p>
+          <p className="mt-1 text-sm">Episode alerts and sequel announcements will appear here.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -180,12 +181,28 @@ function NotificationsPage() {
                 unoptimized
               />
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                <p className={`text-sm font-semibold ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
-                  Episode {notif.episode} of {notif.title}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Aired {formatTimeAgo(notif.airing_at)}
-                </p>
+                {notif.type === 'sequel' ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-purple-900/60 text-purple-300">Sequel</span>
+                      <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
+                        {notif.title}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Upcoming sequel announced &middot; {formatTimeAgo(Math.floor(new Date(notif.created_at).getTime() / 1000))}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className={`text-sm font-semibold ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
+                      Episode {notif.episode} of {notif.title}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Aired {formatTimeAgo(notif.airing_at)}
+                    </p>
+                  </>
+                )}
               </div>
               {!notif.is_read && (
                 <div className="flex items-center">
