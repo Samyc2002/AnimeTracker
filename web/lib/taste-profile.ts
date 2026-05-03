@@ -104,15 +104,21 @@ export function generateQuestions(profile: TasteProfile): QuizQuestion[] {
       (g) => contrasts.includes(g.genre)
     );
     const secondary = contrastGenre?.genre || profile.topGenres[1].genre;
+    const third = profile.topGenres.find(
+      (g) => g.genre !== primary && g.genre !== secondary
+    );
+
+    const options = [
+      { label: primary, value: primary },
+      { label: secondary, value: secondary },
+    ];
+    if (third) options.push({ label: third.genre, value: third.genre });
+    options.push({ label: 'Mix it up', value: 'mix' });
 
     questions.push({
       id: 'mood',
       text: `What are you in the mood for?`,
-      options: [
-        { label: primary, value: primary },
-        { label: secondary, value: secondary },
-        { label: 'Surprise me', value: 'surprise' },
-      ],
+      options,
     });
   }
 
@@ -122,8 +128,8 @@ export function generateQuestions(profile: TasteProfile): QuizQuestion[] {
     text: 'How long of a series?',
     options: [
       { label: avgEps <= 13 ? 'Quick watch (12 eps)' : 'Short (12 eps or fewer)', value: 'short' },
-      { label: 'Standard (13-26 eps)', value: 'medium' },
-      { label: 'Long series (26+ eps)', value: 'long' },
+      { label: 'Standard (13-50 eps)', value: 'medium' },
+      { label: 'Long series (50+ eps)', value: 'long' },
       { label: "Doesn't matter", value: 'any' },
     ],
   });
@@ -157,33 +163,37 @@ export function buildFiltersFromAnswers(
   profile: TasteProfile,
   answers: Record<string, string>,
 ): RecommendationFilters {
-  const topGenreNames = profile.topGenres.slice(0, 3).map((g) => g.genre);
+  const topGenreNames = profile.topGenres.slice(0, 5).map((g) => g.genre);
   let genres: string[];
 
-  if (answers.mood === 'surprise') {
-    genres = topGenreNames.length > 2 ? [topGenreNames[2]] : topGenreNames.slice(0, 1);
+  if (answers.mood === 'mix') {
+    genres = topGenreNames.slice(0, 3);
   } else if (answers.mood) {
-    genres = [answers.mood];
+    const picked = answers.mood;
+    const companions = profile.genrePairs
+      .filter(([a, b]) => a === picked || b === picked)
+      .map(([a, b]) => (a === picked ? b : a))
+      .slice(0, 2);
+    genres = [picked, ...companions];
   } else {
-    genres = topGenreNames.slice(0, 2);
+    genres = topGenreNames.slice(0, 3);
   }
 
   let maxEpisodes: number | null = null;
-  if (answers.length === 'short') maxEpisodes = 13;
-  else if (answers.length === 'medium') maxEpisodes = 26;
-  else if (answers.length === 'long') maxEpisodes = null;
+  if (answers.length === 'short') maxEpisodes = 14;
+  else if (answers.length === 'medium') maxEpisodes = 52;
 
   let status: 'RELEASING' | 'FINISHED' | null = null;
   if (answers.status === 'RELEASING') status = 'RELEASING';
   else if (answers.status === 'FINISHED') status = 'FINISHED';
 
-  let minScore = 60;
+  let minScore = 50;
   let sort: 'SCORE_DESC' | 'TRENDING_DESC' | 'POPULARITY_DESC' = 'SCORE_DESC';
   if (answers.popularity === 'popular') {
-    minScore = 75;
+    minScore = 70;
     sort = 'POPULARITY_DESC';
   } else if (answers.popularity === 'hidden') {
-    minScore = 60;
+    minScore = 45;
     sort = 'SCORE_DESC';
   }
 

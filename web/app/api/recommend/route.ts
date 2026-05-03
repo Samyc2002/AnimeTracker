@@ -7,7 +7,7 @@ const ANILIST_API = 'https://graphql.anilist.co';
 
 const FILTERED_SEARCH_QUERY = `
 query FilteredSearch($genres: [String], $status: MediaStatus, $sort: [MediaSort], $scoreGreater: Int, $page: Int) {
-  Page(page: $page, perPage: 20) {
+  Page(page: $page, perPage: 50) {
     pageInfo { hasNextPage }
     media(
       type: ANIME,
