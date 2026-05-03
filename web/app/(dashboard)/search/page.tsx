@@ -12,6 +12,8 @@ import AddToWatchlist from '@/components/AddToWatchlist';
 import Image from 'next/image';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
+import { useAuth } from '@/lib/auth-context';
+import { account } from '@/lib/appwrite';
 import type { AniListMedia } from '@/lib/types';
 
 function RecommendationGrid({
@@ -70,11 +72,13 @@ export default function SearchPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
+  const { authed } = useAuth();
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [trending, setTrending] = useState<AniListMedia[]>([]);
   const [popular, setPopular] = useState<AniListMedia[]>([]);
+  const [forYou, setForYou] = useState<AniListMedia[]>([]);
   const [recsLoading, setRecsLoading] = useState(true);
 
   useEffect(() => {
@@ -90,6 +94,37 @@ export default function SearchPage() {
     }
     loadRecs();
   }, []);
+
+  useEffect(() => {
+    if (!authed) return;
+    async function loadForYou() {
+      try {
+        const user = await account.get();
+        const profileRes = await fetch('/api/taste-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.$id }),
+        });
+        const profileData = await profileRes.json();
+        if (profileData.insufficient || !profileData.profile) return;
+
+        const topGenres = profileData.profile.topGenres.slice(0, 3).map((g: { genre: string }) => g.genre);
+        const recRes = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.$id,
+            filters: { genres: topGenres, status: null, minScore: 70, maxEpisodes: null, sort: 'SCORE_DESC', excludeMediaIds: [] },
+          }),
+        });
+        const recData = await recRes.json();
+        setForYou((recData.results || []).slice(0, 10));
+      } catch {
+        // Silently skip — For You is optional
+      }
+    }
+    loadForYou();
+  }, [authed]);
 
   const handleSearch = useCallback(async (query: string) => {
     setLoading(true);
@@ -153,6 +188,13 @@ export default function SearchPage() {
           </div>
         ) : (
           <>
+            {forYou.length > 0 && (
+              <RecommendationGrid
+                title="For You"
+                items={sfwMode ? forYou.filter((m) => !m.isAdult) : forYou}
+                onClickAnime={(id) => router.push(`/anime/${id}`)}
+              />
+            )}
             <RecommendationGrid
               title="Trending Now"
               items={sfwMode ? trending.filter((m) => !m.isAdult) : trending}

@@ -13,6 +13,7 @@ import { getTheme } from '@/lib/theme';
 import { getWatchUrl } from '@/lib/stream-provider';
 import AddToWatchlist from '@/components/AddToWatchlist';
 import AddPrequels from '@/components/AddPrequels';
+import RecommendToBuddy from '@/components/RecommendToBuddy';
 import type { AnimeDetail } from '@/lib/types';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -208,6 +209,11 @@ export default function AnimeDetailPage() {
                   nextAiringEpisode: anime.nextAiringEpisode,
                 }} />
                 <AddPrequels anime={anime} />
+                <RecommendToBuddy
+                  mediaId={anime.id}
+                  title={anime.title.english || anime.title.romaji}
+                  coverUrl={anime.coverImage?.extraLarge || anime.coverImage?.large || ''}
+                />
               </div>
             ) : (
               <Link

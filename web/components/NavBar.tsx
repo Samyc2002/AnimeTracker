@@ -18,8 +18,10 @@ const publicNavItems = [
 const authNavItems = [
   { href: '/watchlist', label: 'Watchlist' },
   { href: '/search', label: 'Search' },
+  { href: '/recommend', label: 'For You' },
   { href: '/airing', label: 'Airing' },
   { href: '/playlists', label: 'Playlists' },
+  { href: '/buddies', label: 'Buddies' },
   { href: '/settings', label: 'Settings' },
 ];
 

@@ -145,6 +145,32 @@ query AnimeDetail($id: Int) {
   }
 }`;
 
+const FILTERED_SEARCH_QUERY = `
+query FilteredSearch($genres: [String], $status: MediaStatus, $sort: [MediaSort], $scoreGreater: Int, $page: Int) {
+  Page(page: $page, perPage: 20) {
+    pageInfo { hasNextPage }
+    media(
+      type: ANIME,
+      genre_in: $genres,
+      status: $status,
+      sort: $sort,
+      averageScore_greater: $scoreGreater,
+      isAdult: false
+    ) {
+      id
+      idMal
+      title { romaji english }
+      coverImage { extraLarge large medium }
+      status
+      episodes
+      isAdult
+      averageScore
+      genres
+      nextAiringEpisode { airingAt episode }
+    }
+  }
+}`;
+
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -296,4 +322,30 @@ export async function fetchAnilistUserList(userId: number, token: string): Promi
 export async function fetchAnilistDetail(id: number): Promise<AnimeDetail> {
   const data = await cachedGql<{ Media: AnimeDetail }>('detail', id, ANIME_DETAIL_QUERY, { id });
   return data.Media;
+}
+
+export async function searchAnilistFiltered(filters: {
+  genres?: string[];
+  status?: string;
+  sort?: string[];
+  scoreGreater?: number;
+  page?: number;
+}): Promise<{ media: (AniListMedia & { averageScore?: number; genres?: string[] })[]; hasNextPage: boolean }> {
+  const variables: Record<string, unknown> = { page: filters.page || 1 };
+  if (filters.genres?.length) variables.genres = filters.genres;
+  if (filters.status) variables.status = filters.status;
+  if (filters.sort) variables.sort = filters.sort;
+  if (filters.scoreGreater != null) variables.scoreGreater = filters.scoreGreater;
+
+  const data = await cachedGql<{
+    Page: {
+      pageInfo: { hasNextPage: boolean };
+      media: (AniListMedia & { averageScore?: number; genres?: string[] })[];
+    };
+  }>('filteredSearch', variables, FILTERED_SEARCH_QUERY, variables);
+
+  return {
+    media: data.Page.media,
+    hasNextPage: data.Page.pageInfo.hasNextPage,
+  };
 }

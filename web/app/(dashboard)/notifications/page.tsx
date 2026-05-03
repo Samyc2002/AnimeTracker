@@ -169,7 +169,11 @@ function NotificationsPage() {
               }`}
               onClick={() => {
                 markAsRead(notif);
-                router.push(`/anime/${notif.media_id}`);
+                if (notif.type === 'buddy_request' || notif.type === 'buddy_accept') {
+                  router.push('/buddies');
+                } else {
+                  router.push(`/anime/${notif.media_id}`);
+                }
               }}
             >
               <Image
@@ -191,6 +195,42 @@ function NotificationsPage() {
                     </div>
                     <p className="text-xs text-gray-500">
                       Upcoming sequel announced &middot; {formatTimeAgo(Math.floor(new Date(notif.created_at).getTime() / 1000))}
+                    </p>
+                  </>
+                ) : notif.type === 'buddy_request' ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-indigo-900/60 text-indigo-300">Buddy Request</span>
+                      <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
+                        {notif.title}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Wants to be your buddy &middot; {formatTimeAgo(Math.floor(new Date(notif.created_at).getTime() / 1000))}
+                    </p>
+                  </>
+                ) : notif.type === 'buddy_accept' ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-emerald-900/60 text-emerald-300">Buddy</span>
+                      <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
+                        {notif.title}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Accepted your buddy request! &middot; {formatTimeAgo(Math.floor(new Date(notif.created_at).getTime() / 1000))}
+                    </p>
+                  </>
+                ) : notif.type === 'buddy_rec' ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-amber-900/60 text-amber-300">Recommendation</span>
+                    </div>
+                    <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
+                      {notif.title}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {formatTimeAgo(Math.floor(new Date(notif.created_at).getTime() / 1000))}
                     </p>
                   </>
                 ) : (

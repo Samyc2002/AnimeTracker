@@ -125,3 +125,74 @@ export interface PublicProfile {
   };
   watchlist: PublicProfileEntry[];
 }
+
+// Recommendation types
+
+export interface GenrePreference {
+  genre: string;
+  count: number;
+  percentage: number;
+}
+
+export interface StudioPreference {
+  studio: string;
+  count: number;
+}
+
+export interface TasteProfile {
+  topGenres: GenrePreference[];
+  topStudios: StudioPreference[];
+  avgScore: number;
+  avgEpisodes: number;
+  totalCompleted: number;
+  genrePairs: [string, string, number][];
+}
+
+export interface QuizQuestion {
+  id: string;
+  text: string;
+  options: QuizOption[];
+}
+
+export interface QuizOption {
+  label: string;
+  value: string;
+}
+
+export interface RecommendationFilters {
+  genres: string[];
+  status: 'RELEASING' | 'FINISHED' | null;
+  minScore: number;
+  maxEpisodes: number | null;
+  sort: 'SCORE_DESC' | 'TRENDING_DESC' | 'POPULARITY_DESC';
+  excludeMediaIds: number[];
+}
+
+// Buddy types
+
+export type BuddyStatus = 'pending' | 'accepted' | 'declined';
+
+export interface BuddyDoc {
+  $id: string;
+  sender_id: string;
+  receiver_id: string;
+  status: BuddyStatus;
+  created_at: string;
+}
+
+export interface BuddyRecommendationDoc {
+  $id: string;
+  from_user_id: string;
+  to_user_id: string;
+  media_id: number;
+  title: string;
+  cover_url: string;
+  message: string | null;
+  created_at: string;
+}
+
+export interface BuddyProfile {
+  userId: string;
+  username: string;
+  displayName: string | null;
+}

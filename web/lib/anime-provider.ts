@@ -1,5 +1,5 @@
-import type { AniListMedia, AnimeDetail, AiringSchedule } from '@/lib/types';
-import { searchAnilist, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnilistRecommendations, fetchAnilistViewer, fetchAnilistUserList, fetchAnilistAiringSchedule } from '@/lib/providers/anilist';
+import type { AniListMedia, AnimeDetail, AiringSchedule, RecommendationFilters } from '@/lib/types';
+import { searchAnilist, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnilistRecommendations, fetchAnilistViewer, fetchAnilistUserList, fetchAnilistAiringSchedule, searchAnilistFiltered } from '@/lib/providers/anilist';
 import { searchJikan, fetchJikanDetail, fetchJikanSchedule } from '@/lib/providers/jikan';
 import { searchKitsu, fetchKitsuDetail } from '@/lib/providers/kitsu';
 import { getCachedAnime, getCachedSearch, saveAnimeToCache } from '@/lib/providers/cache';
@@ -141,6 +141,37 @@ export async function fetchViewer(token: string): Promise<{ id: number; name: st
 
 export async function fetchUserList(userId: number, token: string) {
   return fetchAnilistUserList(userId, token);
+}
+
+export async function searchAnimeFiltered(filters: RecommendationFilters): Promise<AniListMedia[]> {
+  const sortMap: Record<string, string[]> = {
+    SCORE_DESC: ['SCORE_DESC'],
+    TRENDING_DESC: ['TRENDING_DESC'],
+    POPULARITY_DESC: ['POPULARITY_DESC'],
+  };
+
+  const result = await searchAnilistFiltered({
+    genres: filters.genres.length > 0 ? filters.genres : undefined,
+    status: filters.status || undefined,
+    sort: sortMap[filters.sort] || ['SCORE_DESC'],
+    scoreGreater: filters.minScore,
+  });
+
+  let media = result.media.filter((m) => !filters.excludeMediaIds.includes(m.id));
+
+  if (filters.maxEpisodes != null) {
+    media = media.filter((m) => m.episodes == null || m.episodes <= filters.maxEpisodes!);
+  }
+
+  if (media.length === 0 && filters.genres.length > 0) {
+    const fallback = await searchAnilistFiltered({
+      sort: sortMap[filters.sort] || ['SCORE_DESC'],
+      scoreGreater: filters.minScore,
+    });
+    media = fallback.media.filter((m) => !filters.excludeMediaIds.includes(m.id));
+  }
+
+  return media;
 }
 
 export function mediaToWatchlistEntry(media: AniListMedia) {
