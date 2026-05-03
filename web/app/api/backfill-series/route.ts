@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   const batchSize = 5;
+  const offset = Number(req.nextUrl.searchParams.get('offset') || '0');
 
   try {
     const client = new Client()
@@ -67,10 +68,9 @@ export async function POST(req: NextRequest) {
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
     const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
 
-    // Find entries without series_id
     const res = await databases.listDocuments(dbId, watchlistCol, [
-      Query.isNull('series_id'),
       Query.limit(batchSize),
+      Query.offset(offset),
     ]);
 
     let updated = 0;
@@ -81,18 +81,21 @@ export async function POST(req: NextRequest) {
 
       try {
         const seriesId = await resolveSeriesRoot(malId);
-        await databases.updateDocument(dbId, watchlistCol, doc.$id, {
-          series_id: seriesId,
-        });
-        updated++;
+        if (seriesId !== (doc.series_id as number | null)) {
+          await databases.updateDocument(dbId, watchlistCol, doc.$id, {
+            series_id: seriesId,
+          });
+          updated++;
+        }
       } catch {
         // Skip failed entries
       }
     }
 
-    const remaining = res.total - res.documents.length;
+    const nextOffset = offset + batchSize;
+    const done = res.documents.length < batchSize;
 
-    return NextResponse.json({ updated, remaining, done: remaining === 0 });
+    return NextResponse.json({ updated, processed: res.documents.length, offset, nextOffset, total: res.total, done });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Backfill failed' },
