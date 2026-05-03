@@ -81,6 +81,13 @@ export async function POST(req: NextRequest) {
     for (const [userId, mediaIds] of userMediaMap) {
       const uniqueIds = [...new Set(mediaIds)];
 
+      const allWatchlist = await databases.listDocuments(dbId, watchlistCol, [
+        Query.equal('user_id', userId),
+        Query.limit(500),
+        Query.select(['media_id']),
+      ]);
+      const trackedMediaIds = new Set(allWatchlist.documents.map((d) => d.media_id as number));
+
       for (let i = 0; i < uniqueIds.length; i += 50) {
         const batch = uniqueIds.slice(i, i + 50);
 
@@ -124,6 +131,8 @@ export async function POST(req: NextRequest) {
         }
 
         for (const sequel of sequels) {
+          if (trackedMediaIds.has(sequel.id)) continue;
+
           const existing = await databases.listDocuments(dbId, notificationsCol, [
             Query.equal('user_id', userId),
             Query.equal('media_id', sequel.id),
