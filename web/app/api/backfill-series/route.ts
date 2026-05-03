@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const batchSize = 5;
+  const batchSize = 10;
+  const mode = req.nextUrl.searchParams.get('mode') || 'new';
   const offset = Number(req.nextUrl.searchParams.get('offset') || '0');
 
   try {
@@ -68,10 +69,11 @@ export async function POST(req: NextRequest) {
     const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
     const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
 
-    const res = await databases.listDocuments(dbId, watchlistCol, [
-      Query.limit(batchSize),
-      Query.offset(offset),
-    ]);
+    const queries = mode === 'full'
+      ? [Query.limit(batchSize), Query.offset(offset)]
+      : [Query.isNull('series_id'), Query.limit(batchSize)];
+
+    const res = await databases.listDocuments(dbId, watchlistCol, queries);
 
     let updated = 0;
 
@@ -93,9 +95,11 @@ export async function POST(req: NextRequest) {
     }
 
     const nextOffset = offset + batchSize;
-    const done = res.documents.length < batchSize;
+    const done = mode === 'full'
+      ? res.documents.length < batchSize
+      : res.documents.length === 0 || (res.total - res.documents.length) === 0;
 
-    return NextResponse.json({ updated, processed: res.documents.length, offset, nextOffset, total: res.total, done });
+    return NextResponse.json({ updated, processed: res.documents.length, offset, nextOffset, total: res.total, mode, done });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Backfill failed' },

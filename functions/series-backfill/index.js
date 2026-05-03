@@ -9,14 +9,13 @@ module.exports = async ({ req, res, log, error }) => {
 
   let totalUpdated = 0;
   let batches = 0;
-  let offset = 0;
-  const maxBatches = 200;
+  const maxBatches = 100;
 
   try {
-    log('Starting series backfill (full re-link)...');
+    log('Starting series backfill (new entries only)...');
 
     while (batches < maxBatches) {
-      const response = await fetch(`${appUrl}/api/backfill-series?offset=${offset}`, {
+      const response = await fetch(`${appUrl}/api/backfill-series?mode=new`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${cronSecret}`,
@@ -33,14 +32,12 @@ module.exports = async ({ req, res, log, error }) => {
       }
 
       totalUpdated += body.updated || 0;
-      log(`Batch ${batches}: offset ${body.offset}, updated ${body.updated}/${body.processed}, total ${body.total}`);
+      log(`Batch ${batches}: processed ${body.processed}, updated ${body.updated}, remaining ~${body.total - body.processed}`);
 
       if (body.done) {
-        log('All entries processed.');
+        log('All new entries processed.');
         break;
       }
-
-      offset = body.nextOffset;
     }
 
     log(`Done. Total updated: ${totalUpdated} in ${batches} batches.`);
