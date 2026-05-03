@@ -272,7 +272,7 @@ function SettingsPage() {
     <div>
       <h1 className="text-xl font-bold text-gray-200 mb-6">Settings</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
       <div className="space-y-8">
         <div>
           <p className="text-sm text-gray-400 mb-1">Signed in as</p>
@@ -468,11 +468,11 @@ function SettingsPage() {
           <div className="grid grid-cols-5 gap-2">
             <button
               onClick={() => setAvatar(null)}
-              className={`aspect-square rounded-lg border-2 flex items-center justify-center transition-colors ${
+              className={`aspect-square rounded-full border-2 flex items-center justify-center transition-colors ${
                 !avatar ? `border-${theme.accent}-500` : 'border-[#253040] hover:border-gray-500'
               }`}
             >
-              <div className={`w-full h-full rounded-md bg-gradient-to-br ${theme.gradientBold} flex items-center justify-center text-sm font-bold text-white`}>
+              <div className={`w-full h-full rounded-full bg-gradient-to-br ${theme.gradientBold} flex items-center justify-center text-sm font-bold text-white`}>
                 {(displayName || username || email || '?').charAt(0).toUpperCase()}
               </div>
             </button>
@@ -480,7 +480,7 @@ function SettingsPage() {
               <button
                 key={opt.id}
                 onClick={() => setAvatar(opt.src)}
-                className={`aspect-square rounded-lg border-2 overflow-hidden transition-colors ${
+                className={`aspect-square rounded-full border-2 overflow-hidden transition-colors ${
                   avatar === opt.src ? `border-${theme.accent}-500` : 'border-[#253040] hover:border-gray-500'
                 }`}
               >
