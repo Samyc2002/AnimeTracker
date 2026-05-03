@@ -94,7 +94,7 @@ export default function DashboardLayout({
         <div data-dashboard-layout className="min-h-screen bg-[#0b0e14] flex flex-col">
           <ProviderStatusBanner />
           <NavBar />
-          <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20 lg:pb-8 flex-1 w-full">{children}</main>
+          <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20 xl:pb-8 flex-1 w-full">{children}</main>
           <Footer />
         </div>
       </SfwProvider>

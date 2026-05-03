@@ -97,7 +97,7 @@ export default function NavBar() {
           <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
           Anime Tracker
         </Link>
-        <div className="hidden lg:flex gap-1">
+        <div className="hidden xl:flex gap-1">
           {navItems.map(({ href, label }) => (
             <Link
               key={href}
@@ -115,7 +115,7 @@ export default function NavBar() {
       </div>
 
       {/* Right side: desktop controls */}
-      <div className="hidden lg:flex items-center gap-3">
+      <div className="hidden xl:flex items-center gap-3">
         {authed && (
           <>
             <Link
@@ -170,7 +170,7 @@ export default function NavBar() {
       {!loading && !authed && (
         <Link
           href="/login"
-          className={`lg:hidden px-3 py-1.5 ${theme.btn} text-white text-sm rounded-lg font-medium transition-colors`}
+          className={`xl:hidden px-3 py-1.5 ${theme.btn} text-white text-sm rounded-lg font-medium transition-colors`}
         >
           Sign In
         </Link>
@@ -179,7 +179,7 @@ export default function NavBar() {
 
     {/* Mobile bottom navigation bar */}
     {authed && (
-      <nav className="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-[#141925]/95 backdrop-blur-xl border-t border-white/5 h-14 flex items-center justify-around px-2 safe-bottom">
+      <nav className="fixed bottom-0 inset-x-0 z-50 xl:hidden bg-[#141925]/60 backdrop-blur-xl border-t border-white/5 h-14 flex items-center justify-around px-2 safe-bottom">
         {[
           { href: '/watchlist', label: 'Watchlist', icon: (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -238,8 +238,8 @@ export default function NavBar() {
     {/* More bottom sheet */}
     {moreOpen && (
       <>
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMoreOpen(false)} />
-        <div className="fixed inset-x-0 bottom-0 z-50 animate-slide-up lg:hidden">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm xl:hidden" onClick={() => setMoreOpen(false)} />
+        <div className="fixed inset-x-0 bottom-0 z-50 animate-slide-up xl:hidden">
           <div className="bg-[#141925] rounded-t-2xl border-t border-x border-[#253040] mx-auto max-w-lg">
             <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mt-3 mb-2" />
             <div className="px-4 pb-4 space-y-1">
