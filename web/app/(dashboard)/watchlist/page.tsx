@@ -292,7 +292,7 @@ function WatchlistPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+      <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
         {[ALL_FILTER, ...WATCH_STATUSES].map((s) => (
           <button
             key={s}
@@ -308,7 +308,7 @@ function WatchlistPage() {
         ))}
       </div>
 
-      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+      <div className="flex gap-1.5 mb-4 overflow-x-auto no-scrollbar">
         <span className="text-xs text-gray-600 self-center mr-1 whitespace-nowrap">Airing:</span>
         {[ALL_AIRING, ...AIRING_STATUSES].map((s) => {
           const label = s === ALL_AIRING ? 'All' : (airingStatusLabels[s]?.label || s);
