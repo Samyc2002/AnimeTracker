@@ -94,6 +94,11 @@ export async function GET(
       username: profile.username as string,
       display_name: (profile.display_name as string) || null,
       joined_at: profile.$createdAt as string,
+      avatar: (profile.avatar as string) || null,
+      social_twitter: (profile.social_twitter as string) || null,
+      social_discord: (profile.social_discord as string) || null,
+      social_instagram: (profile.social_instagram as string) || null,
+      social_reddit: (profile.social_reddit as string) || null,
       stats: {
         total_anime: watchlist.length,
         episodes_watched: watchedEpRes.total,

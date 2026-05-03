@@ -115,6 +115,11 @@ export interface PublicProfile {
   username: string;
   display_name: string | null;
   joined_at: string;
+  avatar: string | null;
+  social_twitter: string | null;
+  social_discord: string | null;
+  social_instagram: string | null;
+  social_reddit: string | null;
   stats: {
     total_anime: number;
     episodes_watched: number;
