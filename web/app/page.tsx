@@ -249,6 +249,18 @@ export default function LandingPage() {
                 </svg>
                 Join Discord
               </a>
+              <a
+                href="https://www.producthunt.com/products/anime-tracker?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-anime-tracker"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  alt="Anime Tracker - Track anime, get smart recs, share with buddies. | Product Hunt"
+                  width={250}
+                  height={54}
+                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark&t=1777810177209"
+                />
+              </a>
             </div>
           </div>
 
