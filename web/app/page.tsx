@@ -196,9 +196,20 @@ export default function LandingPage() {
                 Organized
               </span>
             </h1>
-            <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10">
+            <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-8">
               Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.
             </p>
+            <div className="w-full max-w-3xl mx-auto mb-10 rounded-xl overflow-hidden border border-[#253040]">
+              <iframe
+                src="https://app.arcade.software/share/JVAbYM1R0pJjUvwY2pQb?embed&show_title=true&animated_cursor=true&chat=false"
+                title="Anime Tracker Demo"
+                frameBorder="0"
+                loading="lazy"
+                allowFullScreen
+                allow="clipboard-write"
+                className="w-full aspect-[16/9]"
+              />
+            </div>
             <div className="flex flex-wrap items-center justify-center gap-3">
               {loggedIn ? (
                 <Link
