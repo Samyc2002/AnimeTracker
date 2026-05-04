@@ -199,7 +199,7 @@ export default function LandingPage() {
             <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-8">
               Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.
             </p>
-            <div className="w-full max-w-3xl mx-auto mb-10 rounded-xl overflow-hidden border border-[#253040]">
+            <div className="w-full max-w-3xl mx-auto mb-10 rounded-xl overflow-hidden border border-[#253040] p-2">
               <iframe
                 src="https://app.arcade.software/share/JVAbYM1R0pJjUvwY2pQb?embed&show_title=true&animated_cursor=true&chat=false"
                 title="Anime Tracker Demo"
@@ -207,7 +207,7 @@ export default function LandingPage() {
                 loading="lazy"
                 allowFullScreen
                 allow="clipboard-write"
-                className="w-full aspect-[16/9]"
+                className="w-full aspect-[16/9] rounded-lg"
               />
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -271,7 +271,7 @@ export default function LandingPage() {
                   alt="Anime Tracker on Product Hunt"
                   width={180}
                   height={40}
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark&t=1777810177209"
+                  src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark&t=${Date.now()}`}
                   className="h-[36px] w-auto"
                 />
               </a>
