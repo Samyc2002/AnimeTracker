@@ -4,9 +4,7 @@ import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID, WATCHLIST_COLLECTION_ID, WATCHED_EPISODES_COLLECTION_ID } from '@/lib/appwrite';
-import { fetchUserList, mediaToWatchlistEntry } from '@/lib/anime-provider';
-import { backfillSeriesId } from '@/lib/series-resolver';
+import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import SeriesBackfill from '@/components/SeriesBackfill';
@@ -19,7 +17,6 @@ interface ProfileDoc {
   $id: string;
   display_language: string;
   anilist_user_id?: number;
-  anilist_token?: string;
   username?: string;
   display_name?: string;
   is_public?: boolean;
@@ -47,7 +44,6 @@ function SettingsPage() {
   const [profileDocId, setProfileDocId] = useState<string | null>(null);
   const [anilistConnected, setAnilistConnected] = useState(false);
   const [anilistUserId, setAnilistUserId] = useState<number | null>(null);
-  const [anilistToken, setAnilistToken] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [username, setUsername] = useState('');
@@ -82,6 +78,7 @@ function SettingsPage() {
 
       const profiles = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
         Query.equal('user_id', user.$id),
+        Query.select(['$id', 'display_language', 'anilist_user_id', 'username', 'display_name', 'is_public', 'hide_nsfw_public', 'avatar', 'social_twitter', 'social_discord', 'social_instagram', 'social_reddit']),
         Query.limit(1),
       ]);
 
@@ -98,10 +95,9 @@ function SettingsPage() {
         if (profile.social_discord) setSocialDiscord(profile.social_discord);
         if (profile.social_instagram) setSocialInstagram(profile.social_instagram);
         if (profile.social_reddit) setSocialReddit(profile.social_reddit);
-        if (profile.anilist_user_id && profile.anilist_token) {
+        if (profile.anilist_user_id) {
           setAnilistConnected(true);
           setAnilistUserId(profile.anilist_user_id);
-          setAnilistToken(profile.anilist_token);
         }
       } else {
         const newProfile = await databases.createDocument(DATABASE_ID, PROFILES_COLLECTION_ID, ID.unique(), {
@@ -144,7 +140,6 @@ function SettingsPage() {
     });
     setAnilistConnected(false);
     setAnilistUserId(null);
-    setAnilistToken(null);
     enqueueSnackbar('AniList disconnected', { variant: 'success' });
   }
 
@@ -200,68 +195,24 @@ function SettingsPage() {
   }
 
   async function importWatchlist() {
-    if (!anilistUserId || !anilistToken) return;
+    if (!anilistConnected) return;
     setImporting(true);
     setImportResult(null);
 
     try {
       const user = await account.get();
-      const anilistEntries = await fetchUserList(anilistUserId, anilistToken);
-
-      const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.select(['media_id', '$id']),
-        Query.limit(500),
-      ]);
-      const existingMap = new Map(
-        existing.documents.map((d) => [(d as unknown as { media_id: number }).media_id, d.$id])
-      );
-
-      let created = 0;
-      let updated = 0;
-
-      for (const entry of anilistEntries) {
-        const docData = {
-          ...mediaToWatchlistEntry(entry.media),
-          user_id: user.$id,
-          watch_status: entry.watchStatus,
-        };
-
-        const existingDocId = existingMap.get(entry.media.id);
-
-        if (existingDocId) {
-          await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, existingDocId, docData);
-          updated++;
-        } else {
-          const newDoc = await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), docData);
-          backfillSeriesId(newDoc.$id, entry.media.id, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
-          created++;
-        }
-
-        if (entry.progress > 0) {
-          const watchedRes = await databases.listDocuments(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, [
-            Query.equal('user_id', user.$id),
-            Query.equal('media_id', entry.media.id),
-            Query.limit(5000),
-          ]);
-          const watchedEps = new Set(
-            watchedRes.documents.map((d) => (d as unknown as { episode_number: number }).episode_number)
-          );
-
-          for (let ep = 1; ep <= entry.progress; ep++) {
-            if (!watchedEps.has(ep)) {
-              await databases.createDocument(DATABASE_ID, WATCHED_EPISODES_COLLECTION_ID, ID.unique(), {
-                user_id: user.$id,
-                media_id: entry.media.id,
-                episode_number: ep,
-              });
-            }
-          }
-        }
+      const res = await fetch('/api/import-watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.$id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportResult(`Import failed: ${data.error}`);
+      } else {
+        setImportResult(`Imported ${data.created} new, updated ${data.updated} existing anime.`);
+        enqueueSnackbar(`Imported ${data.created} new, updated ${data.updated} existing anime`, { variant: 'success' });
       }
-
-      setImportResult(`Imported ${created} new, updated ${updated} existing anime.`);
-      enqueueSnackbar(`Imported ${created} new, updated ${updated} existing anime`, { variant: 'success' });
     } catch (err) {
       setImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
