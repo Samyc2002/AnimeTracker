@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import DevtoolsGuard from "@/components/DevtoolsGuard";
 import SnackbarProvider from "@/components/SnackbarProvider";
 import "./globals.css";
 
@@ -61,7 +60,6 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#0b0e14] text-gray-200">
         <SnackbarProvider>
-          <DevtoolsGuard />
           {children}
         </SnackbarProvider>
       </body>
