@@ -90,7 +90,7 @@ export default function NavBar() {
 
   return (
     <>
-    <nav className="relative bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <nav className="relative bg-[#0b0e14]/40 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
       {/* Left side: Logo + desktop nav links */}
       <div className="flex items-center gap-6">
         <Link href="/" className={`flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r ${theme.gradient}`}>

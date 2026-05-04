@@ -138,7 +138,8 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <nav className="bg-[#141925]/60 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+      <div className="absolute inset-x-0 top-0 h-[700px] bg-gradient-to-b from-teal-600/20 via-blue-600/10 to-transparent pointer-events-none z-0" />
+      <nav className="relative bg-transparent backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
             <Image src="/logo.png" alt="" width={28} height={28} className="rounded" unoptimized />
@@ -185,7 +186,6 @@ export default function LandingPage() {
       <main className="flex-1">
         {/* Hero */}
         <section className="relative overflow-hidden pb-8">
-          <div className="absolute inset-0 bg-gradient-to-b from-teal-600/10 via-blue-600/5 to-transparent" />
           <div className="absolute top-20 left-1/4 w-72 h-72 bg-teal-500/5 rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
 
@@ -199,7 +199,7 @@ export default function LandingPage() {
             <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-8">
               Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.
             </p>
-            <div className="w-full max-w-3xl mx-auto mb-10 rounded-xl overflow-hidden border border-[#253040] p-2">
+            <div className="w-full max-w-3xl mx-auto mb-10 rounded-2xl overflow-hidden border border-[#253040] px-2">
               <iframe
                 src="https://app.arcade.software/share/JVAbYM1R0pJjUvwY2pQb?embed&show_title=true&animated_cursor=true&chat=false"
                 title="Anime Tracker Demo"
