@@ -218,7 +218,7 @@ export default function AiringPage() {
                   className={`text-center py-2 rounded-lg ${
                     today
                       ? `${theme.btnBg} border ${theme.btnBorder}`
-                      : 'bg-[#141925]'
+                      : 'bg-[#1c2333] border border-[#253040]'
                   }`}
                 >
                   <div className={`text-sm font-semibold ${today ? theme.btnText : 'text-gray-300'}`}>{day}</div>
