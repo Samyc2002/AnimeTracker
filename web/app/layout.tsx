@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   verification: {
     google: 'g6I5v5VPbkiZRtiXMyJe49iW3HmWB2M97dr13WapfLM',
+    other: { 'msvalidate.01': '075F536179EC3BAC042BC7A940C32973' },
   },
   title: {
     default: "Anime Tracker — Track Your Watchlist, Sync with AniList",
