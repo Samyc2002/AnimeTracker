@@ -136,8 +136,24 @@ export default function LandingPage() {
     fetchRecommendations().then((r) => setTrending(r.trending.slice(0, 8))).catch(() => {});
   }, []);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Anime Tracker',
+    url: 'https://www.animetracker.lol',
+    applicationCategory: 'EntertainmentApplication',
+    operatingSystem: 'Web Browser, Chrome Extension',
+    description: 'Free anime tracker with smart recommendations, buddy system, sequel alerts, and a Chrome extension. AniList import. No ads, no feature locks.',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    author: { '@type': 'Person', name: 'Samriddha Chattopadhyay' },
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="absolute inset-x-0 top-0 h-[700px] bg-gradient-to-b from-teal-600/20 via-blue-600/10 to-transparent pointer-events-none z-0" />
       <nav className="relative bg-transparent backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-6">
