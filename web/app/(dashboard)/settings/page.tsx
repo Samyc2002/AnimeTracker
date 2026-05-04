@@ -373,7 +373,7 @@ function SettingsPage() {
                 </span>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`https://animetracker.lol/u/${username}`);
+                    navigator.clipboard.writeText(`https://www.animetracker.lol/u/${username}`);
                     enqueueSnackbar('Link copied!', { variant: 'success' });
                   }}
                   className={`text-xs ${theme.link} font-medium shrink-0`}

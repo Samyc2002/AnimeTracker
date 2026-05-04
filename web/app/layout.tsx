@@ -22,11 +22,11 @@ export const metadata: Metadata = {
     template: "%s | Anime Tracker",
   },
   description: "Track your anime watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.",
-  metadataBase: new URL("https://animetracker.lol"),
+  metadataBase: new URL("https://www.animetracker.lol"),
   openGraph: {
     title: "Anime Tracker — Track Your Watchlist, Sync with AniList",
     description: "Track your anime watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.",
-    url: "https://animetracker.lol",
+    url: "https://www.animetracker.lol",
     siteName: "Anime Tracker",
     images: [
       {

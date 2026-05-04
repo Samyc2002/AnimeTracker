@@ -1,3 +1,9 @@
+[[redirects]]
+  from = "https://animetracker.lol/*"
+  to = "https://www.animetracker.lol/:splat"
+  status = 301
+  force = true
+
 [functions]
   directory = "netlify/functions"
 
