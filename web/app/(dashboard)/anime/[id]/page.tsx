@@ -58,6 +58,7 @@ export default function AnimeDetailPage() {
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const id = Number(params.id);
+  const [resolvedMediaId, setResolvedMediaId] = useState<number>(id);
 
   useEffect(() => {
     async function load() {
@@ -87,20 +88,31 @@ export default function AnimeDetailPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: wlData } = await supabase
+      let { data: wlData } = await supabase
         .from('watchlist_entries')
-        .select('id')
+        .select('id, media_id')
         .eq('user_id', user.id)
         .eq('media_id', id)
         .limit(1);
+      if ((!wlData || wlData.length === 0)) {
+        const { data: malData } = await supabase
+          .from('watchlist_entries')
+          .select('id, media_id')
+          .eq('user_id', user.id)
+          .eq('id_mal', id)
+          .limit(1);
+        wlData = malData;
+      }
       setIsInWatchlist(!!(wlData && wlData.length > 0));
       if (!wlData || wlData.length === 0) return;
 
+      const trackedMediaId = wlData[0].media_id as number;
+      setResolvedMediaId(trackedMediaId);
       const { data: epData } = await supabase
         .from('watched_episodes')
         .select('episode_number')
         .eq('user_id', user.id)
-        .eq('media_id', id)
+        .eq('media_id', trackedMediaId)
         .limit(5000);
       setWatchedEpisodes((epData || []).map((d) => d.episode_number as number).sort((a, b) => a - b));
     } catch {
@@ -121,21 +133,26 @@ export default function AnimeDetailPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data: existing } = await supabase
+        const { data: existingEps } = await supabase
           .from('watched_episodes')
-          .select('id')
+          .select('episode_number')
           .eq('user_id', user.id)
-          .eq('media_id', id)
-          .eq('episode_number', epNum)
-          .limit(1);
-        if (!existing || existing.length === 0) {
-          await supabase.from('watched_episodes').insert({
-            user_id: user.id,
-            media_id: id,
-            episode_number: epNum,
+          .eq('media_id', resolvedMediaId)
+          .limit(5000);
+        const watched = new Set((existingEps || []).map((d) => d.episode_number as number));
+        const toMark: number[] = [];
+        for (let i = 1; i <= epNum; i++) {
+          if (!watched.has(i)) toMark.push(i);
+        }
+        if (toMark.length > 0) {
+          await supabase.from('watched_episodes').insert(
+            toMark.map((e) => ({ user_id: user.id, media_id: resolvedMediaId, episode_number: e }))
+          );
+          setWatchedEpisodes((prev) => {
+            const set = new Set([...prev, ...toMark]);
+            return [...set].sort((a, b) => a - b);
           });
-          setWatchedEpisodes((prev) => [...prev, epNum].sort((a, b) => a - b));
-          enqueueSnackbar(`Episode ${epNum} marked as watched`, { variant: 'success' });
+          enqueueSnackbar(`Marked episodes 1-${epNum} as watched`, { variant: 'success' });
         }
       } catch {
         // Non-critical
@@ -143,19 +160,21 @@ export default function AnimeDetailPage() {
       window.history.replaceState({}, '', `/anime/${id}`);
     }
     autoMark();
-  }, [authed, id, searchParams]);
+  }, [authed, id, resolvedMediaId, searchParams]);
 
   async function toggleEpisode(ep: number) {
     if (!authed) return;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      if (watchedEpisodes.includes(ep)) {
+
+      const allWatchedUpTo = Array.from({ length: ep }, (_, i) => i + 1).every((e) => watchedEpisodes.includes(e));
+      if (allWatchedUpTo && watchedEpisodes.includes(ep)) {
         const { data: docs } = await supabase
           .from('watched_episodes')
           .select('id')
           .eq('user_id', user.id)
-          .eq('media_id', id)
+          .eq('media_id', resolvedMediaId)
           .eq('episode_number', ep)
           .limit(1);
         if (docs && docs.length > 0) {
@@ -163,12 +182,22 @@ export default function AnimeDetailPage() {
         }
         setWatchedEpisodes((prev) => prev.filter((e) => e !== ep));
       } else {
-        await supabase.from('watched_episodes').insert({
-          user_id: user.id,
-          media_id: id,
-          episode_number: ep,
+        const toMark: number[] = [];
+        for (let i = 1; i <= ep; i++) {
+          if (!watchedEpisodes.includes(i)) toMark.push(i);
+        }
+        if (toMark.length > 0) {
+          await supabase.from('watched_episodes').insert(
+            toMark.map((e) => ({ user_id: user.id, media_id: resolvedMediaId, episode_number: e }))
+          );
+        }
+        setWatchedEpisodes((prev) => {
+          const set = new Set([...prev, ...toMark]);
+          return [...set].sort((a, b) => a - b);
         });
-        setWatchedEpisodes((prev) => [...prev, ep].sort((a, b) => a - b));
+        if (toMark.length > 1) {
+          enqueueSnackbar(`Marked episodes 1-${ep} as watched`, { variant: 'success' });
+        }
       }
     } catch {
       enqueueSnackbar('Failed to update episode', { variant: 'error' });
@@ -390,38 +419,47 @@ export default function AnimeDetailPage() {
           )}
         </div>
 
-        {authed && isInWatchlist && anime.episodes && anime.episodes > 0 && (
-          <div className="mt-6">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Episodes</h2>
-            {watchedEpisodes.length > 0 && (
-              <div className="mb-3 text-xs text-gray-500 space-y-0.5">
-                <p>
-                  Watched up to Episode{' '}
-                  <span className={`${theme.btnText} font-semibold`}>
-                    {(() => {
-                      let consecutive = 0;
-                      for (let i = 1; i <= anime.episodes!; i++) {
-                        if (watchedEpisodes.includes(i)) consecutive = i;
-                        else break;
-                      }
-                      return consecutive || watchedEpisodes[watchedEpisodes.length - 1];
-                    })()}
-                  </span>
-                </p>
-                <p>
-                  <span className={`${theme.btnText} font-semibold`}>{watchedEpisodes.length}</span>
-                  /{anime.episodes} episodes watched
-                </p>
-              </div>
-            )}
-            <EpisodeGrid
-              totalEpisodes={anime.episodes}
-              watchedEpisodes={watchedEpisodes}
-              onToggle={toggleEpisode}
-              availableUpTo={anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : undefined}
-            />
-          </div>
-        )}
+        {authed && isInWatchlist && (() => {
+          const airedSoFar = anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : null;
+          const highestWatched = watchedEpisodes.length > 0 ? Math.max(...watchedEpisodes) : 0;
+          const effectiveTotal = anime.episodes || airedSoFar || Math.max(highestWatched, 1);
+          if (effectiveTotal <= 0) return null;
+
+          let consecutive = 0;
+          for (let i = 1; i <= effectiveTotal; i++) {
+            if (watchedEpisodes.includes(i)) consecutive = i;
+            else break;
+          }
+
+          return (
+            <div className="mt-6">
+              <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Episodes</h2>
+              {watchedEpisodes.length > 0 && (
+                <div className="mb-3 text-xs text-gray-500 space-y-0.5">
+                  <p>
+                    Watched up to Episode{' '}
+                    <span className={`${theme.btnText} font-semibold`}>
+                      {consecutive || watchedEpisodes[watchedEpisodes.length - 1]}
+                    </span>
+                  </p>
+                  <p>
+                    <span className={`${theme.btnText} font-semibold`}>{watchedEpisodes.length}</span>
+                    /{anime.episodes ?? '?'} episodes watched
+                  </p>
+                </div>
+              )}
+              <EpisodeGrid
+                totalEpisodes={effectiveTotal}
+                watchedEpisodes={watchedEpisodes}
+                onToggle={toggleEpisode}
+                availableUpTo={anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : undefined}
+              />
+              {!anime.episodes && (
+                <p className="text-[10px] text-gray-600 mt-2">* Total episodes unknown. Showing episodes aired so far.</p>
+              )}
+            </div>
+          );
+        })()}
 
         {anime.description && (
           <div className="mt-6">

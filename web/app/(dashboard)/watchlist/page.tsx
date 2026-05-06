@@ -91,6 +91,7 @@ function WatchlistPage() {
     return ALL_AIRING;
   });
   const [selectedFolder, setSelectedFolder] = useState<{ seriesId: number; seriesName: string; entries: WatchlistDoc[] } | null>(null);
+  const [episodeProgress, setEpisodeProgress] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: WatchlistDoc } | null>(null);
 
   const loadWatchlist = useCallback(async () => {
@@ -129,28 +130,34 @@ function WatchlistPage() {
       const { count: totalCount } = await countQuery;
       setTotalEntries(totalCount || 0);
 
-      // Fetch counts for each status
-      const countQueries = await Promise.all(
-        WATCH_STATUSES.map(async (s) => {
-          const { count } = await supabase
-            .from('watchlist_entries')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('watch_status', s);
-          return [s, count || 0] as [string, number];
-        })
-      );
-
-      const { count: allCount } = await supabase
+      // Single query for all counts instead of 5 separate ones
+      const { data: allStatusDocs } = await supabase
         .from('watchlist_entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+        .select('watch_status')
+        .eq('user_id', user.id)
+        .limit(5000);
 
-      const newCounts: Record<string, number> = { [ALL_FILTER]: allCount || 0 };
-      for (const [s, count] of countQueries) {
-        newCounts[s] = count;
+      const newCounts: Record<string, number> = { [ALL_FILTER]: (allStatusDocs || []).length };
+      for (const s of WATCH_STATUSES) {
+        newCounts[s] = (allStatusDocs || []).filter((d) => d.watch_status === s).length;
       }
       setCounts(newCounts);
+
+      // Fetch episode progress for displayed entries
+      const mediaIds = (docs || []).map((d) => (d as WatchlistDoc).media_id);
+      if (mediaIds.length > 0) {
+        const { data: epDocs } = await supabase
+          .from('watched_episodes')
+          .select('media_id')
+          .eq('user_id', user.id)
+          .in('media_id', mediaIds)
+          .limit(50000);
+        const epMap: Record<number, number> = {};
+        for (const d of (epDocs || [])) {
+          epMap[d.media_id as number] = (epMap[d.media_id as number] || 0) + 1;
+        }
+        setEpisodeProgress(epMap);
+      }
     } catch {
       // Not authenticated — layout will redirect
     }
@@ -353,6 +360,7 @@ function WatchlistPage() {
                     coverUrl={upgradeImageUrl(entry.cover_url)}
                     status={entry.status}
                     episodes={entry.total_episodes}
+                    progress={episodeProgress[entry.media_id] ? `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched` : undefined}
                     isAdult={entry.is_adult || entry.manual_nsfw}
                     onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                     action={
@@ -519,6 +527,7 @@ function WatchlistPage() {
                         coverUrl={upgradeImageUrl(entry.cover_url)}
                         status={entry.status}
                         episodes={entry.total_episodes}
+                        progress={episodeProgress[entry.media_id] ? `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched` : undefined}
                         isAdult={entry.is_adult || entry.manual_nsfw}
                         onClick={() => { setSelectedFolder(null); router.push(`/anime/${entry.id_mal || entry.media_id}`); }}
                         action={
