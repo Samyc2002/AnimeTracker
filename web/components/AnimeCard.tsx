@@ -12,6 +12,7 @@ interface AnimeCardProps {
   progress?: string;
   watchedCount?: number;
   totalForProgress?: number;
+  airedEpisodes?: number;
   action?: React.ReactNode;
   onClick?: () => void;
   isAdult?: boolean;
@@ -33,6 +34,7 @@ export default function AnimeCard({
   progress,
   watchedCount,
   totalForProgress,
+  airedEpisodes,
   action,
   onClick,
   isAdult,
@@ -63,14 +65,21 @@ export default function AnimeCard({
           </span>
           {episodes && <span className="text-gray-500">{episodes} eps</span>}
         </div>
-        {watchedCount != null && totalForProgress != null && totalForProgress > 0 && (
-          <div className="w-full h-1.5 bg-[#1e2736] rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full ${theme.activeTab} transition-all`}
-              style={{ width: `${Math.min((watchedCount / totalForProgress) * 100, 100)}%` }}
-            />
-          </div>
-        )}
+        {watchedCount != null && totalForProgress != null && totalForProgress > 0 && (() => {
+          const pct = Math.min((watchedCount / totalForProgress) * 100, 100);
+          const airedPct = airedEpisodes ? Math.min((airedEpisodes / totalForProgress) * 100, 100) : undefined;
+          return (
+            <div className="w-full h-1.5 bg-[#1e2736] rounded-full overflow-hidden relative">
+              {airedPct != null && airedPct > pct && (
+                <div className="absolute inset-y-0 left-0 rounded-full bg-gray-600/40" style={{ width: `${airedPct}%` }} />
+              )}
+              <div
+                className={`h-full rounded-full ${theme.activeTab} transition-all relative z-10`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          );
+        })()}
         {progress && !watchedCount && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
       </div>
       {action && <div className="flex items-center flex-shrink-0">{action}</div>}
