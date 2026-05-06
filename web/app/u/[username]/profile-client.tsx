@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useTitle } from '@/lib/useTitle';
 import { supabase } from '@/lib/supabase';
 import { AuthContext } from '@/lib/auth-context';
@@ -228,21 +229,101 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
   );
 }
 
-export default function ProfileClient({ profile }: { profile: PublicProfile }) {
+export default function ProfileClient({ profile, selfMode }: { profile: (PublicProfile & { is_public?: boolean; owner_user_id?: string }) | null; selfMode?: boolean }) {
+  const router = useRouter();
   const [authed, setAuthed] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [selfProfile, setSelfProfile] = useState<PublicProfile | null>(null);
+  const [selfLoading, setSelfLoading] = useState(!!selfMode);
 
   useEffect(() => {
     supabase.auth.getUser()
-      .then(({ data: { user } }) => setAuthed(!!user))
-      .catch(() => setAuthed(false))
+      .then(async ({ data: { user } }) => {
+        setAuthed(!!user);
+        if (user && profile?.owner_user_id) {
+          setIsOwner(user.id === profile.owner_user_id);
+        }
+        if (selfMode) {
+          if (!user) {
+            setSelfLoading(false);
+            setAuthLoading(false);
+            return;
+          }
+          const { data } = await supabase
+            .from('profiles')
+            .select()
+            .eq('user_id', user.id)
+            .limit(1);
+          if (data && data.length > 0) {
+            const p = data[0];
+            if (p.is_public && p.username) {
+              router.replace(`/u/${p.username}`);
+              return;
+            }
+            const res = await fetch(`/api/profiles/self?userId=${user.id}`);
+            if (res.ok) {
+              setSelfProfile(await res.json());
+            }
+          }
+          setSelfLoading(false);
+        }
+      })
+      .catch(() => {
+        setAuthed(false);
+        setSelfLoading(false);
+      })
       .finally(() => setAuthLoading(false));
-  }, []);
+  }, [profile?.owner_user_id, selfMode, router]);
 
-  if (authLoading) {
+  if (authLoading || selfLoading) {
     return (
       <div className="min-h-screen bg-[#0b0e14] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#253040] border-t-gray-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (selfMode) {
+    if (!authed) {
+      return (
+        <div className="min-h-screen bg-[#0b0e14] flex flex-col items-center justify-center gap-4">
+          <p className="text-gray-400">Sign in to view your profile.</p>
+          <Link href="/login" className="text-teal-400 text-sm hover:text-teal-300">Sign in</Link>
+        </div>
+      );
+    }
+    if (selfProfile) {
+      return (
+        <AuthContext.Provider value={{ authed: true, loading: false }}>
+          <SfwProvider>
+            <AuthedProfileContent profile={selfProfile} />
+          </SfwProvider>
+        </AuthContext.Provider>
+      );
+    }
+    return (
+      <div className="min-h-screen bg-[#0b0e14] flex flex-col items-center justify-center gap-4">
+        <p className="text-gray-400">Set up your profile first.</p>
+        <Link href="/settings" className="text-teal-400 text-sm hover:text-teal-300">Go to Settings</Link>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-[#0b0e14] flex flex-col items-center justify-center gap-4">
+        <p className="text-gray-400">Profile not found.</p>
+        <Link href="/" className="text-teal-400 text-sm hover:text-teal-300">Go home</Link>
+      </div>
+    );
+  }
+
+  if (!profile.is_public && !isOwner) {
+    return (
+      <div className="min-h-screen bg-[#0b0e14] flex flex-col items-center justify-center gap-4">
+        <p className="text-gray-400">This profile is private.</p>
+        <Link href="/" className="text-teal-400 text-sm hover:text-teal-300">Go home</Link>
       </div>
     );
   }

@@ -6,7 +6,7 @@ import ProfileClient from './profile-client';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
 
-async function getProfile(username: string): Promise<PublicProfile | null> {
+async function getProfile(username: string): Promise<(PublicProfile & { is_public: boolean; owner_user_id: string }) | null> {
   try {
     const supabase = getServiceSupabase();
 
@@ -14,7 +14,6 @@ async function getProfile(username: string): Promise<PublicProfile | null> {
       .from('profiles')
       .select()
       .eq('username', username)
-      .eq('is_public', true)
       .limit(1);
 
     if (!profiles || profiles.length === 0) return null;
@@ -72,6 +71,8 @@ async function getProfile(username: string): Promise<PublicProfile | null> {
       social_discord: (profile.social_discord as string) || null,
       social_instagram: (profile.social_instagram as string) || null,
       social_reddit: (profile.social_reddit as string) || null,
+      is_public: !!(profile.is_public),
+      owner_user_id: userId,
       stats: {
         total_anime: watchlist.length,
         episodes_watched: watchedEpDocs.length,
@@ -128,6 +129,11 @@ export default async function PublicProfilePage(
   { params }: { params: Promise<{ username: string }> },
 ) {
   const { username } = await params;
+
+  if (username === 'me') {
+    return <ProfileClient profile={null} selfMode />;
+  }
+
   const profile = await getProfile(username);
 
   if (!profile) {

@@ -32,6 +32,7 @@ export default function NavBar() {
   const { authed, loading } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  const [profilePublic, setProfilePublic] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const navItems = loading ? [] : authed ? authNavItems : publicNavItems;
@@ -65,10 +66,11 @@ export default function NavBar() {
         if (!user) return;
         const { data } = await supabase
           .from('profiles')
-          .select('username')
+          .select('username, is_public')
           .eq('user_id', user.id)
           .limit(1);
         if (data && data.length > 0 && data[0].username) setProfileUsername(data[0].username);
+        if (data && data.length > 0) setProfilePublic(!!(data[0].is_public));
       } catch {
         // Not critical
       }
@@ -135,9 +137,9 @@ export default function NavBar() {
               )}
             </Link>
             <Link
-              href={profileUsername ? `/u/${profileUsername}` : '/settings'}
+              href={profileUsername && profilePublic ? `/u/${profileUsername}` : '/u/me'}
               className="p-1.5 rounded text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors"
-              title={profileUsername ? `View profile` : 'Set up profile'}
+              title="View profile"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -245,7 +247,7 @@ export default function NavBar() {
                 { href: '/recommend', label: 'For You', icon: '✦' },
                 { href: '/playlists', label: 'Playlists', icon: '▶' },
                 { href: '/buddies', label: 'Buddies', icon: '♥' },
-                { href: profileUsername ? `/u/${profileUsername}` : '/settings', label: profileUsername ? 'Profile' : 'Set Up Profile', icon: '●' },
+                { href: profileUsername && profilePublic ? `/u/${profileUsername}` : '/u/me', label: 'Profile', icon: '●' },
                 { href: '/settings', label: 'Settings', icon: '⚙' },
               ].map(({ href, label, icon }) => (
                 <Link
