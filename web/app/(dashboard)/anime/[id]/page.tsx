@@ -123,7 +123,7 @@ export default function AnimeDetailPage() {
   useEffect(() => { loadWatchedEpisodes(); }, [loadWatchedEpisodes]);
 
   useEffect(() => {
-    if (!authed) return;
+    if (!authed || !isInWatchlist) return;
     const markEp = searchParams.get('mark_episode');
     if (!markEp) return;
     const epNum = parseInt(markEp);
@@ -160,7 +160,7 @@ export default function AnimeDetailPage() {
       window.history.replaceState({}, '', `/anime/${id}`);
     }
     autoMark();
-  }, [authed, id, resolvedMediaId, searchParams]);
+  }, [authed, id, resolvedMediaId, isInWatchlist, searchParams]);
 
   async function toggleEpisode(ep: number) {
     if (!authed) return;
