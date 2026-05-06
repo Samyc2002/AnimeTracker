@@ -445,7 +445,9 @@ function WatchlistPage() {
                     <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">
                       {episodeProgress[entry.media_id]
-                        ? `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched`
+                        ? entry.watch_status === 'Dropped'
+                          ? `Dropped at ep ${episodeProgress[entry.media_id]}`
+                          : `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched`
                         : entry.total_episodes
                           ? `${entry.total_episodes} eps`
                           : null}
