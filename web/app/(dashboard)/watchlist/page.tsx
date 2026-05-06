@@ -155,17 +155,17 @@ function WatchlistPage() {
         }
       }
       if (allIds.size > 0) {
-        const { data: epDocs } = await supabase
-          .from('watched_episodes')
-          .select('media_id')
-          .eq('user_id', user.id)
-          .in('media_id', [...allIds])
-          .limit(50000);
         const epMap: Record<number, number> = {};
-        for (const d of (epDocs || [])) {
-          const mid = d.media_id as number;
-          const canonical = malToMedia.get(mid) ?? mid;
-          epMap[canonical] = (epMap[canonical] || 0) + 1;
+        for (const mid of allIds) {
+          const { count } = await supabase
+            .from('watched_episodes')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('media_id', mid);
+          if (count && count > 0) {
+            const canonical = malToMedia.get(mid) ?? mid;
+            epMap[canonical] = (epMap[canonical] || 0) + count;
+          }
         }
         setEpisodeProgress(epMap);
       }
