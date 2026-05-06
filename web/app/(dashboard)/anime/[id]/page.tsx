@@ -145,7 +145,7 @@ export default function AnimeDetailPage() {
           if (!watched.has(i)) toMark.push(i);
         }
         if (toMark.length > 0) {
-          await supabase.from('watched_episodes').insert(
+          await supabase.from('watched_episodes').upsert(
             toMark.map((e) => ({ user_id: user.id, media_id: resolvedMediaId, episode_number: e }))
           );
           setWatchedEpisodes((prev) => {
@@ -187,7 +187,7 @@ export default function AnimeDetailPage() {
           if (!watchedEpisodes.includes(i)) toMark.push(i);
         }
         if (toMark.length > 0) {
-          await supabase.from('watched_episodes').insert(
+          await supabase.from('watched_episodes').upsert(
             toMark.map((e) => ({ user_id: user.id, media_id: resolvedMediaId, episode_number: e }))
           );
         }

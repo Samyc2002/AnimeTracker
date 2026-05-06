@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
         for (let ep = 1; ep <= entry.progress; ep++) {
           if (!watchedEps.has(ep)) {
-            await supabase.from('watched_episodes').insert({
+            await supabase.from('watched_episodes').upsert({
               user_id: userId,
               media_id: entry.media.id,
               episode_number: ep,
