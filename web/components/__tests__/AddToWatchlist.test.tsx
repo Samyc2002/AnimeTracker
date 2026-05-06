@@ -1,41 +1,8 @@
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import AddToWatchlist from '@/components/AddToWatchlist';
+import { supabase } from '@/lib/supabase';
 import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia } from '@/lib/types';
-
-const mockSelect = vi.fn();
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockEq = vi.fn();
-const mockLimit = vi.fn();
-const mockSingle = vi.fn();
-
-function chainBuilder(overrides: Record<string, unknown> = {}) {
-  const chain: Record<string, unknown> = {
-    select: mockSelect,
-    insert: mockInsert,
-    update: mockUpdate,
-    eq: mockEq,
-    limit: mockLimit,
-    single: mockSingle,
-    then: undefined,
-    ...overrides,
-  };
-  for (const fn of [mockSelect, mockInsert, mockUpdate, mockEq, mockLimit, mockSingle]) {
-    fn.mockReturnValue(chain);
-  }
-  return chain;
-}
-
-const mockGetUser = vi.fn();
-const mockFrom = vi.fn();
-
-vi.mock('@/lib/supabase', () => ({
-  supabase: {
-    auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
-    from: (...args: unknown[]) => mockFrom(...args),
-  },
-}));
 
 vi.mock('@/lib/anime-provider', () => ({
   mediaToWatchlistEntry: vi.fn(() => ({
@@ -71,19 +38,30 @@ const testMedia: AniListMedia = {
   nextAiringEpisode: null,
 };
 
+function mockSupabaseChain(data: unknown[] = [], error: unknown = null) {
+  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+  for (const m of ['select', 'insert', 'update', 'delete', 'eq', 'limit', 'single', 'upsert']) {
+    chain[m] = vi.fn(() => chain);
+  }
+  chain.select.mockReturnValue({ ...chain, data, error });
+  chain.eq.mockReturnValue({ ...chain, data, error });
+  chain.limit.mockReturnValue({ ...chain, data, error });
+  chain.single.mockReturnValue({ ...chain, data: data[0] || null, error });
+  chain.insert.mockReturnValue({ ...chain, data: data[0] || null, error });
+  return chain;
+}
+
 describe('AddToWatchlist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'user1', email: 'test@test.com' } } });
+    (supabase.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user1', email: 'test@test.com' } },
+      error: null,
+    });
   });
 
   it('shows "+ Add" button when anime is not in watchlist', async () => {
-    const chain = chainBuilder();
-    chain.then = (_resolve: (v: unknown) => void) => {
-      _resolve({ data: [], error: null });
-      return { catch: () => {} };
-    };
-    mockFrom.mockReturnValue(chain);
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(mockSupabaseChain([]));
 
     const { getByText } = render(<AddToWatchlist media={testMedia} />);
 
@@ -93,12 +71,9 @@ describe('AddToWatchlist', () => {
   });
 
   it('shows current status when anime is already in watchlist', async () => {
-    const chain = chainBuilder();
-    chain.then = (_resolve: (v: unknown) => void) => {
-      _resolve({ data: [{ id: 'doc1', watch_status: 'Completed' }], error: null });
-      return { catch: () => {} };
-    };
-    mockFrom.mockReturnValue(chain);
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockSupabaseChain([{ id: 'doc1', watch_status: 'Completed' }])
+    );
 
     const { getByText } = render(<AddToWatchlist media={testMedia} />);
 
@@ -108,12 +83,7 @@ describe('AddToWatchlist', () => {
   });
 
   it('opens dropdown with 4 status options on click', async () => {
-    const chain = chainBuilder();
-    chain.then = (_resolve: (v: unknown) => void) => {
-      _resolve({ data: [], error: null });
-      return { catch: () => {} };
-    };
-    mockFrom.mockReturnValue(chain);
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(mockSupabaseChain([]));
 
     const { getByText, getAllByRole } = render(<AddToWatchlist media={testMedia} />);
 
@@ -127,5 +97,70 @@ describe('AddToWatchlist', () => {
       ['Watching', 'Planned', 'Completed', 'Dropped'].includes(btn.textContent ?? ''),
     );
     expect(statusButtons).toHaveLength(4);
+  });
+
+  it('calls insert on add and shows snackbar', async () => {
+    const insertChain = mockSupabaseChain([{ id: 'new-doc' }]);
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(mockSupabaseChain([]));
+
+    const { getByText } = render(<AddToWatchlist media={testMedia} />);
+
+    await waitFor(() => {
+      expect(getByText('+ Add')).toBeInTheDocument();
+    });
+
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(insertChain);
+
+    fireEvent.click(getByText('+ Add'));
+    fireEvent.click(getByText('Watching'));
+
+    await waitFor(() => {
+      expect(enqueueSnackbar).toHaveBeenCalledWith('Added as Watching', { variant: 'success' });
+    });
+  });
+
+  it('calls update on status change and shows snackbar', async () => {
+    const updateChain = mockSupabaseChain([{ id: 'doc1' }]);
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockSupabaseChain([{ id: 'doc1', watch_status: 'Watching' }])
+    );
+
+    const { getByText } = render(<AddToWatchlist media={testMedia} />);
+
+    await waitFor(() => {
+      expect(getByText('Watching')).toBeInTheDocument();
+    });
+
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+    fireEvent.click(getByText('Watching'));
+
+    const droppedOption = getByText((content) => content.includes('Dropped'));
+    fireEvent.click(droppedOption);
+
+    await waitFor(() => {
+      expect(enqueueSnackbar).toHaveBeenCalledWith('Status changed to Dropped', { variant: 'success' });
+    });
+  });
+
+  it('blocks double-clicks while updating', async () => {
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(mockSupabaseChain([]));
+
+    const { getByText, queryByText } = render(<AddToWatchlist media={testMedia} />);
+
+    await waitFor(() => {
+      expect(getByText('+ Add')).toBeInTheDocument();
+    });
+
+    const insertChain = mockSupabaseChain([{ id: 'new-doc' }]);
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(insertChain);
+
+    fireEvent.click(getByText('+ Add'));
+    fireEvent.click(getByText('Watching'));
+
+    // Dropdown should close immediately
+    await waitFor(() => {
+      expect(queryByText('Planned')).not.toBeInTheDocument();
+    });
   });
 });

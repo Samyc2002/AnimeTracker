@@ -244,4 +244,82 @@ describe('fetchAiringSchedule', () => {
     expect(result).toEqual([]);
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it('returns schedules for given mediaIds', async () => {
+    vi.resetModules();
+    const schedules = [{ mediaId: 1, episode: 5, airingAt: 1700000000 }];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      makeFetchResponse({ data: { Page: { airingSchedules: schedules } } })
+    ));
+    const { fetchAiringSchedule } = await import('@/lib/anilist');
+    const result = await fetchAiringSchedule([1], 0, 2000000000);
+    expect(result).toEqual(schedules);
+  });
+});
+
+describe('fetchWeeklyAiring', () => {
+  it('returns schedules and hasNextPage', async () => {
+    vi.resetModules();
+    const schedules = [{ mediaId: 1, episode: 1, airingAt: 1700000000 }];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      makeFetchResponse({ data: { Page: { pageInfo: { hasNextPage: false }, airingSchedules: schedules } } })
+    ));
+    const { fetchWeeklyAiring } = await import('@/lib/anilist');
+    const result = await fetchWeeklyAiring(0, 2000000000);
+    expect(result.schedules).toEqual(schedules);
+    expect(result.hasNextPage).toBe(false);
+  });
+});
+
+describe('fetchRecommendations', () => {
+  it('returns trending and popular', async () => {
+    vi.resetModules();
+    const media = [makeMedia()];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      makeFetchResponse({ data: { trending: { media }, popular: { media } } })
+    ));
+    const { fetchRecommendations } = await import('@/lib/anilist');
+    const result = await fetchRecommendations();
+    expect(result.trending).toEqual(media);
+    expect(result.popular).toEqual(media);
+  });
+});
+
+describe('fetchViewer', () => {
+  it('returns viewer id and name', async () => {
+    vi.resetModules();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      makeFetchResponse({ data: { Viewer: { id: 42, name: 'TestUser' } } })
+    ));
+    const { fetchViewer } = await import('@/lib/anilist');
+    const result = await fetchViewer('test-token');
+    expect(result).toEqual({ id: 42, name: 'TestUser' });
+  });
+});
+
+describe('fetchUserList', () => {
+  it('returns mapped user entries', async () => {
+    vi.resetModules();
+    const media = makeMedia();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      makeFetchResponse({
+        data: {
+          MediaListCollection: {
+            lists: [{
+              entries: [
+                { progress: 5, status: 'CURRENT', media },
+                { progress: 0, status: 'PLANNING', media: { ...media, id: 2 } },
+              ],
+            }],
+          },
+        },
+      })
+    ));
+    const { fetchUserList } = await import('@/lib/anilist');
+    const result = await fetchUserList(42, 'test-token');
+    expect(result).toHaveLength(2);
+    expect(result[0].watchStatus).toBe('Watching');
+    expect(result[0].progress).toBe(5);
+    expect(result[1].watchStatus).toBe('Planned');
+  });
 });
