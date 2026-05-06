@@ -202,6 +202,7 @@ function WatchlistPage() {
   async function updateWatchStatus(entry: WatchlistDoc, newStatus: WatchStatus) {
     await supabase.from('watchlist_entries').update({ watch_status: newStatus }).eq('id', entry.id);
     enqueueSnackbar(`Status changed to ${newStatus}`, { variant: 'success' });
+    setSelectedFolder(null);
     loadWatchlist();
   }
 
@@ -209,6 +210,7 @@ function WatchlistPage() {
     const next = !entry.manual_nsfw;
     await supabase.from('watchlist_entries').update({ manual_nsfw: next }).eq('id', entry.id);
     enqueueSnackbar(next ? 'Marked as NSFW' : 'Unmarked NSFW', { variant: 'success' });
+    setSelectedFolder(null);
     loadWatchlist();
   }
 
