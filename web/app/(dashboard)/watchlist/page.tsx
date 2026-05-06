@@ -443,11 +443,15 @@ function WatchlistPage() {
                   </div>
                   <div className="p-2">
                     <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
-                    {entry.total_episodes ? (
-                      <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>
-                    ) : episodeProgress[entry.media_id] > 0 ? (
-                      <p className="text-[10px] text-gray-500 mt-0.5">{episodeProgress[entry.media_id]} eps watched</p>
-                    ) : null}
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      {episodeProgress[entry.media_id]
+                        ? entry.watch_status === 'Dropped'
+                          ? `Dropped at ep ${episodeProgress[entry.media_id]}`
+                          : `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched`
+                        : entry.total_episodes
+                          ? `${entry.total_episodes} eps`
+                          : null}
+                    </p>
                     {(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] > 0 && (() => {
                       const watched = episodeProgress[entry.media_id];
                       const total = entry.total_episodes;
