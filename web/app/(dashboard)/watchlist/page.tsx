@@ -360,8 +360,8 @@ function WatchlistPage() {
                     coverUrl={upgradeImageUrl(entry.cover_url)}
                     status={entry.status}
                     episodes={entry.total_episodes}
-                    watchedCount={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? episodeProgress[entry.media_id] : undefined}
-                    totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? (entry.total_episodes || (entry.next_airing_episode ? entry.next_airing_episode : episodeProgress[entry.media_id] + 1)) : undefined}
+                    watchedCount={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') ? (episodeProgress[entry.media_id] || 0) : undefined}
+                    totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') ? (entry.total_episodes || undefined) : undefined}
                     isAdult={entry.is_adult || entry.manual_nsfw}
                     onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                     action={
@@ -448,9 +448,11 @@ function WatchlistPage() {
                       );
                     })()}
                   </div>
-                  {(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] > 0 && (
+                  {(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && (
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0b0e14]/90 border border-[#253040] rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/card:opacity-100 transition-opacity pointer-events-none z-20">
-                      {episodeProgress[entry.media_id]}/{entry.total_episodes ?? (entry.next_airing_episode || '?')} eps watched
+                      {episodeProgress[entry.media_id]
+                        ? `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched`
+                        : 'Not started yet'}
                     </div>
                   )}
                 </div>
@@ -548,8 +550,8 @@ function WatchlistPage() {
                         coverUrl={upgradeImageUrl(entry.cover_url)}
                         status={entry.status}
                         episodes={entry.total_episodes}
-                        watchedCount={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? episodeProgress[entry.media_id] : undefined}
-                        totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? (entry.total_episodes || (entry.next_airing_episode ? entry.next_airing_episode : episodeProgress[entry.media_id] + 1)) : undefined}
+                        watchedCount={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') ? (episodeProgress[entry.media_id] || 0) : undefined}
+                        totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') ? (entry.total_episodes || undefined) : undefined}
                         isAdult={entry.is_adult || entry.manual_nsfw}
                         onClick={() => { setSelectedFolder(null); router.push(`/anime/${entry.id_mal || entry.media_id}`); }}
                         action={

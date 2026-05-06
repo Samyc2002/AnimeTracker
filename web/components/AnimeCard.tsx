@@ -74,9 +74,11 @@ export default function AnimeCard({
         {progress && !watchedCount && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
       </div>
       {action && <div className="flex items-center flex-shrink-0">{action}</div>}
-      {watchedCount != null && totalForProgress != null && (
+      {watchedCount != null && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0b0e14]/90 border border-[#253040] rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/card:opacity-100 transition-opacity pointer-events-none z-20">
-          {watchedCount}/{totalForProgress} episodes watched
+          {watchedCount > 0
+            ? `${watchedCount}/${totalForProgress ?? '?'} episodes watched`
+            : 'Not started yet'}
         </div>
       )}
     </div>
