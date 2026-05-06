@@ -360,7 +360,8 @@ function WatchlistPage() {
                     coverUrl={upgradeImageUrl(entry.cover_url)}
                     status={entry.status}
                     episodes={entry.total_episodes}
-                    progress={episodeProgress[entry.media_id] ? `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched` : undefined}
+                    watchedCount={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? episodeProgress[entry.media_id] : undefined}
+                    totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? (entry.total_episodes || (entry.next_airing_episode ? entry.next_airing_episode : episodeProgress[entry.media_id] + 1)) : undefined}
                     isAdult={entry.is_adult || entry.manual_nsfw}
                     onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                     action={
@@ -527,7 +528,8 @@ function WatchlistPage() {
                         coverUrl={upgradeImageUrl(entry.cover_url)}
                         status={entry.status}
                         episodes={entry.total_episodes}
-                        progress={episodeProgress[entry.media_id] ? `${episodeProgress[entry.media_id]}/${entry.total_episodes ?? '?'} eps watched` : undefined}
+                        watchedCount={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? episodeProgress[entry.media_id] : undefined}
+                        totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] ? (entry.total_episodes || (entry.next_airing_episode ? entry.next_airing_episode : episodeProgress[entry.media_id] + 1)) : undefined}
                         isAdult={entry.is_adult || entry.manual_nsfw}
                         onClick={() => { setSelectedFolder(null); router.push(`/anime/${entry.id_mal || entry.media_id}`); }}
                         action={

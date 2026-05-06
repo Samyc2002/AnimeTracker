@@ -10,6 +10,8 @@ interface AnimeCardProps {
   status: string;
   episodes?: number | null;
   progress?: string;
+  watchedCount?: number;
+  totalForProgress?: number;
   action?: React.ReactNode;
   onClick?: () => void;
   isAdult?: boolean;
@@ -29,6 +31,8 @@ export default function AnimeCard({
   status,
   episodes,
   progress,
+  watchedCount,
+  totalForProgress,
   action,
   onClick,
   isAdult,
@@ -59,7 +63,20 @@ export default function AnimeCard({
           </span>
           {episodes && <span className="text-gray-500">{episodes} eps</span>}
         </div>
-        {progress && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
+        {watchedCount != null && totalForProgress != null && totalForProgress > 0 && (
+          <div className="group/progress relative">
+            <div className="w-full h-1.5 bg-[#1e2736] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${theme.activeTab} transition-all`}
+                style={{ width: `${Math.min((watchedCount / totalForProgress) * 100, 100)}%` }}
+              />
+            </div>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-[#0b0e14] border border-[#253040] rounded text-[10px] text-gray-300 whitespace-nowrap opacity-0 group-hover/progress:opacity-100 transition-opacity pointer-events-none">
+              {watchedCount}/{totalForProgress} episodes watched
+            </div>
+          </div>
+        )}
+        {progress && !watchedCount && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
       </div>
       {action && <div className="flex items-center flex-shrink-0">{action}</div>}
     </div>

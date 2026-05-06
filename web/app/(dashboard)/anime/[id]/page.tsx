@@ -420,10 +420,12 @@ export default function AnimeDetailPage() {
         </div>
 
         {authed && isInWatchlist && (() => {
-          const airedSoFar = anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : null;
+          const nextEp = anime.nextAiringEpisode?.episode ?? null;
+          const airedSoFar = nextEp ? nextEp - 1 : null;
           const highestWatched = watchedEpisodes.length > 0 ? Math.max(...watchedEpisodes) : 0;
-          const effectiveTotal = anime.episodes || airedSoFar || Math.max(highestWatched, 1);
+          const effectiveTotal = anime.episodes || (nextEp ? nextEp : null) || Math.max(highestWatched + 1, 1);
           if (effectiveTotal <= 0) return null;
+          const displayTotal = anime.episodes || (nextEp ? nextEp : highestWatched + 1);
 
           let consecutive = 0;
           for (let i = 1; i <= effectiveTotal; i++) {
@@ -444,7 +446,7 @@ export default function AnimeDetailPage() {
                   </p>
                   <p>
                     <span className={`${theme.btnText} font-semibold`}>{watchedEpisodes.length}</span>
-                    /{anime.episodes ?? '?'} episodes watched
+                    /{displayTotal} episodes watched
                   </p>
                 </div>
               )}
