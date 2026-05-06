@@ -43,7 +43,7 @@ export default function AnimeCard({
 
   return (
     <div
-      className={`group/card flex gap-3 bg-[#141925] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
+      className={`group/card flex gap-3 bg-[#141925] rounded-lg p-3 relative ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
       onClick={onClick}
     >
       <Image
@@ -64,21 +64,21 @@ export default function AnimeCard({
           {episodes && <span className="text-gray-500">{episodes} eps</span>}
         </div>
         {watchedCount != null && totalForProgress != null && totalForProgress > 0 && (
-          <div className="group/progress relative">
-            <div className="w-full h-1.5 bg-[#1e2736] rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${theme.activeTab} transition-all`}
-                style={{ width: `${Math.min((watchedCount / totalForProgress) * 100, 100)}%` }}
-              />
-            </div>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-[#0b0e14] border border-[#253040] rounded text-[10px] text-gray-300 whitespace-nowrap opacity-0 group-hover/progress:opacity-100 transition-opacity pointer-events-none">
-              {watchedCount}/{totalForProgress} episodes watched
-            </div>
+          <div className="w-full h-1.5 bg-[#1e2736] rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${theme.activeTab} transition-all`}
+              style={{ width: `${Math.min((watchedCount / totalForProgress) * 100, 100)}%` }}
+            />
           </div>
         )}
         {progress && !watchedCount && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
       </div>
       {action && <div className="flex items-center flex-shrink-0">{action}</div>}
+      {watchedCount != null && totalForProgress != null && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0b0e14]/90 border border-[#253040] rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/card:opacity-100 transition-opacity pointer-events-none z-20">
+          {watchedCount}/{totalForProgress} episodes watched
+        </div>
+      )}
     </div>
   );
 }

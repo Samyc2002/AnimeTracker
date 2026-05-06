@@ -416,13 +416,13 @@ function WatchlistPage() {
               return (
                 <div
                   key={entry.id}
-                  className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${entry.is_adult || entry.manual_nsfw ? 'border border-red-500/40' : ''}`}
+                  className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group/card relative ${entry.is_adult || entry.manual_nsfw ? 'border border-red-500/40' : ''}`}
                   onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                   onContextMenu={(e) => handleContextMenu(e, entry)}
                 >
                   <div className="relative w-full aspect-[3/4]">
                     <Image src={upgradeImageUrl(entry.cover_url) || '/placeholder.png'} alt={title} fill className="object-cover" unoptimized />
-                    <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                       <AddToPlaylist mediaId={entry.media_id} />
                     </div>
                     <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
@@ -431,8 +431,28 @@ function WatchlistPage() {
                   </div>
                   <div className="p-2">
                     <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
-                    {entry.total_episodes && <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>}
+                    {entry.total_episodes ? (
+                      <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>
+                    ) : episodeProgress[entry.media_id] > 0 ? (
+                      <p className="text-[10px] text-gray-500 mt-0.5">{episodeProgress[entry.media_id]} eps watched</p>
+                    ) : null}
+                    {(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] > 0 && (() => {
+                      const watched = episodeProgress[entry.media_id];
+                      const total = entry.total_episodes || (entry.next_airing_episode ? entry.next_airing_episode : watched + 1);
+                      return (
+                        <div className="mt-1">
+                          <div className="w-full h-1 bg-[#1e2736] rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${theme.activeTab} transition-all`} style={{ width: `${Math.min((watched / total) * 100, 100)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
+                  {(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] > 0 && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0b0e14]/90 border border-[#253040] rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/card:opacity-100 transition-opacity pointer-events-none z-20">
+                      {episodeProgress[entry.media_id]}/{entry.total_episodes ?? (entry.next_airing_episode || '?')} eps watched
+                    </div>
+                  )}
                 </div>
               );
             }
