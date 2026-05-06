@@ -144,17 +144,28 @@ function WatchlistPage() {
       setCounts(newCounts);
 
       // Fetch episode progress for displayed entries
-      const mediaIds = (docs || []).map((d) => (d as WatchlistDoc).media_id);
-      if (mediaIds.length > 0) {
+      const wlDocs = (docs || []) as WatchlistDoc[];
+      const allIds = new Set<number>();
+      const malToMedia = new Map<number, number>();
+      for (const d of wlDocs) {
+        allIds.add(d.media_id);
+        if (d.id_mal) {
+          allIds.add(d.id_mal);
+          malToMedia.set(d.id_mal, d.media_id);
+        }
+      }
+      if (allIds.size > 0) {
         const { data: epDocs } = await supabase
           .from('watched_episodes')
           .select('media_id')
           .eq('user_id', user.id)
-          .in('media_id', mediaIds)
+          .in('media_id', [...allIds])
           .limit(50000);
         const epMap: Record<number, number> = {};
         for (const d of (epDocs || [])) {
-          epMap[d.media_id as number] = (epMap[d.media_id as number] || 0) + 1;
+          const mid = d.media_id as number;
+          const canonical = malToMedia.get(mid) ?? mid;
+          epMap[canonical] = (epMap[canonical] || 0) + 1;
         }
         setEpisodeProgress(epMap);
       }
@@ -438,11 +449,12 @@ function WatchlistPage() {
                     ) : null}
                     {(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && episodeProgress[entry.media_id] > 0 && (() => {
                       const watched = episodeProgress[entry.media_id];
-                      const total = entry.total_episodes || (entry.next_airing_episode ? entry.next_airing_episode : watched + 1);
+                      const total = entry.total_episodes;
+                      const pct = total ? Math.min((watched / total) * 100, 100) : 60;
                       return (
                         <div className="mt-1">
                           <div className="w-full h-1 bg-[#1e2736] rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${theme.activeTab} transition-all`} style={{ width: `${Math.min((watched / total) * 100, 100)}%` }} />
+                            <div className={`h-full rounded-full ${theme.activeTab} transition-all`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       );
