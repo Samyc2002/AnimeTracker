@@ -170,6 +170,8 @@ function NotificationsPage() {
                 markAsRead(notif);
                 if (notif.type === 'buddy_request' || notif.type === 'buddy_accept') {
                   router.push('/buddies');
+                } else if (!notif.type && notif.episode > 0) {
+                  router.push(`/anime/${notif.media_id}?mark_episode=${notif.episode}`);
                 } else {
                   router.push(`/anime/${notif.media_id}`);
                 }

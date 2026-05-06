@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchAnimeDetail, getErrorMessage } from '@/lib/anime-provider';
@@ -11,9 +11,11 @@ import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { getWatchUrl } from '@/lib/stream-provider';
+import { supabase } from '@/lib/supabase';
 import AddToWatchlist from '@/components/AddToWatchlist';
 import AddPrequels from '@/components/AddPrequels';
 import RecommendToBuddy from '@/components/RecommendToBuddy';
+import EpisodeGrid from '@/components/EpisodeGrid';
 import type { AnimeDetail } from '@/lib/types';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -44,10 +46,13 @@ function formatRelation(type: string) {
 export default function AnimeDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [anime, setAnime] = useState<AnimeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [watchUrl, setWatchUrl] = useState<string | null>(null);
   const [streamingLinks, setStreamingLinks] = useState<{ name: string; url: string }[]>([]);
+  const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>([]);
+  const [isInWatchlist, setIsInWatchlist] = useState(false);
 
   const { authed } = useAuth();
   const { sfwMode } = useSfw();
@@ -76,6 +81,99 @@ export default function AnimeDetailPage() {
     }
     load();
   }, [id]);
+
+  const loadWatchedEpisodes = useCallback(async () => {
+    if (!authed) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: wlData } = await supabase
+        .from('watchlist_entries')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('media_id', id)
+        .limit(1);
+      setIsInWatchlist(!!(wlData && wlData.length > 0));
+      if (!wlData || wlData.length === 0) return;
+
+      const { data: epData } = await supabase
+        .from('watched_episodes')
+        .select('episode_number')
+        .eq('user_id', user.id)
+        .eq('media_id', id)
+        .limit(5000);
+      setWatchedEpisodes((epData || []).map((d) => d.episode_number as number).sort((a, b) => a - b));
+    } catch {
+      // Non-critical
+    }
+  }, [authed, id]);
+
+  useEffect(() => { loadWatchedEpisodes(); }, [loadWatchedEpisodes]);
+
+  useEffect(() => {
+    if (!authed) return;
+    const markEp = searchParams.get('mark_episode');
+    if (!markEp) return;
+    const epNum = parseInt(markEp);
+    if (isNaN(epNum)) return;
+
+    async function autoMark() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: existing } = await supabase
+          .from('watched_episodes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('media_id', id)
+          .eq('episode_number', epNum)
+          .limit(1);
+        if (!existing || existing.length === 0) {
+          await supabase.from('watched_episodes').insert({
+            user_id: user.id,
+            media_id: id,
+            episode_number: epNum,
+          });
+          setWatchedEpisodes((prev) => [...prev, epNum].sort((a, b) => a - b));
+          enqueueSnackbar(`Episode ${epNum} marked as watched`, { variant: 'success' });
+        }
+      } catch {
+        // Non-critical
+      }
+      window.history.replaceState({}, '', `/anime/${id}`);
+    }
+    autoMark();
+  }, [authed, id, searchParams]);
+
+  async function toggleEpisode(ep: number) {
+    if (!authed) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      if (watchedEpisodes.includes(ep)) {
+        const { data: docs } = await supabase
+          .from('watched_episodes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('media_id', id)
+          .eq('episode_number', ep)
+          .limit(1);
+        if (docs && docs.length > 0) {
+          await supabase.from('watched_episodes').delete().eq('id', docs[0].id);
+        }
+        setWatchedEpisodes((prev) => prev.filter((e) => e !== ep));
+      } else {
+        await supabase.from('watched_episodes').insert({
+          user_id: user.id,
+          media_id: id,
+          episode_number: ep,
+        });
+        setWatchedEpisodes((prev) => [...prev, ep].sort((a, b) => a - b));
+      }
+    } catch {
+      enqueueSnackbar('Failed to update episode', { variant: 'error' });
+    }
+  }
 
   useEffect(() => {
     if (!anime) return;
@@ -291,6 +389,39 @@ export default function AnimeDetailPage() {
             </p>
           )}
         </div>
+
+        {authed && isInWatchlist && anime.episodes && anime.episodes > 0 && (
+          <div className="mt-6">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Episodes</h2>
+            {watchedEpisodes.length > 0 && (
+              <div className="mb-3 text-xs text-gray-500 space-y-0.5">
+                <p>
+                  Watched up to Episode{' '}
+                  <span className={`${theme.btnText} font-semibold`}>
+                    {(() => {
+                      let consecutive = 0;
+                      for (let i = 1; i <= anime.episodes!; i++) {
+                        if (watchedEpisodes.includes(i)) consecutive = i;
+                        else break;
+                      }
+                      return consecutive || watchedEpisodes[watchedEpisodes.length - 1];
+                    })()}
+                  </span>
+                </p>
+                <p>
+                  <span className={`${theme.btnText} font-semibold`}>{watchedEpisodes.length}</span>
+                  /{anime.episodes} episodes watched
+                </p>
+              </div>
+            )}
+            <EpisodeGrid
+              totalEpisodes={anime.episodes}
+              watchedEpisodes={watchedEpisodes}
+              onToggle={toggleEpisode}
+              availableUpTo={anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : undefined}
+            />
+          </div>
+        )}
 
         {anime.description && (
           <div className="mt-6">
