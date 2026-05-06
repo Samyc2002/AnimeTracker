@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -37,6 +39,24 @@ export default function LoginPage() {
     }
   }
 
+  async function handleResetPassword() {
+    if (!email) {
+      setError('Enter your email first');
+      return;
+    }
+    setResetLoading(true);
+    setError('');
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setResetSent(true);
+    }
+    setResetLoading(false);
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0e14]">
       <div className="flex-1 flex items-center justify-center">
@@ -60,6 +80,7 @@ export default function LoginPage() {
             className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
+          {resetSent && <p className="text-emerald-400 text-sm">Password reset link sent! Check your email.</p>}
           <button
             type="submit"
             disabled={loading}
@@ -68,7 +89,16 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-400">
+        <div className="mt-4 text-center text-sm">
+          <button
+            onClick={handleResetPassword}
+            disabled={resetLoading}
+            className="text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+          >
+            {resetLoading ? 'Sending...' : 'Forgot password?'}
+          </button>
+        </div>
+        <p className="mt-2 text-center text-sm text-gray-400">
           Don&apos;t have an account?{' '}
           <Link href="/signup" className="text-teal-400 hover:text-teal-300">Sign up</Link>
         </p>
