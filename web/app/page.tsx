@@ -287,7 +287,7 @@ export default function LandingPage() {
                   alt="Anime Tracker on Product Hunt"
                   width={180}
                   height={40}
-                  src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark&t=${Date.now()}`}
+                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark"
                   className="h-[36px] w-auto"
                 />
               </a>
