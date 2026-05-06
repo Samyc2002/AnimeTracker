@@ -1,78 +1,56 @@
 import { NextResponse } from 'next/server';
-import { Client, Databases, Query, Users } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 import { getOnlineCount } from '@/lib/online-tracker';
 
-function getServerClient() {
-  const client = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-    .setKey(process.env.APPWRITE_API_KEY!);
-
-  return {
-    databases: new Databases(client),
-    users: new Users(client),
-  };
-}
-
 export async function GET() {
-  const apiKey = process.env.APPWRITE_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'APPWRITE_API_KEY not configured' }, { status: 500 });
-  }
-
-  const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-  const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
-  const watchedEpCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHED_EPISODES_COLLECTION_ID!;
-  const profilesCol = process.env.NEXT_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID!;
-
   try {
-    const { databases, users } = getServerClient();
+    const supabase = getServiceSupabase();
 
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const [
-      totalUsers,
-      totalWatchlistEntries,
-      totalWatchedEpisodes,
-      recentWatchlistEntries,
-      recentWatchedEpisodes,
-      recentProfiles,
+      totalUsersResult,
+      totalWatchlistResult,
+      totalWatchedEpResult,
+      recentWatchlistResult,
+      recentWatchedEpResult,
+      recentProfilesResult,
     ] = await Promise.all([
-      users.list().then((r) => r.total),
-      databases.listDocuments(dbId, watchlistCol, [Query.limit(1)]).then((r) => r.total),
-      databases.listDocuments(dbId, watchedEpCol, [Query.limit(1)]).then((r) => r.total),
-      databases.listDocuments(dbId, watchlistCol, [
-        Query.greaterThan('$createdAt', sevenDaysAgo),
-        Query.limit(1),
-      ]).then((r) => r.total),
-      databases.listDocuments(dbId, watchedEpCol, [
-        Query.greaterThan('$createdAt', sevenDaysAgo),
-        Query.limit(1),
-      ]).then((r) => r.total),
-      databases.listDocuments(dbId, profilesCol, [
-        Query.greaterThan('$createdAt', thirtyDaysAgo),
-        Query.limit(1),
-      ]).then((r) => r.total),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('watchlist_entries').select('*', { count: 'exact', head: true }),
+      supabase.from('watched_episodes').select('*', { count: 'exact', head: true }),
+      supabase.from('watchlist_entries').select('*', { count: 'exact', head: true }).gt('created_at', sevenDaysAgo),
+      supabase.from('watched_episodes').select('*', { count: 'exact', head: true }).gt('created_at', sevenDaysAgo),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('created_at', thirtyDaysAgo),
     ]);
+
+    const totalUsers = totalUsersResult.count || 0;
+    const totalWatchlistEntries = totalWatchlistResult.count || 0;
+    const totalWatchedEpisodes = totalWatchedEpResult.count || 0;
+    const recentWatchlistEntries = recentWatchlistResult.count || 0;
+    const recentWatchedEpisodes = recentWatchedEpResult.count || 0;
+    const recentProfiles = recentProfilesResult.count || 0;
 
     const onlineNow = getOnlineCount();
 
     // Count unique users with activity in last 7 days
-    const recentDocs = await databases.listDocuments(dbId, watchlistCol, [
-      Query.greaterThan('$createdAt', sevenDaysAgo),
-      Query.select(['user_id']),
-      Query.limit(500),
-    ]);
-    const activeUserIds = new Set(recentDocs.documents.map((d) => (d as unknown as { user_id: string }).user_id));
+    const { data: recentDocs } = await supabase
+      .from('watchlist_entries')
+      .select('user_id')
+      .gt('created_at', sevenDaysAgo)
+      .limit(500);
 
-    const recentEpDocs = await databases.listDocuments(dbId, watchedEpCol, [
-      Query.greaterThan('$createdAt', sevenDaysAgo),
-      Query.select(['user_id']),
-      Query.limit(500),
-    ]);
-    recentEpDocs.documents.forEach((d) => activeUserIds.add((d as unknown as { user_id: string }).user_id));
+    const activeUserIds = new Set((recentDocs || []).map((d) => (d as unknown as { user_id: string }).user_id));
+
+    const { data: recentEpDocs } = await supabase
+      .from('watched_episodes')
+      .select('user_id')
+      .gt('created_at', sevenDaysAgo)
+      .limit(500);
+
+    (recentEpDocs || []).forEach((d) => activeUserIds.add((d as unknown as { user_id: string }).user_id));
 
     return NextResponse.json({
       online_now: onlineNow,

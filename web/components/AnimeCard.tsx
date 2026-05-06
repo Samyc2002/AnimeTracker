@@ -10,6 +10,9 @@ interface AnimeCardProps {
   status: string;
   episodes?: number | null;
   progress?: string;
+  watchedCount?: number;
+  totalForProgress?: number;
+  airedEpisodes?: number;
   action?: React.ReactNode;
   onClick?: () => void;
   isAdult?: boolean;
@@ -29,6 +32,9 @@ export default function AnimeCard({
   status,
   episodes,
   progress,
+  watchedCount,
+  totalForProgress,
+  airedEpisodes,
   action,
   onClick,
   isAdult,
@@ -39,7 +45,7 @@ export default function AnimeCard({
 
   return (
     <div
-      className={`group/card flex gap-3 bg-[#141925] rounded-lg p-3 ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
+      className={`group/card flex gap-3 bg-[#141925] rounded-lg p-3 relative ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
       onClick={onClick}
     >
       <Image
@@ -59,9 +65,31 @@ export default function AnimeCard({
           </span>
           {episodes && <span className="text-gray-500">{episodes} eps</span>}
         </div>
-        {progress && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
+        {watchedCount != null && totalForProgress != null && totalForProgress > 0 && (() => {
+          const pct = Math.min((watchedCount / totalForProgress) * 100, 100);
+          const airedPct = airedEpisodes ? Math.min((airedEpisodes / totalForProgress) * 100, 100) : undefined;
+          return (
+            <div className="w-full h-1.5 bg-[#1e2736] rounded-full overflow-hidden relative">
+              {airedPct != null && airedPct > pct && (
+                <div className="absolute inset-y-0 left-0 rounded-full bg-gray-600/40" style={{ width: `${airedPct}%` }} />
+              )}
+              <div
+                className={`h-full rounded-full ${theme.activeTab} transition-all relative z-10`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          );
+        })()}
+        {progress && !watchedCount && <p className={`text-xs ${theme.btnText}`}>{progress}</p>}
       </div>
       {action && <div className="flex items-center flex-shrink-0">{action}</div>}
+      {watchedCount != null && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#0b0e14]/90 border border-[#253040] rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/card:opacity-100 transition-opacity pointer-events-none z-20">
+          {watchedCount > 0
+            ? `${watchedCount}/${totalForProgress ?? '?'} episodes watched`
+            : 'Not started yet'}
+        </div>
+      )}
     </div>
   );
 }

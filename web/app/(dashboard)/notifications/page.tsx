@@ -3,8 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Query } from 'appwrite';
-import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import { useSfw } from '@/lib/sfw-context';
@@ -12,7 +11,7 @@ import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 
 interface NotificationDoc {
-  $id: string;
+  id: string;
   media_id: number;
   episode: number;
   title: string;
@@ -48,13 +47,16 @@ function NotificationsPage() {
 
   const loadNotifications = useCallback(async () => {
     try {
-      const user = await account.get();
-      const res = await databases.listDocuments(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.orderDesc('$createdAt'),
-        Query.limit(100),
-      ]);
-      setNotifications(res.documents as unknown as NotificationDoc[]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      setNotifications((data || []) as NotificationDoc[]);
     } catch {
       // Not authenticated
     }
@@ -64,11 +66,12 @@ function NotificationsPage() {
   const pollForNew = useCallback(async () => {
     setPolling(true);
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
       await fetch('/api/notifications/poll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.$id }),
+        body: JSON.stringify({ userId: user.id }),
       });
       await loadNotifications();
     } catch {
@@ -83,20 +86,16 @@ function NotificationsPage() {
 
   async function markAsRead(notif: NotificationDoc) {
     if (notif.is_read) return;
-    await databases.updateDocument(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, notif.$id, {
-      is_read: true,
-    });
+    await supabase.from('notifications').update({ is_read: true }).eq('id', notif.id);
     setNotifications((prev) =>
-      prev.map((n) => n.$id === notif.$id ? { ...n, is_read: true } : n)
+      prev.map((n) => n.id === notif.id ? { ...n, is_read: true } : n)
     );
   }
 
   async function markAllAsRead() {
     const unread = notifications.filter((n) => !n.is_read);
     for (const n of unread) {
-      await databases.updateDocument(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, n.$id, {
-        is_read: true,
-      });
+      await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
     }
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     enqueueSnackbar('All notifications marked as read', { variant: 'success' });
@@ -104,7 +103,7 @@ function NotificationsPage() {
 
   async function clearAll() {
     for (const n of notifications) {
-      await databases.deleteDocument(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, n.$id);
+      await supabase.from('notifications').delete().eq('id', n.id);
     }
     setNotifications([]);
     enqueueSnackbar('All notifications cleared', { variant: 'success' });
@@ -163,7 +162,7 @@ function NotificationsPage() {
         <div className="space-y-2">
           {notifications.map((notif) => (
             <div
-              key={notif.$id}
+              key={notif.id}
               className={`flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors ${
                 !notif.is_read ? `border-l-2 border-${theme.accent}-500` : ''
               }`}
@@ -171,6 +170,8 @@ function NotificationsPage() {
                 markAsRead(notif);
                 if (notif.type === 'buddy_request' || notif.type === 'buddy_accept') {
                   router.push('/buddies');
+                } else if (!notif.type && notif.episode > 0) {
+                  router.push(`/anime/${notif.media_id}?mark_episode=${notif.episode}`);
                 } else {
                   router.push(`/anime/${notif.media_id}`);
                 }

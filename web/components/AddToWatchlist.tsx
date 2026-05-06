@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ID, Query } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
@@ -39,30 +38,41 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
   }, [showDropdown]);
 
   async function handleAdd(status: WatchStatus) {
+    if (updating) return;
     setUpdating(true);
+    setShowDropdown(false);
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not logged in');
 
       if (added && docId) {
-        await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, docId, {
-          watch_status: status,
-        });
+        const { error } = await supabase
+          .from('watchlist_entries')
+          .update({ watch_status: status })
+          .eq('id', docId);
+        if (error) throw error;
+        setCurrentStatus(status);
+        enqueueSnackbar(`Status changed to ${status}`, { variant: 'success' });
       } else {
         const entry = mediaToWatchlistEntry(media);
-        const doc = await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
-          ...entry,
-          user_id: user.$id,
-          watch_status: status,
-        });
-        setDocId(doc.$id);
-        backfillSeriesId(doc.$id, media.id, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
+        const { data: doc, error } = await supabase
+          .from('watchlist_entries')
+          .insert({
+            ...entry,
+            user_id: user.id,
+            watch_status: status,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        setDocId(doc.id);
+        setAdded(true);
+        setCurrentStatus(status);
+        enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
+        backfillSeriesId(doc.id, media.id, async (id, data) => {
+          await supabase.from('watchlist_entries').update(data).eq('id', id);
+        }).catch(() => {});
       }
-
-      const wasAdded = added;
-      setAdded(true);
-      setCurrentStatus(status);
-      setShowDropdown(false);
-      enqueueSnackbar(wasAdded ? `Status changed to ${status}` : `Added as ${status}`, { variant: 'success' });
     } catch (err) {
       enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
     }
@@ -71,23 +81,30 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
 
   async function checkIfAdded() {
     try {
-      const user = await account.get();
-      let res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.equal('media_id', media.id),
-        Query.limit(1),
-      ]);
-      if (res.documents.length === 0 && media.idMal) {
-        res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.equal('id_mal', media.idMal),
-          Query.limit(1),
-        ]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let { data } = await supabase
+        .from('watchlist_entries')
+        .select()
+        .eq('user_id', user.id)
+        .eq('media_id', media.id)
+        .limit(1);
+
+      if ((!data || data.length === 0) && media.idMal) {
+        const res = await supabase
+          .from('watchlist_entries')
+          .select()
+          .eq('user_id', user.id)
+          .eq('id_mal', media.idMal)
+          .limit(1);
+        data = res.data;
       }
-      if (res.documents.length > 0) {
+
+      if (data && data.length > 0) {
         setAdded(true);
-        setDocId(res.documents[0].$id);
-        const ws = (res.documents[0] as unknown as { watch_status?: string }).watch_status;
+        setDocId(data[0].id);
+        const ws = data[0].watch_status as string | undefined;
         if (ws) setCurrentStatus(ws as WatchStatus);
       }
     } catch {

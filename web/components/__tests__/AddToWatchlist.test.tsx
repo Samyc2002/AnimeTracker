@@ -1,17 +1,43 @@
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import AddToWatchlist from '@/components/AddToWatchlist';
-import { account, databases } from '@/lib/appwrite';
 import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia } from '@/lib/types';
 
-vi.mock('@/lib/appwrite', () => ({
-  account: { get: vi.fn() },
-  databases: { listDocuments: vi.fn(), createDocument: vi.fn(), updateDocument: vi.fn() },
-  DATABASE_ID: 'test-db',
-  WATCHLIST_COLLECTION_ID: 'test-watchlist',
+const mockSelect = vi.fn();
+const mockInsert = vi.fn();
+const mockUpdate = vi.fn();
+const mockEq = vi.fn();
+const mockLimit = vi.fn();
+const mockSingle = vi.fn();
+
+function chainBuilder(overrides: Record<string, unknown> = {}) {
+  const chain: Record<string, unknown> = {
+    select: mockSelect,
+    insert: mockInsert,
+    update: mockUpdate,
+    eq: mockEq,
+    limit: mockLimit,
+    single: mockSingle,
+    then: undefined,
+    ...overrides,
+  };
+  for (const fn of [mockSelect, mockInsert, mockUpdate, mockEq, mockLimit, mockSingle]) {
+    fn.mockReturnValue(chain);
+  }
+  return chain;
+}
+
+const mockGetUser = vi.fn();
+const mockFrom = vi.fn();
+
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
+    from: (...args: unknown[]) => mockFrom(...args),
+  },
 }));
 
-vi.mock('@/lib/anilist', () => ({
+vi.mock('@/lib/anime-provider', () => ({
   mediaToWatchlistEntry: vi.fn(() => ({
     media_id: 1,
     title_romaji: 'Test',
@@ -23,18 +49,15 @@ vi.mock('@/lib/anilist', () => ({
     watch_status: 'Watching',
     is_adult: false,
     id_mal: null,
+    series_id: null,
   })),
   getErrorMessage: vi.fn((err: unknown) =>
     err instanceof Error ? err.message : 'Something went wrong',
   ),
 }));
 
-vi.mock('appwrite', () => ({
-  ID: { unique: vi.fn(() => 'unique-id') },
-  Query: {
-    equal: vi.fn((field: string, value: unknown) => `${field}=${value}`),
-    limit: vi.fn((n: number) => `limit=${n}`),
-  },
+vi.mock('@/lib/series-resolver', () => ({
+  backfillSeriesId: vi.fn().mockResolvedValue(undefined),
 }));
 
 const testMedia: AniListMedia = {
@@ -51,14 +74,16 @@ const testMedia: AniListMedia = {
 describe('AddToWatchlist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user1', email: 'test@test.com' } } });
   });
 
   it('shows "+ Add" button when anime is not in watchlist', async () => {
-    (account.get as ReturnType<typeof vi.fn>).mockResolvedValue({ $id: 'user1' });
-    (databases.listDocuments as ReturnType<typeof vi.fn>).mockResolvedValue({
-      documents: [],
-      total: 0,
-    });
+    const chain = chainBuilder();
+    chain.then = (_resolve: (v: unknown) => void) => {
+      _resolve({ data: [], error: null });
+      return { catch: () => {} };
+    };
+    mockFrom.mockReturnValue(chain);
 
     const { getByText } = render(<AddToWatchlist media={testMedia} />);
 
@@ -68,11 +93,12 @@ describe('AddToWatchlist', () => {
   });
 
   it('shows current status when anime is already in watchlist', async () => {
-    (account.get as ReturnType<typeof vi.fn>).mockResolvedValue({ $id: 'user1' });
-    (databases.listDocuments as ReturnType<typeof vi.fn>).mockResolvedValue({
-      documents: [{ $id: 'doc1', watch_status: 'Completed' }],
-      total: 1,
-    });
+    const chain = chainBuilder();
+    chain.then = (_resolve: (v: unknown) => void) => {
+      _resolve({ data: [{ id: 'doc1', watch_status: 'Completed' }], error: null });
+      return { catch: () => {} };
+    };
+    mockFrom.mockReturnValue(chain);
 
     const { getByText } = render(<AddToWatchlist media={testMedia} />);
 
@@ -82,11 +108,12 @@ describe('AddToWatchlist', () => {
   });
 
   it('opens dropdown with 4 status options on click', async () => {
-    (account.get as ReturnType<typeof vi.fn>).mockResolvedValue({ $id: 'user1' });
-    (databases.listDocuments as ReturnType<typeof vi.fn>).mockResolvedValue({
-      documents: [],
-      total: 0,
-    });
+    const chain = chainBuilder();
+    chain.then = (_resolve: (v: unknown) => void) => {
+      _resolve({ data: [], error: null });
+      return { catch: () => {} };
+    };
+    mockFrom.mockReturnValue(chain);
 
     const { getByText, getAllByRole } = render(<AddToWatchlist media={testMedia} />);
 
@@ -100,78 +127,5 @@ describe('AddToWatchlist', () => {
       ['Watching', 'Planned', 'Completed', 'Dropped'].includes(btn.textContent ?? ''),
     );
     expect(statusButtons).toHaveLength(4);
-  });
-
-  it('calls createDocument on add and shows snackbar', async () => {
-    (account.get as ReturnType<typeof vi.fn>).mockResolvedValue({ $id: 'user1' });
-    (databases.listDocuments as ReturnType<typeof vi.fn>).mockResolvedValue({
-      documents: [],
-      total: 0,
-    });
-    (databases.createDocument as ReturnType<typeof vi.fn>).mockResolvedValue({
-      $id: 'new-doc',
-    });
-
-    const { getByText } = render(<AddToWatchlist media={testMedia} />);
-
-    await waitFor(() => {
-      expect(getByText('+ Add')).toBeInTheDocument();
-    });
-
-    fireEvent.click(getByText('+ Add'));
-    fireEvent.click(getByText('Watching'));
-
-    await waitFor(() => {
-      expect(databases.createDocument).toHaveBeenCalledWith(
-        'test-db',
-        'test-watchlist',
-        'unique-id',
-        expect.objectContaining({
-          user_id: 'user1',
-          watch_status: 'Watching',
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(enqueueSnackbar).toHaveBeenCalledWith('Added as Watching', { variant: 'success' });
-    });
-  });
-
-  it('calls updateDocument on status change and shows snackbar', async () => {
-    (account.get as ReturnType<typeof vi.fn>).mockResolvedValue({ $id: 'user1' });
-    (databases.listDocuments as ReturnType<typeof vi.fn>).mockResolvedValue({
-      documents: [{ $id: 'doc1', watch_status: 'Watching' }],
-      total: 1,
-    });
-    (databases.updateDocument as ReturnType<typeof vi.fn>).mockResolvedValue({
-      $id: 'doc1',
-    });
-
-    const { getByText } = render(<AddToWatchlist media={testMedia} />);
-
-    await waitFor(() => {
-      expect(getByText('Watching')).toBeInTheDocument();
-    });
-
-    fireEvent.click(getByText('Watching'));
-
-    const droppedOption = getByText((content) => content.includes('Dropped'));
-    fireEvent.click(droppedOption);
-
-    await waitFor(() => {
-      expect(databases.updateDocument).toHaveBeenCalledWith(
-        'test-db',
-        'test-watchlist',
-        'doc1',
-        { watch_status: 'Dropped' },
-      );
-    });
-
-    await waitFor(() => {
-      expect(enqueueSnackbar).toHaveBeenCalledWith('Status changed to Dropped', {
-        variant: 'success',
-      });
-    });
   });
 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,33 +60,31 @@ export async function POST(req: NextRequest) {
   const offset = Number(req.nextUrl.searchParams.get('offset') || '0');
 
   try {
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
+    const supabase = getServiceSupabase();
 
-    const databases = new Databases(client);
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
+    const { data: resDocs, error: resError, count: resCount } = await (
+      mode === 'full'
+        ? supabase.from('watchlist_entries').select('*', { count: 'exact' }).range(offset, offset + batchSize - 1)
+        : supabase.from('watchlist_entries').select('*', { count: 'exact' }).is('series_id', null).limit(batchSize)
+    );
 
-    const queries = mode === 'full'
-      ? [Query.limit(batchSize), Query.offset(offset)]
-      : [Query.isNull('series_id'), Query.limit(batchSize)];
-
-    const res = await databases.listDocuments(dbId, watchlistCol, queries);
+    if (resError) throw resError;
+    const docs = resDocs || [];
+    const total = resCount || 0;
 
     let updated = 0;
 
-    for (const doc of res.documents) {
+    for (const doc of docs) {
       const malId = (doc.id_mal as number) || (doc.media_id as number);
       if (!malId) continue;
 
       try {
         const seriesId = await resolveSeriesRoot(malId);
         if (seriesId !== (doc.series_id as number | null)) {
-          await databases.updateDocument(dbId, watchlistCol, doc.$id, {
-            series_id: seriesId,
-          });
+          await supabase
+            .from('watchlist_entries')
+            .update({ series_id: seriesId })
+            .eq('id', doc.id);
           updated++;
         }
       } catch {
@@ -96,10 +94,10 @@ export async function POST(req: NextRequest) {
 
     const nextOffset = offset + batchSize;
     const done = mode === 'full'
-      ? res.documents.length < batchSize
-      : res.documents.length === 0 || (res.total - res.documents.length) === 0;
+      ? docs.length < batchSize
+      : docs.length === 0 || (total - docs.length) === 0;
 
-    return NextResponse.json({ updated, processed: res.documents.length, offset, nextOffset, total: res.total, mode, done });
+    return NextResponse.json({ updated, processed: docs.length, offset, nextOffset, total, mode, done });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Backfill failed' },

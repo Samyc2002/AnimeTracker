@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -19,11 +21,14 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await account.createEmailPasswordSession(email, password);
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
       try {
-        const jwt = await account.createJWT();
-        const user = await account.get();
-        localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: jwt.jwt, userId: user.$id }));
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (session && user) {
+          localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: session.access_token, userId: user.id }));
+        }
       } catch {
         // JWT creation is non-critical
       }
@@ -32,6 +37,24 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : 'Login failed');
       setLoading(false);
     }
+  }
+
+  async function handleResetPassword() {
+    if (!email) {
+      setError('Enter your email first');
+      return;
+    }
+    setResetLoading(true);
+    setError('');
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setResetSent(true);
+    }
+    setResetLoading(false);
   }
 
   return (
@@ -57,6 +80,7 @@ export default function LoginPage() {
             className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
+          {resetSent && <p className="text-emerald-400 text-sm">Password reset link sent! Check your email.</p>}
           <button
             type="submit"
             disabled={loading}
@@ -65,7 +89,16 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-400">
+        <div className="mt-4 text-center text-sm">
+          <button
+            onClick={handleResetPassword}
+            disabled={resetLoading}
+            className="text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+          >
+            {resetLoading ? 'Sending...' : 'Forgot password?'}
+          </button>
+        </div>
+        <p className="mt-2 text-center text-sm text-gray-400">
           Don&apos;t have an account?{' '}
           <Link href="/signup" className="text-teal-400 hover:text-teal-300">Sign up</Link>
         </p>

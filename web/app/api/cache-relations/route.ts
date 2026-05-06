@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query, ID } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,25 +31,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ cached: 0 });
     }
 
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
-
-    const databases = new Databases(client);
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const cacheCol = process.env.NEXT_PUBLIC_APPWRITE_ANIME_CACHE_COLLECTION_ID!;
+    const supabase = getServiceSupabase();
 
     let cached = 0;
 
     for (const malId of malIds.slice(0, 10)) {
       try {
-        const existing = await databases.listDocuments(dbId, cacheCol, [
-          Query.equal('mal_id', malId),
-          Query.limit(1),
-        ]);
+        const { data: existingDocs } = await supabase
+          .from('anime_cache')
+          .select()
+          .eq('mal_id', malId)
+          .limit(1);
 
-        if (existing.documents.length > 0 && existing.documents[0].relations_json) continue;
+        if (existingDocs && existingDocs.length > 0 && existingDocs[0].relations_json) continue;
 
         await delay(1000);
         const res = await fetch(`${JIKAN_BASE}/anime/${malId}/full`, {
@@ -108,10 +102,10 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         };
 
-        if (existing.documents.length > 0) {
-          await databases.updateDocument(dbId, cacheCol, existing.documents[0].$id, doc);
+        if (existingDocs && existingDocs.length > 0) {
+          await supabase.from('anime_cache').update(doc).eq('id', existingDocs[0].id);
         } else {
-          await databases.createDocument(dbId, cacheCol, ID.unique(), doc);
+          await supabase.from('anime_cache').insert(doc);
         }
         cached++;
       } catch {

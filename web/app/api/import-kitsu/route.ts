@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { fetchUserList, mediaToWatchlistEntry, ANILIST_STATUS_MAP } from '@/lib/anime-provider';
+import { fetchKitsuUserId, fetchKitsuLibrary } from '@/lib/providers/kitsu';
+import { mediaToWatchlistEntry } from '@/lib/anime-provider';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,31 +14,33 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    const { data: profileDocs } = await supabase
+    const { data: profiles } = await supabase
       .from('profiles')
-      .select()
+      .select('kitsu_username')
       .eq('user_id', userId)
       .limit(1);
 
-    if (!profileDocs || profileDocs.length === 0) {
+    if (!profiles || profiles.length === 0) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    const profile = profileDocs[0];
-    const anilistUserId = profile.anilist_user_id as number | null;
-    const anilistToken = profile.anilist_token as string | null;
-
-    if (!anilistUserId || !anilistToken) {
-      return NextResponse.json({ error: 'AniList not connected' }, { status: 400 });
+    const kitsuUsername = profiles[0].kitsu_username as string | null;
+    if (!kitsuUsername) {
+      return NextResponse.json({ error: 'Kitsu not connected' }, { status: 400 });
     }
 
-    const anilistEntries = await fetchUserList(anilistUserId, anilistToken);
+    const kitsuUserId = await fetchKitsuUserId(kitsuUsername);
+    if (!kitsuUserId) {
+      return NextResponse.json({ error: 'Kitsu user not found' }, { status: 404 });
+    }
+
+    const kitsuEntries = await fetchKitsuLibrary(kitsuUserId);
 
     const { data: existingDocs } = await supabase
       .from('watchlist_entries')
       .select('media_id, id')
       .eq('user_id', userId)
-      .limit(500);
+      .limit(5000);
 
     const existingMap = new Map(
       (existingDocs || []).map((d) => [d.media_id as number, d.id as string])
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
     let created = 0;
     let updated = 0;
 
-    for (const entry of anilistEntries) {
+    for (const entry of kitsuEntries) {
       const docData = {
         ...mediaToWatchlistEntry(entry.media),
         user_id: userId,
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
       if (entry.progress > 0) {
         const { data: watchedDocs } = await supabase
           .from('watched_episodes')
-          .select()
+          .select('episode_number')
           .eq('user_id', userId)
           .eq('media_id', entry.media.id)
           .limit(5000);

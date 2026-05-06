@@ -4,8 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Query } from 'appwrite';
-import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import SfwToggle from '@/components/SfwToggle';
@@ -33,6 +32,7 @@ export default function NavBar() {
   const { authed, loading } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  const [profilePublic, setProfilePublic] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const navItems = loading ? [] : authed ? authNavItems : publicNavItems;
@@ -41,13 +41,14 @@ export default function NavBar() {
     if (!authed) return;
     async function loadUnread() {
       try {
-        const user = await account.get();
-        const res = await databases.listDocuments(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.equal('is_read', false),
-          Query.limit(1),
-        ]);
-        setUnreadCount(res.total);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { count } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_read', false);
+        setUnreadCount(count ?? 0);
       } catch {
         // Not critical
       }
@@ -61,16 +62,15 @@ export default function NavBar() {
     if (!authed) return;
     async function loadProfile() {
       try {
-        const user = await account.get();
-        const res = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.select(['username']),
-          Query.limit(1),
-        ]);
-        if (res.documents.length > 0) {
-          const username = res.documents[0].username as string | undefined;
-          if (username) setProfileUsername(username);
-        }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('profiles')
+          .select('username, is_public')
+          .eq('user_id', user.id)
+          .limit(1);
+        if (data && data.length > 0 && data[0].username) setProfileUsername(data[0].username);
+        if (data && data.length > 0) setProfilePublic(!!(data[0].is_public));
       } catch {
         // Not critical
       }
@@ -84,7 +84,7 @@ export default function NavBar() {
 
   async function handleSignOut() {
     localStorage.removeItem('anime_tracker_ext_jwt');
-    await account.deleteSession('current');
+    await supabase.auth.signOut();
     router.push('/');
   }
 
@@ -137,9 +137,9 @@ export default function NavBar() {
               )}
             </Link>
             <Link
-              href={profileUsername ? `/u/${profileUsername}` : '/settings'}
+              href={profileUsername && profilePublic ? `/u/${profileUsername}` : '/u/me'}
               className="p-1.5 rounded text-gray-400 hover:text-gray-200 hover:bg-[#1c2333] transition-colors"
-              title={profileUsername ? `View profile` : 'Set up profile'}
+              title="View profile"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -247,11 +247,11 @@ export default function NavBar() {
                 { href: '/recommend', label: 'For You', icon: '✦' },
                 { href: '/playlists', label: 'Playlists', icon: '▶' },
                 { href: '/buddies', label: 'Buddies', icon: '♥' },
-                { href: profileUsername ? `/u/${profileUsername}` : '/settings', label: profileUsername ? 'Profile' : 'Set Up Profile', icon: '●' },
+                { href: profileUsername && profilePublic ? `/u/${profileUsername}` : '/u/me', label: 'Profile', icon: '●' },
                 { href: '/settings', label: 'Settings', icon: '⚙' },
               ].map(({ href, label, icon }) => (
                 <Link
-                  key={href}
+                  key={label}
                   href={href}
                   onClick={() => setMoreOpen(false)}
                   className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${

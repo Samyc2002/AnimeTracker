@@ -3,7 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
@@ -33,11 +33,12 @@ function RecommendPage() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const user = await account.get();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
         const res = await fetch('/api/taste-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.$id }),
+          body: JSON.stringify({ userId: user.id }),
         });
         const data = await res.json();
         if (data.insufficient) {
@@ -59,12 +60,13 @@ function RecommendPage() {
     if (!profile) return;
     setPhase('searching');
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
       const filters = buildFiltersFromAnswers(profile, answers);
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.$id, filters }),
+        body: JSON.stringify({ userId: user.id, filters }),
       });
       const data = await res.json();
       const media = sfwMode

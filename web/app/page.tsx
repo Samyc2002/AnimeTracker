@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { fetchRecommendations } from '@/lib/anime-provider';
 import Footer from '@/components/Footer';
 import type { AniListMedia } from '@/lib/types';
@@ -132,7 +132,7 @@ export default function LandingPage() {
   const [trending, setTrending] = useState<AniListMedia[]>([]);
 
   useEffect(() => {
-    account.get().then(() => setLoggedIn(true)).catch(() => {});
+    supabase.auth.getUser().then(({ data: { user } }) => setLoggedIn(!!user)).catch(() => {});
     fetchRecommendations().then((r) => setTrending(r.trending.slice(0, 8))).catch(() => {});
   }, []);
 
@@ -287,7 +287,7 @@ export default function LandingPage() {
                   alt="Anime Tracker on Product Hunt"
                   width={180}
                   height={40}
-                  src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark&t=${Date.now()}`}
+                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark"
                   className="h-[36px] w-auto"
                 />
               </a>

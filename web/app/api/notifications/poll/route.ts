@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query, ID } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 
 const ANILIST_API = 'https://graphql.anilist.co';
 
@@ -34,22 +34,17 @@ export async function POST(req: NextRequest) {
     }
     pollCache.set(userId, Date.now());
 
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
+    const supabase = getServiceSupabase();
 
-    const databases = new Databases(client);
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
-    const notificationsCol = process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION_ID!;
+    const { data: watchlistDocs, error: watchlistError } = await supabase
+      .from('watchlist_entries')
+      .select()
+      .eq('user_id', userId)
+      .limit(500);
 
-    const watchlist = await databases.listDocuments(dbId, watchlistCol, [
-      Query.equal('user_id', userId),
-      Query.limit(500),
-    ]);
+    if (watchlistError) throw watchlistError;
 
-    const mediaIds = watchlist.documents.map((d) => d.media_id as number);
+    const mediaIds = (watchlistDocs || []).map((d) => d.media_id as number);
     if (mediaIds.length === 0) {
       return NextResponse.json({ created: 0 });
     }
@@ -74,18 +69,21 @@ export async function POST(req: NextRequest) {
     const anilistData = await anilistRes.json();
     const schedules = anilistData.data?.Page?.airingSchedules || [];
 
-    const existing = await databases.listDocuments(dbId, notificationsCol, [
-      Query.equal('user_id', userId),
-      Query.greaterThan('created_at', new Date(oneDayAgo * 1000).toISOString()),
-      Query.limit(500),
-    ]);
+    const { data: existingDocs, error: existingError } = await supabase
+      .from('notifications')
+      .select()
+      .eq('user_id', userId)
+      .gt('created_at', new Date(oneDayAgo * 1000).toISOString())
+      .limit(500);
+
+    if (existingError) throw existingError;
 
     const existingKeys = new Set(
-      existing.documents.map((d) => `${d.media_id}-${d.episode}`)
+      (existingDocs || []).map((d) => `${d.media_id}-${d.episode}`)
     );
 
     const watchlistMap = new Map(
-      watchlist.documents.map((d) => [d.media_id as number, d])
+      (watchlistDocs || []).map((d) => [d.media_id as number, d])
     );
 
     let created = 0;
@@ -97,17 +95,20 @@ export async function POST(req: NextRequest) {
       const wlEntry = watchlistMap.get(schedule.mediaId);
       if (!wlEntry) continue;
 
-      await databases.createDocument(dbId, notificationsCol, ID.unique(), {
-        user_id: userId,
-        media_id: schedule.mediaId,
-        episode: schedule.episode,
-        title: (wlEntry.title_english as string) || (wlEntry.title_romaji as string) || 'Unknown',
-        cover_url: wlEntry.cover_url as string,
-        airing_at: schedule.airingAt,
-        is_read: false,
-        created_at: new Date().toISOString(),
-      });
+      const { error: insertError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          media_id: schedule.mediaId,
+          episode: schedule.episode,
+          title: (wlEntry.title_english as string) || (wlEntry.title_romaji as string) || 'Unknown',
+          cover_url: wlEntry.cover_url as string,
+          airing_at: schedule.airingAt,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        });
 
+      if (insertError) throw insertError;
       created++;
     }
 

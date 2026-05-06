@@ -3,8 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import SeriesBackfill from '@/components/SeriesBackfill';
@@ -14,7 +13,7 @@ import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 
 interface ProfileDoc {
-  $id: string;
+  id: string;
   display_language: string;
   anilist_user_id?: number;
   username?: string;
@@ -26,6 +25,7 @@ interface ProfileDoc {
   social_discord?: string;
   social_instagram?: string;
   social_reddit?: string;
+  kitsu_username?: string;
 }
 
 export default function SettingsPageGuarded() {
@@ -57,6 +57,10 @@ function SettingsPage() {
   const [socialDiscord, setSocialDiscord] = useState('');
   const [socialInstagram, setSocialInstagram] = useState('');
   const [socialReddit, setSocialReddit] = useState('');
+  const [kitsuUsername, setKitsuUsername] = useState('');
+  const [kitsuConnected, setKitsuConnected] = useState(false);
+  const [kitsuImporting, setKitsuImporting] = useState(false);
+  const [kitsuImportResult, setKitsuImportResult] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -72,20 +76,21 @@ function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const user = await account.get();
-      setEmail(user.email);
-      setUserId(user.$id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setEmail(user.email || '');
+      setUserId(user.id);
 
-      const profiles = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.select(['$id', 'display_language', 'anilist_user_id', 'username', 'display_name', 'is_public', 'hide_nsfw_public', 'avatar', 'social_twitter', 'social_discord', 'social_instagram', 'social_reddit']),
-        Query.limit(1),
-      ]);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_language, anilist_user_id, username, display_name, is_public, hide_nsfw_public, avatar, social_twitter, social_discord, social_instagram, social_reddit, kitsu_username')
+        .eq('user_id', user.id)
+        .limit(1);
 
-      if (profiles.documents.length > 0) {
-        const profile = profiles.documents[0] as unknown as ProfileDoc;
+      if (profiles && profiles.length > 0) {
+        const profile = profiles[0] as ProfileDoc;
         setLanguage(profile.display_language);
-        setProfileDocId(profile.$id);
+        setProfileDocId(profile.id);
         if (profile.username) setUsername(profile.username);
         if (profile.display_name) setDisplayName(profile.display_name);
         if (profile.is_public) setIsPublic(profile.is_public);
@@ -95,16 +100,21 @@ function SettingsPage() {
         if (profile.social_discord) setSocialDiscord(profile.social_discord);
         if (profile.social_instagram) setSocialInstagram(profile.social_instagram);
         if (profile.social_reddit) setSocialReddit(profile.social_reddit);
+        if (profile.kitsu_username) {
+          setKitsuUsername(profile.kitsu_username);
+          setKitsuConnected(true);
+        }
         if (profile.anilist_user_id) {
           setAnilistConnected(true);
           setAnilistUserId(profile.anilist_user_id);
         }
       } else {
-        const newProfile = await databases.createDocument(DATABASE_ID, PROFILES_COLLECTION_ID, ID.unique(), {
-          user_id: user.$id,
-          display_language: 'English',
-        });
-        setProfileDocId(newProfile.$id);
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .insert({ user_id: user.id, display_language: 'English' })
+          .select()
+          .single();
+        if (newProfile) setProfileDocId(newProfile.id);
       }
     }
     load();
@@ -114,9 +124,7 @@ function SettingsPage() {
     setLanguage(value);
     if (!profileDocId) return;
     setSaving(true);
-    await databases.updateDocument(DATABASE_ID, PROFILES_COLLECTION_ID, profileDocId, {
-      display_language: value,
-    });
+    await supabase.from('profiles').update({ display_language: value }).eq('id', profileDocId);
     setSaving(false);
     enqueueSnackbar('Language updated', { variant: 'success' });
   }
@@ -134,10 +142,10 @@ function SettingsPage() {
 
   async function disconnectAniList() {
     if (!profileDocId) return;
-    await databases.updateDocument(DATABASE_ID, PROFILES_COLLECTION_ID, profileDocId, {
+    await supabase.from('profiles').update({
       anilist_user_id: null,
       anilist_token: null,
-    });
+    }).eq('id', profileDocId);
     setAnilistConnected(false);
     setAnilistUserId(null);
     enqueueSnackbar('AniList disconnected', { variant: 'success' });
@@ -165,18 +173,19 @@ function SettingsPage() {
 
     try {
       if (username) {
-        const existing = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
-          Query.equal('username', username),
-          Query.limit(1),
-        ]);
-        if (existing.documents.length > 0 && existing.documents[0].$id !== profileDocId) {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username)
+          .limit(1);
+        if (existing && existing.length > 0 && existing[0].id !== profileDocId) {
           setUsernameError('Username is already taken');
           setSavingProfile(false);
           return;
         }
       }
 
-      await databases.updateDocument(DATABASE_ID, PROFILES_COLLECTION_ID, profileDocId, {
+      await supabase.from('profiles').update({
         username: username || null,
         display_name: displayName || null,
         is_public: isPublic,
@@ -186,7 +195,7 @@ function SettingsPage() {
         social_discord: socialDiscord || null,
         social_instagram: socialInstagram || null,
         social_reddit: socialReddit || null,
-      });
+      }).eq('id', profileDocId);
       enqueueSnackbar('Profile saved!', { variant: 'success' });
     } catch (err) {
       enqueueSnackbar(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`, { variant: 'error' });
@@ -200,11 +209,12 @@ function SettingsPage() {
     setImportResult(null);
 
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
       const res = await fetch('/api/import-watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.$id }),
+        body: JSON.stringify({ userId: user.id }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -287,6 +297,96 @@ function SettingsPage() {
               >
                 Connect AniList
               </button>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-[#253040] pt-6">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Kitsu Integration</h2>
+
+          {kitsuConnected ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full" />
+                <span className="text-sm text-gray-300">
+                  Connected as Kitsu user <span className={`${theme.btnText} font-medium`}>{kitsuUsername}</span>
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    setKitsuImporting(true);
+                    setKitsuImportResult(null);
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) throw new Error('Not authenticated');
+                      const res = await fetch('/api/import-kitsu', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.id }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        setKitsuImportResult(`Import failed: ${data.error}`);
+                      } else {
+                        setKitsuImportResult(`Imported ${data.created} new, updated ${data.updated} existing anime.`);
+                        enqueueSnackbar(`Imported ${data.created} new, updated ${data.updated} existing anime`, { variant: 'success' });
+                      }
+                    } catch (err) {
+                      setKitsuImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                    }
+                    setKitsuImporting(false);
+                  }}
+                  disabled={kitsuImporting}
+                  className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
+                >
+                  {kitsuImporting ? 'Importing...' : 'Import Watchlist'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!profileDocId) return;
+                    await supabase.from('profiles').update({ kitsu_username: null }).eq('id', profileDocId);
+                    setKitsuConnected(false);
+                    setKitsuUsername('');
+                    enqueueSnackbar('Kitsu disconnected', { variant: 'success' });
+                  }}
+                  className="px-4 py-2 bg-[#141925] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg border border-[#253040] transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+
+              {kitsuImportResult && (
+                <p className="text-xs text-gray-400">{kitsuImportResult}</p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-500">
+                Enter your Kitsu username to import your anime watchlist. No login needed.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={kitsuUsername}
+                  onChange={(e) => setKitsuUsername(e.target.value.trim())}
+                  placeholder="Your Kitsu username"
+                  className="flex-1 px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm placeholder:text-gray-600 focus:outline-none focus:border-gray-500"
+                />
+                <button
+                  onClick={async () => {
+                    if (!kitsuUsername || !profileDocId) return;
+                    await supabase.from('profiles').update({ kitsu_username: kitsuUsername }).eq('id', profileDocId);
+                    setKitsuConnected(true);
+                    enqueueSnackbar('Kitsu connected!', { variant: 'success' });
+                  }}
+                  disabled={!kitsuUsername}
+                  className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
+                >
+                  Connect
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,28 +38,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing userId or filters' }, { status: 400 });
     }
 
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
-
-    const databases = new Databases(client);
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
+    const supabase = getServiceSupabase();
 
     const excludeIds = new Set<number>();
     let offset = 0;
     while (true) {
-      const batch = await databases.listDocuments(dbId, watchlistCol, [
-        Query.equal('user_id', userId),
-        Query.limit(100),
-        Query.offset(offset),
-      ]);
-      for (const d of batch.documents) {
+      const { data: batchDocs } = await supabase
+        .from('watchlist_entries')
+        .select()
+        .eq('user_id', userId)
+        .range(offset, offset + 99);
+
+      const batch = batchDocs || [];
+      for (const d of batch) {
         excludeIds.add(d.media_id as number);
         if (d.id_mal) excludeIds.add(d.id_mal as number);
       }
-      if (batch.documents.length < 100) break;
+      if (batch.length < 100) break;
       offset += 100;
     }
 

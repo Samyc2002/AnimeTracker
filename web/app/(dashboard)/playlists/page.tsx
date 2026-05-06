@@ -2,8 +2,7 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
-import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { searchAnime, fetchAnimeDetail } from '@/lib/anime-provider';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
@@ -13,7 +12,7 @@ import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
 
 interface PlaylistDoc {
-  $id: string;
+  id: string;
   user_id: string;
   title: string;
   description: string;
@@ -48,12 +47,15 @@ function PlaylistsPage() {
 
   const loadPlaylists = useCallback(async () => {
     try {
-      const user = await account.get();
-      const res = await databases.listDocuments(DATABASE_ID, PLAYLISTS_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.orderDesc('$createdAt'),
-      ]);
-      setPlaylists(res.documents as unknown as PlaylistDoc[]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await supabase
+        .from('playlists')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPlaylists((data || []) as PlaylistDoc[]);
     } catch {
       // Not authenticated
     }
@@ -68,10 +70,11 @@ function PlaylistsPage() {
     if (!newTitle.trim()) return;
     setCreating(true);
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
       const slug = `${slugify(newTitle)}-${Date.now().toString(36)}`;
-      await databases.createDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, ID.unique(), {
-        user_id: user.$id,
+      await supabase.from('playlists').insert({
+        user_id: user.id,
         title: newTitle.trim(),
         description: newDescription.trim(),
         anime_ids: '[]',
@@ -89,7 +92,7 @@ function PlaylistsPage() {
   }
 
   async function deletePlaylist(playlist: PlaylistDoc) {
-    await databases.deleteDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id);
+    await supabase.from('playlists').delete().eq('id', playlist.id);
     setSelectedPlaylist(null);
     enqueueSnackbar('Playlist deleted', { variant: 'success' });
     loadPlaylists();
@@ -153,7 +156,7 @@ function PlaylistsPage() {
             const animeIds: number[] = JSON.parse(pl.anime_ids || '[]');
             return (
               <div
-                key={pl.$id}
+                key={pl.id}
                 className="bg-[#141925] rounded-lg p-4 hover:bg-[#1c2333] transition-colors cursor-pointer border border-[#253040]"
                 onClick={() => setSelectedPlaylist(pl)}
               >
@@ -226,11 +229,11 @@ function PlaylistEditor({
   async function save() {
     setSaving(true);
     try {
-      await databases.updateDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id, {
+      await supabase.from('playlists').update({
         title: title.trim(),
         description: description.trim(),
         anime_ids: JSON.stringify(animeIds),
-      });
+      }).eq('id', playlist.id);
       enqueueSnackbar('Playlist saved', { variant: 'success' });
     } catch {
       enqueueSnackbar('Failed to save playlist', { variant: 'error' });
@@ -254,9 +257,9 @@ function PlaylistEditor({
     if (!animeIds.includes(mediaId)) {
       const updated = [...animeIds, mediaId];
       setAnimeIds(updated);
-      databases.updateDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id, {
+      supabase.from('playlists').update({
         anime_ids: JSON.stringify(updated),
-      });
+      }).eq('id', playlist.id);
       enqueueSnackbar('Added to playlist', { variant: 'success' });
     }
   }
@@ -264,9 +267,9 @@ function PlaylistEditor({
   function removeAnime(mediaId: number) {
     const updated = animeIds.filter((id) => id !== mediaId);
     setAnimeIds(updated);
-    databases.updateDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id, {
+    supabase.from('playlists').update({
       anime_ids: JSON.stringify(updated),
-    });
+    }).eq('id', playlist.id);
     enqueueSnackbar('Removed from playlist', { variant: 'success' });
   }
 

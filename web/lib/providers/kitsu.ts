@@ -137,4 +137,76 @@ export async function fetchKitsuDetail(kitsuId: string): Promise<AnimeDetail> {
   }
 }
 
+export const KITSU_STATUS_MAP: Record<string, string> = {
+  current: 'Watching',
+  planned: 'Planned',
+  completed: 'Completed',
+  dropped: 'Dropped',
+  on_hold: 'Dropped',
+};
+
+export interface KitsuLibraryEntry {
+  media: AniListMedia;
+  progress: number;
+  watchStatus: string;
+}
+
+export async function fetchKitsuUserId(username: string): Promise<number | null> {
+  try {
+    const data = await kitsuFetch<{ data: any[] }>(
+      `/users?filter[name]=${encodeURIComponent(username)}&page[limit]=1`
+    );
+    if (!data.data || data.data.length === 0) return null;
+    return parseInt(data.data[0].id, 10) || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchKitsuLibrary(userId: number): Promise<KitsuLibraryEntry[]> {
+  const entries: KitsuLibraryEntry[] = [];
+  let nextUrl: string | null = `/library-entries?filter[userId]=${userId}&filter[kind]=anime&include=anime&page[limit]=20&sort=-updatedAt`;
+
+  while (nextUrl) {
+    const fullUrl: string = nextUrl.startsWith('http') ? nextUrl : `${KITSU_BASE}${nextUrl}`;
+    const res: Response = await fetch(fullUrl, {
+      headers: {
+        'Accept': 'application/vnd.api+json',
+        'Content-Type': 'application/vnd.api+json',
+      },
+    });
+    if (!res.ok) break;
+
+    const data: any = await res.json();
+    const included = new Map<string, any>();
+    for (const inc of data.included || []) {
+      if (inc.type === 'anime') {
+        included.set(inc.id, inc);
+      }
+    }
+
+    for (const entry of data.data || []) {
+      const attrs = entry.attributes || {};
+      const animeRef = entry.relationships?.anime?.data;
+      if (!animeRef) continue;
+
+      const animeResource = included.get(animeRef.id);
+      if (!animeResource) continue;
+
+      const media = mapKitsuToMedia(animeResource);
+      const status = KITSU_STATUS_MAP[attrs.status] || 'Watching';
+
+      entries.push({
+        media,
+        progress: attrs.progress || 0,
+        watchStatus: status,
+      });
+    }
+
+    nextUrl = data.links?.next || null;
+  }
+
+  return entries;
+}
+
 /* eslint-enable @typescript-eslint/no-explicit-any */

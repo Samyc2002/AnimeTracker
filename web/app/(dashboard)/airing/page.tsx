@@ -3,8 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { fetchWeeklyAiring, getCachedAiring, saveAiringToCache, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { backfillSeriesId } from '@/lib/series-resolver';
 import Image from 'next/image';
@@ -114,15 +113,15 @@ export default function AiringPage() {
   useEffect(() => {
     async function loadTracked() {
       try {
-        const user = await account.get();
-        const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.select(['media_id', 'id_mal']),
-          Query.limit(500),
-        ]);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: existing } = await supabase
+          .from('watchlist_entries')
+          .select('media_id, id_mal')
+          .eq('user_id', user.id)
+          .limit(500);
         const ids = new Set<number>();
-        for (const d of existing.documents) {
-          const doc = d as unknown as { media_id: number; id_mal: number | null };
+        for (const doc of (existing || [])) {
           ids.add(doc.media_id);
           if (doc.id_mal) ids.add(doc.id_mal);
         }
@@ -141,13 +140,18 @@ export default function AiringPage() {
 
     setTrackingId(s.mediaId);
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
       const entry = mediaToWatchlistEntry(media);
-      const doc = await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
-        ...entry,
-        user_id: user.$id,
-      });
-      backfillSeriesId(doc.$id, s.mediaId, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
+      const { data: doc, error } = await supabase
+        .from('watchlist_entries')
+        .insert({ ...entry, user_id: user.id })
+        .select()
+        .single();
+      if (error) throw error;
+      backfillSeriesId(doc.id, s.mediaId, async (id, data) => {
+        await supabase.from('watchlist_entries').update(data).eq('id', id);
+      }).catch(() => {});
       setTrackedIds((prev) => new Set(prev).add(s.mediaId));
       enqueueSnackbar('Added to watchlist', { variant: 'success' });
     } catch (err) {

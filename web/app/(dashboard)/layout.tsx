@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import NavBar from '@/components/NavBar';
 import ProviderStatusBanner from '@/components/ProviderStatusBanner';
 import Footer from '@/components/Footer';
@@ -19,13 +19,20 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    account.get()
-      .then(async (user) => {
+    supabase.auth.getUser()
+      .then(async ({ data: { user } }) => {
+        if (!user) {
+          setAuthed(false);
+          setLoading(false);
+          return;
+        }
         setAuthed(true);
         setLoading(false);
         try {
-          const jwt = await account.createJWT();
-          localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: jwt.jwt, userId: user.$id }));
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: session.access_token, userId: user.id }));
+          }
         } catch {
           // JWT creation is non-critical
         }
@@ -40,9 +47,11 @@ export default function DashboardLayout({
     if (!authed) return;
     const interval = setInterval(async () => {
       try {
-        const jwt = await account.createJWT();
-        const user = await account.get();
-        localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: jwt.jwt, userId: user.$id }));
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (session && user) {
+          localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: session.access_token, userId: user.id }));
+        }
       } catch {
         // Session may have expired
       }
@@ -54,11 +63,12 @@ export default function DashboardLayout({
     if (!authed) return;
     async function pollNotifications() {
       try {
-        const user = await account.get();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
         await fetch('/api/notifications/poll', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.$id }),
+          body: JSON.stringify({ userId: user.id }),
         });
       } catch {
         // Non-critical
@@ -73,11 +83,12 @@ export default function DashboardLayout({
     if (!authed) return;
     async function heartbeat() {
       try {
-        const user = await account.get();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
         await fetch('/api/heartbeat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.$id }),
+          body: JSON.stringify({ userId: user.id }),
         });
       } catch {
         // Non-critical

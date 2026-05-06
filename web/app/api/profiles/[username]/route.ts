@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
-
-function getServerClient() {
-  const client = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-    .setKey(process.env.APPWRITE_API_KEY!);
-  return new Databases(client);
-}
 
 export async function GET(
   _req: NextRequest,
@@ -19,45 +11,54 @@ export async function GET(
   const { username } = await params;
 
   try {
-    const databases = getServerClient();
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const profilesCol = process.env.NEXT_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID!;
-    const allEntriesCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
-    const watchedEpCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHED_EPISODES_COLLECTION_ID!;
+    const supabase = getServiceSupabase();
 
-    const profileRes = await databases.listDocuments(dbId, profilesCol, [
-      Query.equal('username', username),
-      Query.equal('is_public', true),
-      Query.limit(1),
-    ]);
+    const { data: profileDocs, error: profileError } = await supabase
+      .from('profiles')
+      .select()
+      .eq('username', username)
+      .eq('is_public', true)
+      .limit(1);
 
-    if (profileRes.documents.length === 0) {
+    if (profileError) throw profileError;
+
+    if (!profileDocs || profileDocs.length === 0) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    const profile = profileRes.documents[0];
+    const profile = profileDocs[0];
     const userId = profile.user_id as string;
     const hideNsfw = !!(profile.hide_nsfw_public as boolean | undefined);
 
-    const [allEntriesRes, watchedEpRes] = await Promise.all([
-      databases.listDocuments(dbId, allEntriesCol, [
-        Query.equal('user_id', userId),
-        Query.limit(500),
-      ]),
-      databases.listDocuments(dbId, watchedEpCol, [
-        Query.equal('user_id', userId),
-        Query.select(['media_id']),
-        Query.limit(5000),
-      ]),
+    const [allEntriesResult, watchedEpResult] = await Promise.all([
+      supabase
+        .from('watchlist_entries')
+        .select()
+        .eq('user_id', userId)
+        .limit(500),
+      supabase
+        .from('watched_episodes')
+        .select('media_id')
+        .eq('user_id', userId)
+        .limit(5000),
     ]);
 
+    const allEntriesDocs = allEntriesResult.data || [];
+    const watchedEpDocs = watchedEpResult.data || [];
+
+    // Get total count for watched episodes
+    const { count: watchedEpTotal } = await supabase
+      .from('watched_episodes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     const epCountMap: Record<number, number> = {};
-    for (const doc of watchedEpRes.documents) {
+    for (const doc of watchedEpDocs) {
       const mediaId = (doc as unknown as { media_id: number }).media_id;
       epCountMap[mediaId] = (epCountMap[mediaId] || 0) + 1;
     }
 
-    const allEntries: PublicProfileEntry[] = allEntriesRes.documents.map((doc) => {
+    const allEntries: PublicProfileEntry[] = allEntriesDocs.map((doc) => {
       const d = doc as unknown as {
         media_id: number;
         title_romaji: string;
@@ -93,7 +94,7 @@ export async function GET(
     const result: PublicProfile = {
       username: profile.username as string,
       display_name: (profile.display_name as string) || null,
-      joined_at: profile.$createdAt as string,
+      joined_at: profile.created_at as string,
       avatar: (profile.avatar as string) || null,
       social_twitter: (profile.social_twitter as string) || null,
       social_discord: (profile.social_discord as string) || null,
@@ -101,7 +102,7 @@ export async function GET(
       social_reddit: (profile.social_reddit as string) || null,
       stats: {
         total_anime: watchlist.length,
-        episodes_watched: watchedEpRes.total,
+        episodes_watched: watchedEpTotal || 0,
         watching: statusCounts.watching,
         completed: statusCounts.completed,
         planned: statusCounts.planned,
