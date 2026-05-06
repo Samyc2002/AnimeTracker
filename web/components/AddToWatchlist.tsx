@@ -38,7 +38,9 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
   }, [showDropdown]);
 
   async function handleAdd(status: WatchStatus) {
+    if (updating) return;
     setUpdating(true);
+    setShowDropdown(false);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in');
@@ -49,23 +51,9 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
           .update({ watch_status: status })
           .eq('id', docId);
         if (error) throw error;
+        setCurrentStatus(status);
+        enqueueSnackbar(`Status changed to ${status}`, { variant: 'success' });
       } else {
-        const { data: existing } = await supabase
-          .from('watchlist_entries')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('media_id', media.id)
-          .limit(1);
-        if (existing && existing.length > 0) {
-          setDocId(existing[0].id);
-          setAdded(true);
-          await supabase.from('watchlist_entries').update({ watch_status: status }).eq('id', existing[0].id);
-          setCurrentStatus(status);
-          setShowDropdown(false);
-          enqueueSnackbar(`Status changed to ${status}`, { variant: 'success' });
-          setUpdating(false);
-          return;
-        }
         const entry = mediaToWatchlistEntry(media);
         const { data: doc, error } = await supabase
           .from('watchlist_entries')
@@ -78,16 +66,13 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
           .single();
         if (error) throw error;
         setDocId(doc.id);
+        setAdded(true);
+        setCurrentStatus(status);
+        enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
         backfillSeriesId(doc.id, media.id, async (id, data) => {
           await supabase.from('watchlist_entries').update(data).eq('id', id);
         }).catch(() => {});
       }
-
-      const wasAdded = added;
-      setAdded(true);
-      setCurrentStatus(status);
-      setShowDropdown(false);
-      enqueueSnackbar(wasAdded ? `Status changed to ${status}` : `Added as ${status}`, { variant: 'success' });
     } catch (err) {
       enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
     }
