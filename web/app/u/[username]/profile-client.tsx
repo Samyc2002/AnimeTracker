@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTitle } from '@/lib/useTitle';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { AuthContext } from '@/lib/auth-context';
 import { SfwProvider, useSfw } from '@/lib/sfw-context';
 import NavBar from '@/components/NavBar';
@@ -233,8 +233,8 @@ export default function ProfileClient({ profile }: { profile: PublicProfile }) {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    account.get()
-      .then(() => setAuthed(true))
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => setAuthed(!!user))
       .catch(() => setAuthed(false))
       .finally(() => setAuthLoading(false));
   }, []);

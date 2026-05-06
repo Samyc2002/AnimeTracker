@@ -3,8 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Query } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
@@ -19,7 +18,7 @@ function upgradeImageUrl(url: string): string {
 }
 
 interface WatchlistDoc {
-  $id: string;
+  id: string;
   user_id: string;
   media_id: number;
   id_mal: number | null;
@@ -97,47 +96,57 @@ function WatchlistPage() {
   const loadWatchlist = useCallback(async () => {
     setLoading(true);
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-      const queries: string[] = [
-        Query.equal('user_id', user.$id) as unknown as string,
-        Query.orderDesc('$createdAt') as unknown as string,
-        Query.limit(PAGE_SIZE) as unknown as string,
-        Query.offset(page * PAGE_SIZE) as unknown as string,
-      ];
+      let query = supabase
+        .from('watchlist_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (filter !== ALL_FILTER) {
-        queries.push(Query.equal('watch_status', filter) as unknown as string);
+        query = query.eq('watch_status', filter);
       }
 
       if (airingFilter !== ALL_AIRING) {
-        queries.push(Query.equal('status', airingFilter) as unknown as string);
+        query = query.eq('status', airingFilter);
       }
 
-      const watchlist = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, queries as unknown as string[]);
+      const { data: docs, error } = await query;
+      if (error) throw error;
 
-      const docs = watchlist.documents as unknown as WatchlistDoc[];
-      setEntries(docs);
-      setTotalEntries(watchlist.total);
+      setEntries((docs || []) as WatchlistDoc[]);
+
+      // Get total count for current filter
+      let countQuery = supabase
+        .from('watchlist_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      if (filter !== ALL_FILTER) countQuery = countQuery.eq('watch_status', filter);
+      if (airingFilter !== ALL_AIRING) countQuery = countQuery.eq('status', airingFilter);
+      const { count: totalCount } = await countQuery;
+      setTotalEntries(totalCount || 0);
 
       // Fetch counts for each status
       const countQueries = await Promise.all(
         WATCH_STATUSES.map(async (s) => {
-          const res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-            Query.equal('user_id', user.$id),
-            Query.equal('watch_status', s),
-            Query.limit(1),
-          ]);
-          return [s, res.total] as [string, number];
+          const { count } = await supabase
+            .from('watchlist_entries')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('watch_status', s);
+          return [s, count || 0] as [string, number];
         })
       );
 
-      const allRes = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.limit(1),
-      ]);
+      const { count: allCount } = await supabase
+        .from('watchlist_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
 
-      const newCounts: Record<string, number> = { [ALL_FILTER]: allRes.total };
+      const newCounts: Record<string, number> = { [ALL_FILTER]: allCount || 0 };
       for (const [s, count] of countQueries) {
         newCounts[s] = count;
       }
@@ -185,24 +194,20 @@ function WatchlistPage() {
   }
 
   async function removeFromWatchlist(entry: WatchlistDoc) {
-    await databases.deleteDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id);
+    await supabase.from('watchlist_entries').delete().eq('id', entry.id);
     enqueueSnackbar('Removed from watchlist', { variant: 'success' });
     loadWatchlist();
   }
 
   async function updateWatchStatus(entry: WatchlistDoc, newStatus: WatchStatus) {
-    await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
-      watch_status: newStatus,
-    });
+    await supabase.from('watchlist_entries').update({ watch_status: newStatus }).eq('id', entry.id);
     enqueueSnackbar(`Status changed to ${newStatus}`, { variant: 'success' });
     loadWatchlist();
   }
 
   async function toggleManualNsfw(entry: WatchlistDoc) {
     const next = !entry.manual_nsfw;
-    await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
-      manual_nsfw: next,
-    });
+    await supabase.from('watchlist_entries').update({ manual_nsfw: next }).eq('id', entry.id);
     enqueueSnackbar(next ? 'Marked as NSFW' : 'Unmarked NSFW', { variant: 'success' });
     loadWatchlist();
   }
@@ -240,21 +245,21 @@ function WatchlistPage() {
     const processed = new Set<string>();
 
     for (const entry of displayEntries) {
-      if (processed.has(entry.$id)) continue;
+      if (processed.has(entry.id)) continue;
       const sid = entry.series_id;
       if (sid != null && seriesMap.has(sid)) {
         const group = seriesMap.get(sid)!;
         if (group.length > 1) {
-          for (const e of group) processed.add(e.$id);
+          for (const e of group) processed.add(e.id);
           const firstName = group[0].title_english || group[0].title_romaji || 'Unknown Series';
           const seriesName = firstName.replace(/\s*(Season|Part|Cour)\s*\d+.*$/i, '').replace(/\s*\d+(st|nd|rd|th)\s*Season.*$/i, '').trim() || firstName;
           result.push({ type: 'folder', seriesId: sid, seriesName, entries: group });
         } else {
-          processed.add(entry.$id);
+          processed.add(entry.id);
           result.push({ type: 'entry', entry });
         }
       } else {
-        processed.add(entry.$id);
+        processed.add(entry.id);
         result.push({ type: 'entry', entry });
       }
     }
@@ -340,7 +345,7 @@ function WatchlistPage() {
               const title = entry.title_english || entry.title_romaji || 'Unknown';
               const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
               return (
-                <div key={entry.$id} className="group/row" onContextMenu={(e) => handleContextMenu(e, entry)}>
+                <div key={entry.id} className="group/row" onContextMenu={(e) => handleContextMenu(e, entry)}>
                   <AnimeCard
                     title={title}
                     coverUrl={upgradeImageUrl(entry.cover_url)}
@@ -372,7 +377,7 @@ function WatchlistPage() {
               >
                 <div className="relative w-14 h-20 flex-shrink-0">
                   {folder.entries.slice(0, 3).reverse().map((e, i) => (
-                    <div key={e.$id} className="absolute rounded overflow-hidden" style={{ top: i * 3, left: i * 3, width: 48, height: 68, zIndex: 3 - i }}>
+                    <div key={e.id} className="absolute rounded overflow-hidden" style={{ top: i * 3, left: i * 3, width: 48, height: 68, zIndex: 3 - i }}>
                       <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover" sizes="48px" unoptimized />
                     </div>
                   ))}
@@ -399,7 +404,7 @@ function WatchlistPage() {
               const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
               return (
                 <div
-                  key={entry.$id}
+                  key={entry.id}
                   className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group ${entry.is_adult || entry.manual_nsfw ? 'border border-red-500/40' : ''}`}
                   onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                   onContextMenu={(e) => handleContextMenu(e, entry)}
@@ -430,7 +435,7 @@ function WatchlistPage() {
               >
                 <div className="relative w-full aspect-[3/4]">
                   {folder.entries.slice(0, 3).reverse().map((e, i) => (
-                    <div key={e.$id} className="absolute inset-0" style={{ top: i * 4, left: i * 4, right: -(i * 4), bottom: -(i * 4), zIndex: 3 - i, opacity: 1 - i * 0.15 }}>
+                    <div key={e.id} className="absolute inset-0" style={{ top: i * 4, left: i * 4, right: -(i * 4), bottom: -(i * 4), zIndex: 3 - i, opacity: 1 - i * 0.15 }}>
                       <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover rounded-lg" unoptimized />
                     </div>
                   ))}
@@ -503,7 +508,7 @@ function WatchlistPage() {
                   const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
                   return (
                     <div
-                      key={entry.$id}
+                      key={entry.id}
                       className="group/row"
                       onContextMenu={(e) => { handleContextMenu(e, entry); setSelectedFolder(null); }}
                     >

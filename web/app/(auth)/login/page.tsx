@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
@@ -19,11 +19,14 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await account.createEmailPasswordSession(email, password);
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
       try {
-        const jwt = await account.createJWT();
-        const user = await account.get();
-        localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: jwt.jwt, userId: user.$id }));
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (session && user) {
+          localStorage.setItem('anime_tracker_ext_jwt', JSON.stringify({ jwt: session.access_token, userId: user.id }));
+        }
       } catch {
         // JWT creation is non-critical
       }

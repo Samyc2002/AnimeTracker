@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Query } from 'appwrite';
-import { account, databases, DATABASE_ID, PLAYLISTS_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 
 interface PlaylistDoc {
-  $id: string;
+  id: string;
   title: string;
   anime_ids: string;
 }
@@ -37,13 +36,15 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
     if (!open || loaded) return;
     async function load() {
       try {
-        const user = await account.get();
-        const res = await databases.listDocuments(DATABASE_ID, PLAYLISTS_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.orderDesc('$createdAt'),
-          Query.limit(50),
-        ]);
-        setPlaylists(res.documents as unknown as PlaylistDoc[]);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('playlists')
+          .select('id, title, anime_ids')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        setPlaylists((data as PlaylistDoc[]) || []);
       } catch {
         // Not logged in
       }
@@ -70,13 +71,14 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
       ? ids.filter((id) => id !== mediaId)
       : [...ids, mediaId];
 
-    await databases.updateDocument(DATABASE_ID, PLAYLISTS_COLLECTION_ID, playlist.$id, {
-      anime_ids: JSON.stringify(updated),
-    });
+    await supabase
+      .from('playlists')
+      .update({ anime_ids: JSON.stringify(updated) })
+      .eq('id', playlist.id);
 
     setPlaylists((prev) =>
       prev.map((p) =>
-        p.$id === playlist.$id ? { ...p, anime_ids: JSON.stringify(updated) } : p
+        p.id === playlist.id ? { ...p, anime_ids: JSON.stringify(updated) } : p
       )
     );
     enqueueSnackbar(
@@ -127,7 +129,7 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
                 const isIn = ids.includes(mediaId);
                 return (
                   <button
-                    key={pl.$id}
+                    key={pl.id}
                     onClick={() => toggleInPlaylist(pl)}
                     className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#1c2333] transition-colors"
                   >

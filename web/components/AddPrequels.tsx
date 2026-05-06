@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ID, Query } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { fetchAnimeDetail, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { backfillSeriesId } from '@/lib/series-resolver';
 import { enqueueSnackbar } from 'notistack';
@@ -61,20 +60,21 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
 
     async function checkPrequels() {
       try {
-        const user = await account.get();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setChecking(false); return; }
         const prequels = await collectPrequels(anime.id);
         if (prequels.length === 0) {
           setAllAdded(true);
           setChecking(false);
           return;
         }
-        const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.limit(500),
-        ]);
+        const { data: existing } = await supabase
+          .from('watchlist_entries')
+          .select('media_id, id_mal')
+          .eq('user_id', user.id)
+          .limit(500);
         const existingIds = new Set<number>();
-        for (const d of existing.documents) {
-          const doc = d as unknown as { media_id: number; id_mal: number | null };
+        for (const doc of existing || []) {
           existingIds.add(doc.media_id);
           if (doc.id_mal) existingIds.add(doc.id_mal);
         }
@@ -132,7 +132,8 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
     setShowDropdown(false);
 
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not logged in');
       const prequels = await collectPrequels(anime.id);
 
       if (prequels.length === 0) {
@@ -142,13 +143,13 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
         return;
       }
 
-      const existing = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.limit(500),
-      ]);
+      const { data: existing } = await supabase
+        .from('watchlist_entries')
+        .select('media_id, id_mal')
+        .eq('user_id', user.id)
+        .limit(500);
       const existingIds = new Set<number>();
-      for (const d of existing.documents) {
-        const doc = d as unknown as { media_id: number; id_mal: number | null };
+      for (const doc of existing || []) {
         existingIds.add(doc.media_id);
         if (doc.id_mal) existingIds.add(doc.id_mal);
       }
@@ -165,12 +166,19 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
           episodes: prequel.episodes,
           nextAiringEpisode: prequel.nextAiringEpisode,
         });
-        const newDoc = await databases.createDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, ID.unique(), {
-          ...entry,
-          user_id: user.$id,
-          watch_status: status,
-        });
-        backfillSeriesId(newDoc.$id, prequel.id, (id, data) => databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, id, data)).catch(() => {});
+        const { data: newDoc, error } = await supabase
+          .from('watchlist_entries')
+          .insert({
+            ...entry,
+            user_id: user.id,
+            watch_status: status,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        backfillSeriesId(newDoc.id, prequel.id, async (id, data) => {
+          await supabase.from('watchlist_entries').update(data).eq('id', id);
+        }).catch(() => {});
         added++;
       }
 

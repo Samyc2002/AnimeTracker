@@ -1,11 +1,10 @@
-import { Query, ID } from 'appwrite';
-import { databases, DATABASE_ID, ANIME_CACHE_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
 
 const STALE_MS = 24 * 60 * 60 * 1000;
 
 interface CacheDoc {
-  $id: string;
+  id: string;
   anilist_id: number | null;
   mal_id: number | null;
   kitsu_id: string | null;
@@ -127,22 +126,22 @@ export async function getCachedAnime(opts: {
   title?: string;
 }): Promise<{ detail: AnimeDetail; stale: boolean; complete: boolean } | null> {
   try {
-    const queries = [];
+    let query = supabase.from('anime_cache').select();
+
     if (opts.anilistId) {
-      queries.push(Query.equal('anilist_id', opts.anilistId));
+      query = query.eq('anilist_id', opts.anilistId);
     } else if (opts.malId) {
-      queries.push(Query.equal('mal_id', opts.malId));
+      query = query.eq('mal_id', opts.malId);
     } else if (opts.title) {
-      queries.push(Query.equal('title_romaji', opts.title));
+      query = query.eq('title_romaji', opts.title);
     } else {
       return null;
     }
-    queries.push(Query.limit(1));
 
-    const res = await databases.listDocuments(DATABASE_ID, ANIME_CACHE_COLLECTION_ID, queries);
-    if (res.documents.length === 0) return null;
+    const { data } = await query.limit(1);
+    if (!data || data.length === 0) return null;
 
-    const doc = res.documents[0] as unknown as CacheDoc;
+    const doc = data[0] as unknown as CacheDoc;
     return { detail: docToDetail(doc), stale: isStale(doc), complete: doc.relations_json !== null };
   } catch (err) {
     console.error('[AnimeCache] Read failed:', err instanceof Error ? err.message : err);
@@ -152,11 +151,12 @@ export async function getCachedAnime(opts: {
 
 export async function getCachedSearch(query: string): Promise<AniListMedia[]> {
   try {
-    const res = await databases.listDocuments(DATABASE_ID, ANIME_CACHE_COLLECTION_ID, [
-      Query.search('title_romaji', query),
-      Query.limit(10),
-    ]);
-    return res.documents.map(d => docToMedia(d as unknown as CacheDoc));
+    const { data } = await supabase
+      .from('anime_cache')
+      .select()
+      .ilike('title_romaji', `%${query}%`)
+      .limit(10);
+    return (data || []).map(d => docToMedia(d as unknown as CacheDoc));
   } catch {
     return [];
   }
@@ -166,20 +166,22 @@ export async function saveAnimeToCache(anime: AnimeDetail): Promise<void> {
   try {
     const data = detailToDoc(anime);
 
-    const existingQueries = [];
-    if (anime.id) existingQueries.push(Query.equal('anilist_id', anime.id));
-    else if (anime.idMal) existingQueries.push(Query.equal('mal_id', anime.idMal));
+    let existingQuery = null;
+    if (anime.id) {
+      existingQuery = supabase.from('anime_cache').select('id').eq('anilist_id', anime.id).limit(1);
+    } else if (anime.idMal) {
+      existingQuery = supabase.from('anime_cache').select('id').eq('mal_id', anime.idMal).limit(1);
+    }
 
-    if (existingQueries.length > 0) {
-      existingQueries.push(Query.limit(1));
-      const existing = await databases.listDocuments(DATABASE_ID, ANIME_CACHE_COLLECTION_ID, existingQueries);
-      if (existing.documents.length > 0) {
-        await databases.updateDocument(DATABASE_ID, ANIME_CACHE_COLLECTION_ID, existing.documents[0].$id, data);
+    if (existingQuery) {
+      const { data: existing } = await existingQuery;
+      if (existing && existing.length > 0) {
+        await supabase.from('anime_cache').update(data).eq('id', existing[0].id);
         return;
       }
     }
 
-    await databases.createDocument(DATABASE_ID, ANIME_CACHE_COLLECTION_ID, ID.unique(), data);
+    await supabase.from('anime_cache').insert(data);
   } catch (err) {
     console.error('[AnimeCache] Write failed:', err instanceof Error ? err.message : err);
   }

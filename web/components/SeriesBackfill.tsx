@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Query } from 'appwrite';
-import { account, databases, DATABASE_ID, WATCHLIST_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { getSeriesId } from '@/lib/series-resolver';
 import { enqueueSnackbar } from 'notistack';
 
@@ -21,21 +20,23 @@ export default function SeriesBackfill() {
     const result = { updated: 0, skipped: 0, errors: 0 };
 
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not logged in');
       setProgress('Fetching watchlist...');
 
-      const allDocs: { $id: string; media_id: number; series_id?: number | null }[] = [];
+      const allDocs: { id: string; media_id: number; series_id?: number | null }[] = [];
       let offset = 0;
       let hasMore = true;
       while (hasMore) {
-        const res = await databases.listDocuments(DATABASE_ID, WATCHLIST_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.limit(100),
-          Query.offset(offset),
-        ]);
-        allDocs.push(...(res.documents as unknown as { $id: string; media_id: number; series_id?: number | null }[]));
+        const { data } = await supabase
+          .from('watchlist_entries')
+          .select('id, media_id, series_id')
+          .eq('user_id', user.id)
+          .range(offset, offset + 99);
+        const rows = data || [];
+        allDocs.push(...rows);
         offset += 100;
-        hasMore = res.documents.length === 100;
+        hasMore = rows.length === 100;
       }
 
       const entries = allDocs;
@@ -47,9 +48,10 @@ export default function SeriesBackfill() {
         setProgress(`Resolving ${i + 1}/${entries.length}...`);
         try {
           const seriesId = await getSeriesId(entry.media_id);
-          await databases.updateDocument(DATABASE_ID, WATCHLIST_COLLECTION_ID, entry.$id, {
-            series_id: seriesId,
-          });
+          await supabase
+            .from('watchlist_entries')
+            .update({ series_id: seriesId })
+            .eq('id', entry.id);
           result.updated++;
         } catch {
           result.errors++;

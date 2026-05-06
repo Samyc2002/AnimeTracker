@@ -3,8 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Query, ID } from 'appwrite';
-import { account, databases, DATABASE_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import SeriesBackfill from '@/components/SeriesBackfill';
@@ -14,7 +13,7 @@ import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 
 interface ProfileDoc {
-  $id: string;
+  id: string;
   display_language: string;
   anilist_user_id?: number;
   username?: string;
@@ -72,20 +71,21 @@ function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const user = await account.get();
-      setEmail(user.email);
-      setUserId(user.$id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setEmail(user.email || '');
+      setUserId(user.id);
 
-      const profiles = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
-        Query.equal('user_id', user.$id),
-        Query.select(['$id', 'display_language', 'anilist_user_id', 'username', 'display_name', 'is_public', 'hide_nsfw_public', 'avatar', 'social_twitter', 'social_discord', 'social_instagram', 'social_reddit']),
-        Query.limit(1),
-      ]);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_language, anilist_user_id, username, display_name, is_public, hide_nsfw_public, avatar, social_twitter, social_discord, social_instagram, social_reddit')
+        .eq('user_id', user.id)
+        .limit(1);
 
-      if (profiles.documents.length > 0) {
-        const profile = profiles.documents[0] as unknown as ProfileDoc;
+      if (profiles && profiles.length > 0) {
+        const profile = profiles[0] as ProfileDoc;
         setLanguage(profile.display_language);
-        setProfileDocId(profile.$id);
+        setProfileDocId(profile.id);
         if (profile.username) setUsername(profile.username);
         if (profile.display_name) setDisplayName(profile.display_name);
         if (profile.is_public) setIsPublic(profile.is_public);
@@ -100,11 +100,12 @@ function SettingsPage() {
           setAnilistUserId(profile.anilist_user_id);
         }
       } else {
-        const newProfile = await databases.createDocument(DATABASE_ID, PROFILES_COLLECTION_ID, ID.unique(), {
-          user_id: user.$id,
-          display_language: 'English',
-        });
-        setProfileDocId(newProfile.$id);
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .insert({ user_id: user.id, display_language: 'English' })
+          .select()
+          .single();
+        if (newProfile) setProfileDocId(newProfile.id);
       }
     }
     load();
@@ -114,9 +115,7 @@ function SettingsPage() {
     setLanguage(value);
     if (!profileDocId) return;
     setSaving(true);
-    await databases.updateDocument(DATABASE_ID, PROFILES_COLLECTION_ID, profileDocId, {
-      display_language: value,
-    });
+    await supabase.from('profiles').update({ display_language: value }).eq('id', profileDocId);
     setSaving(false);
     enqueueSnackbar('Language updated', { variant: 'success' });
   }
@@ -134,10 +133,10 @@ function SettingsPage() {
 
   async function disconnectAniList() {
     if (!profileDocId) return;
-    await databases.updateDocument(DATABASE_ID, PROFILES_COLLECTION_ID, profileDocId, {
+    await supabase.from('profiles').update({
       anilist_user_id: null,
       anilist_token: null,
-    });
+    }).eq('id', profileDocId);
     setAnilistConnected(false);
     setAnilistUserId(null);
     enqueueSnackbar('AniList disconnected', { variant: 'success' });
@@ -165,18 +164,19 @@ function SettingsPage() {
 
     try {
       if (username) {
-        const existing = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
-          Query.equal('username', username),
-          Query.limit(1),
-        ]);
-        if (existing.documents.length > 0 && existing.documents[0].$id !== profileDocId) {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username)
+          .limit(1);
+        if (existing && existing.length > 0 && existing[0].id !== profileDocId) {
           setUsernameError('Username is already taken');
           setSavingProfile(false);
           return;
         }
       }
 
-      await databases.updateDocument(DATABASE_ID, PROFILES_COLLECTION_ID, profileDocId, {
+      await supabase.from('profiles').update({
         username: username || null,
         display_name: displayName || null,
         is_public: isPublic,
@@ -186,7 +186,7 @@ function SettingsPage() {
         social_discord: socialDiscord || null,
         social_instagram: socialInstagram || null,
         social_reddit: socialReddit || null,
-      });
+      }).eq('id', profileDocId);
       enqueueSnackbar('Profile saved!', { variant: 'success' });
     } catch (err) {
       enqueueSnackbar(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`, { variant: 'error' });
@@ -200,11 +200,12 @@ function SettingsPage() {
     setImportResult(null);
 
     try {
-      const user = await account.get();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
       const res = await fetch('/api/import-watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.$id }),
+        body: JSON.stringify({ userId: user.id }),
       });
       const data = await res.json();
       if (!res.ok) {

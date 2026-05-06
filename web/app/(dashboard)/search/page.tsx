@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import type { AniListMedia } from '@/lib/types';
 
 function RecommendationGrid({
@@ -99,11 +99,12 @@ export default function SearchPage() {
     if (!authed) return;
     async function loadForYou() {
       try {
-        const user = await account.get();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
         const profileRes = await fetch('/api/taste-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.$id }),
+          body: JSON.stringify({ userId: user.id }),
         });
         const profileData = await profileRes.json();
         if (profileData.insufficient || !profileData.profile) return;
@@ -113,7 +114,7 @@ export default function SearchPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: user.$id,
+            userId: user.id,
             filters: { genres: topGenres, status: null, minScore: 70, maxEpisodes: null, sort: 'SCORE_DESC', excludeMediaIds: [] },
           }),
         });

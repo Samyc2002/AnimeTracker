@@ -3,7 +3,7 @@
 import { useTitle } from '@/lib/useTitle';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { account } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
@@ -11,7 +11,7 @@ import RequireAuth from '@/components/RequireAuth';
 import type { BuddyProfile } from '@/lib/types';
 
 interface BuddyEntry {
-  $id: string;
+  id: string;
   userId: string;
   username: string;
   displayName: string | null;
@@ -48,9 +48,10 @@ function BuddiesPage() {
 
   useEffect(() => {
     async function init() {
-      const user = await account.get();
-      setUserId(user.$id);
-      loadBuddies(user.$id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+      loadBuddies(user.id);
     }
     init();
   }, [loadBuddies]);
@@ -189,7 +190,7 @@ function BuddiesPage() {
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Pending Requests</h2>
           <div className="space-y-2">
             {pendingReceived.map((entry) => (
-              <div key={entry.$id} className="flex items-center justify-between bg-[#141925] rounded-lg p-3 border border-[#253040]">
+              <div key={entry.id} className="flex items-center justify-between bg-[#141925] rounded-lg p-3 border border-[#253040]">
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-white text-sm font-bold`}>
                     {(entry.username || '?')[0].toUpperCase()}
@@ -201,13 +202,13 @@ function BuddiesPage() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => respondToRequest(entry.$id, 'accept')}
+                    onClick={() => respondToRequest(entry.id, 'accept')}
                     className="px-3 py-1 rounded text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                   >
                     Accept
                   </button>
                   <button
-                    onClick={() => respondToRequest(entry.$id, 'decline')}
+                    onClick={() => respondToRequest(entry.id, 'decline')}
                     className="px-3 py-1 rounded text-xs font-medium bg-[#253040] text-gray-300 hover:bg-[#2d3a4d] transition-colors"
                   >
                     Decline
@@ -224,7 +225,7 @@ function BuddiesPage() {
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Sent Requests</h2>
           <div className="space-y-2">
             {pendingSent.map((entry) => (
-              <div key={entry.$id} className="flex items-center justify-between bg-[#141925] rounded-lg p-3 border border-[#253040]">
+              <div key={entry.id} className="flex items-center justify-between bg-[#141925] rounded-lg p-3 border border-[#253040]">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#253040] flex items-center justify-center text-gray-400 text-sm font-bold">
                     {(entry.username || '?')[0].toUpperCase()}
@@ -251,7 +252,7 @@ function BuddiesPage() {
         ) : (
           <div className="space-y-2">
             {buddies.map((entry) => (
-              <div key={entry.$id} className="flex items-center justify-between bg-[#141925] rounded-lg p-3 border border-[#253040] group">
+              <div key={entry.id} className="flex items-center justify-between bg-[#141925] rounded-lg p-3 border border-[#253040] group">
                 <div
                   className="flex items-center gap-3 cursor-pointer"
                   onClick={() => router.push(`/u/${entry.username}`)}
@@ -265,7 +266,7 @@ function BuddiesPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => removeBuddy(entry.$id)}
+                  onClick={() => removeBuddy(entry.id)}
                   className="text-xs text-gray-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                 >
                   Remove

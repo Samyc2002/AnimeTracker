@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query, ID } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,29 +47,22 @@ export async function POST(req: NextRequest) {
   const offset = Number(req.nextUrl.searchParams.get('offset') || '0');
 
   try {
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
+    const supabase = getServiceSupabase();
 
-    const databases = new Databases(client);
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
-    const notificationsCol = process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION_ID!;
+    const { data: resDocs, error: resError } = await supabase
+      .from('watchlist_entries')
+      .select('user_id, media_id')
+      .eq('watch_status', 'Completed')
+      .range(offset, offset + batchSize - 1);
 
-    const res = await databases.listDocuments(dbId, watchlistCol, [
-      Query.equal('watch_status', 'Completed'),
-      Query.limit(batchSize),
-      Query.offset(offset),
-      Query.select(['user_id', 'media_id']),
-    ]);
+    if (resError) throw resError;
 
-    if (res.documents.length === 0) {
+    if (!resDocs || resDocs.length === 0) {
       return NextResponse.json({ processed: 0, created: 0, offset, done: true });
     }
 
     const userMediaMap = new Map<string, number[]>();
-    for (const doc of res.documents) {
+    for (const doc of resDocs) {
       const userId = doc.user_id as string;
       const mediaId = doc.media_id as number;
       if (!userMediaMap.has(userId)) userMediaMap.set(userId, []);
@@ -81,12 +74,13 @@ export async function POST(req: NextRequest) {
     for (const [userId, mediaIds] of userMediaMap) {
       const uniqueIds = [...new Set(mediaIds)];
 
-      const allWatchlist = await databases.listDocuments(dbId, watchlistCol, [
-        Query.equal('user_id', userId),
-        Query.limit(500),
-        Query.select(['media_id']),
-      ]);
-      const trackedMediaIds = new Set(allWatchlist.documents.map((d) => d.media_id as number));
+      const { data: allWatchlistDocs } = await supabase
+        .from('watchlist_entries')
+        .select('media_id')
+        .eq('user_id', userId)
+        .limit(500);
+
+      const trackedMediaIds = new Set((allWatchlistDocs || []).map((d) => d.media_id as number));
 
       for (let i = 0; i < uniqueIds.length; i += 50) {
         const batch = uniqueIds.slice(i, i + 50);
@@ -133,26 +127,29 @@ export async function POST(req: NextRequest) {
         for (const sequel of sequels) {
           if (trackedMediaIds.has(sequel.id)) continue;
 
-          const existing = await databases.listDocuments(dbId, notificationsCol, [
-            Query.equal('user_id', userId),
-            Query.equal('media_id', sequel.id),
-            Query.equal('type', 'sequel'),
-            Query.limit(1),
-          ]);
+          const { data: existingDocs } = await supabase
+            .from('notifications')
+            .select()
+            .eq('user_id', userId)
+            .eq('media_id', sequel.id)
+            .eq('type', 'sequel')
+            .limit(1);
 
-          if (existing.total > 0) continue;
+          if (existingDocs && existingDocs.length > 0) continue;
 
-          await databases.createDocument(dbId, notificationsCol, ID.unique(), {
-            user_id: userId,
-            media_id: sequel.id,
-            episode: 0,
-            title: sequel.title,
-            cover_url: sequel.coverUrl,
-            airing_at: 0,
-            is_read: false,
-            type: 'sequel',
-            created_at: new Date().toISOString(),
-          });
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id: userId,
+              media_id: sequel.id,
+              episode: 0,
+              title: sequel.title,
+              cover_url: sequel.coverUrl,
+              airing_at: 0,
+              is_read: false,
+              type: 'sequel',
+              created_at: new Date().toISOString(),
+            });
 
           created++;
         }
@@ -161,10 +158,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const done = res.documents.length < batchSize;
+    const done = resDocs.length < batchSize;
 
     return NextResponse.json({
-      processed: res.documents.length,
+      processed: resDocs.length,
       created,
       offset,
       done,

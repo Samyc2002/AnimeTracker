@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 import { buildTasteProfile, generateQuestions } from '@/lib/taste-profile';
 
 export const dynamic = 'force-dynamic';
@@ -19,24 +19,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(cached.data);
     }
 
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
+    const supabase = getServiceSupabase();
 
-    const databases = new Databases(client);
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const watchlistCol = process.env.NEXT_PUBLIC_APPWRITE_WATCHLIST_COLLECTION_ID!;
-    const cacheCol = process.env.NEXT_PUBLIC_APPWRITE_ANIME_CACHE_COLLECTION_ID!;
+    const { data: watchlistDocs } = await supabase
+      .from('watchlist_entries')
+      .select('media_id')
+      .eq('user_id', userId)
+      .eq('watch_status', 'Completed')
+      .limit(500);
 
-    const watchlist = await databases.listDocuments(dbId, watchlistCol, [
-      Query.equal('user_id', userId),
-      Query.equal('watch_status', 'Completed'),
-      Query.limit(500),
-      Query.select(['media_id']),
-    ]);
-
-    const mediaIds = watchlist.documents.map((d) => d.media_id as number);
+    const mediaIds = (watchlistDocs || []).map((d) => d.media_id as number);
 
     if (mediaIds.length < 3) {
       return NextResponse.json({
@@ -51,12 +43,13 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < mediaIds.length; i += 100) {
       const batch = mediaIds.slice(i, i + 100);
-      const res = await databases.listDocuments(dbId, cacheCol, [
-        Query.equal('anilist_id', batch),
-        Query.limit(100),
-        Query.select(['genres', 'studio', 'average_score', 'episodes']),
-      ]);
-      for (const doc of res.documents) {
+      const { data: docs } = await supabase
+        .from('anime_cache')
+        .select('genres, studio, average_score, episodes')
+        .in('anilist_id', batch)
+        .limit(100);
+
+      for (const doc of (docs || [])) {
         cacheDocs.push({
           genres: (doc.genres as string) || null,
           studio: (doc.studio as string) || null,

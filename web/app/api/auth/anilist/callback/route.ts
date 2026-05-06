@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Databases, Query } from 'node-appwrite';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
-  const appwriteUserId = req.nextUrl.searchParams.get('state');
+  const userId = req.nextUrl.searchParams.get('state');
 
-  if (!code || !appwriteUserId) {
+  if (!code || !userId) {
     return NextResponse.redirect(new URL('/settings?anilist=error', req.url));
   }
 
@@ -43,25 +43,22 @@ export async function GET(req: NextRequest) {
     const viewerData = await viewerRes.json();
     const anilistUserId = viewerData.data.Viewer.id;
 
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
+    const supabase = getServiceSupabase();
 
-    const databases = new Databases(client);
-    const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-    const profilesCol = process.env.NEXT_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID!;
+    const { data: profileDocs } = await supabase
+      .from('profiles')
+      .select()
+      .eq('user_id', userId)
+      .limit(1);
 
-    const profiles = await databases.listDocuments(dbId, profilesCol, [
-      Query.equal('user_id', appwriteUserId),
-      Query.limit(1),
-    ]);
-
-    if (profiles.documents.length > 0) {
-      await databases.updateDocument(dbId, profilesCol, profiles.documents[0].$id, {
-        anilist_user_id: anilistUserId,
-        anilist_token: accessToken,
-      });
+    if (profileDocs && profileDocs.length > 0) {
+      await supabase
+        .from('profiles')
+        .update({
+          anilist_user_id: anilistUserId,
+          anilist_token: accessToken,
+        })
+        .eq('id', profileDocs[0].id);
     }
 
     return NextResponse.redirect(new URL('/settings?anilist=connected', req.url));

@@ -4,8 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Query } from 'appwrite';
-import { account, databases, DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import SfwToggle from '@/components/SfwToggle';
@@ -41,13 +40,14 @@ export default function NavBar() {
     if (!authed) return;
     async function loadUnread() {
       try {
-        const user = await account.get();
-        const res = await databases.listDocuments(DATABASE_ID, NOTIFICATIONS_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.equal('is_read', false),
-          Query.limit(1),
-        ]);
-        setUnreadCount(res.total);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { count } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_read', false);
+        setUnreadCount(count ?? 0);
       } catch {
         // Not critical
       }
@@ -61,16 +61,15 @@ export default function NavBar() {
     if (!authed) return;
     async function loadProfile() {
       try {
-        const user = await account.get();
-        const res = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
-          Query.equal('user_id', user.$id),
-          Query.select(['username']),
-          Query.limit(1),
-        ]);
-        if (res.documents.length > 0) {
-          const username = res.documents[0].username as string | undefined;
-          if (username) setProfileUsername(username);
-        }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single();
+        if (data?.username) setProfileUsername(data.username);
       } catch {
         // Not critical
       }
@@ -84,7 +83,7 @@ export default function NavBar() {
 
   async function handleSignOut() {
     localStorage.removeItem('anime_tracker_ext_jwt');
-    await account.deleteSession('current');
+    await supabase.auth.signOut();
     router.push('/');
   }
 

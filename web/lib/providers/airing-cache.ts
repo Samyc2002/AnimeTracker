@@ -1,5 +1,4 @@
-import { Query, ID } from 'appwrite';
-import { databases, DATABASE_ID, AIRING_CACHE_COLLECTION_ID } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabase';
 import type { AiringSchedule } from '@/lib/types';
 
 const STALE_MS = 6 * 60 * 60 * 1000;
@@ -18,14 +17,15 @@ export async function getCachedAiring(
 ): Promise<{ schedules: AiringSchedule[]; stale: boolean } | null> {
   try {
     const weekKey = getWeekKey(fromTimestamp);
-    const res = await databases.listDocuments(DATABASE_ID, AIRING_CACHE_COLLECTION_ID, [
-      Query.equal('week_key', weekKey),
-      Query.limit(1),
-    ]);
+    const { data } = await supabase
+      .from('airing_cache')
+      .select()
+      .eq('week_key', weekKey)
+      .limit(1);
 
-    if (res.documents.length === 0) return null;
+    if (!data || data.length === 0) return null;
 
-    const doc = res.documents[0];
+    const doc = data[0];
     const schedules: AiringSchedule[] = JSON.parse(doc.schedule_json as string);
     const updatedAt = new Date(doc.updated_at as string).getTime();
     const stale = Date.now() - updatedAt > STALE_MS;
@@ -49,15 +49,16 @@ export async function saveAiringToCache(
       updated_at: new Date().toISOString(),
     };
 
-    const existing = await databases.listDocuments(DATABASE_ID, AIRING_CACHE_COLLECTION_ID, [
-      Query.equal('week_key', weekKey),
-      Query.limit(1),
-    ]);
+    const { data: existing } = await supabase
+      .from('airing_cache')
+      .select('id')
+      .eq('week_key', weekKey)
+      .limit(1);
 
-    if (existing.documents.length > 0) {
-      await databases.updateDocument(DATABASE_ID, AIRING_CACHE_COLLECTION_ID, existing.documents[0].$id, data);
+    if (existing && existing.length > 0) {
+      await supabase.from('airing_cache').update(data).eq('id', existing[0].id);
     } else {
-      await databases.createDocument(DATABASE_ID, AIRING_CACHE_COLLECTION_ID, ID.unique(), data);
+      await supabase.from('airing_cache').insert(data);
     }
   } catch (err) {
     console.error('[AiringCache] Write failed:', err instanceof Error ? err.message : err);
