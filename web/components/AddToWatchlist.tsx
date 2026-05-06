@@ -50,6 +50,22 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
           .eq('id', docId);
         if (error) throw error;
       } else {
+        const { data: existing } = await supabase
+          .from('watchlist_entries')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('media_id', media.id)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          setDocId(existing[0].id);
+          setAdded(true);
+          await supabase.from('watchlist_entries').update({ watch_status: status }).eq('id', existing[0].id);
+          setCurrentStatus(status);
+          setShowDropdown(false);
+          enqueueSnackbar(`Status changed to ${status}`, { variant: 'success' });
+          setUpdating(false);
+          return;
+        }
         const entry = mediaToWatchlistEntry(media);
         const { data: doc, error } = await supabase
           .from('watchlist_entries')

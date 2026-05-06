@@ -67,9 +67,8 @@ export default function NavBar() {
           .from('profiles')
           .select('username')
           .eq('user_id', user.id)
-          .limit(1)
-          .single();
-        if (data?.username) setProfileUsername(data.username);
+          .limit(1);
+        if (data && data.length > 0 && data[0].username) setProfileUsername(data[0].username);
       } catch {
         // Not critical
       }
@@ -250,7 +249,7 @@ export default function NavBar() {
                 { href: '/settings', label: 'Settings', icon: '⚙' },
               ].map(({ href, label, icon }) => (
                 <Link
-                  key={href}
+                  key={label}
                   href={href}
                   onClick={() => setMoreOpen(false)}
                   className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${

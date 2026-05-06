@@ -510,7 +510,7 @@ function WatchlistPage() {
                     <div
                       key={entry.id}
                       className="group/row"
-                      onContextMenu={(e) => { handleContextMenu(e, entry); setSelectedFolder(null); }}
+                      onContextMenu={(e) => handleContextMenu(e, entry)}
                     >
                       <AnimeCard
                         title={title}
