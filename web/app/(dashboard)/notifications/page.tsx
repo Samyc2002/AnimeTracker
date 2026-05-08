@@ -45,6 +45,7 @@ function NotificationsPage() {
   const theme = getTheme(sfwMode);
   const { userId } = useAuth();
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
 
@@ -84,6 +85,7 @@ function NotificationsPage() {
   useEffect(() => {
     pollForNew();
   }, [pollForNew]);
+
 
   async function markAsRead(notif: NotificationDoc) {
     if (notif.is_read) return;
@@ -176,9 +178,11 @@ function NotificationsPage() {
                 markAsRead(notif);
                 if (notif.type === 'buddy_request' || notif.type === 'buddy_accept') {
                   router.push('/buddies');
-                } else if (!notif.type && notif.episode > 0) {
+                } else if (notif.type === 'achievement') {
+                  router.push('/u/me');
+                } else if (notif.episode && notif.episode > 0 && notif.media_id) {
                   router.push(`/anime/${notif.media_id}?mark_episode=${notif.episode}`);
-                } else {
+                } else if (notif.media_id) {
                   router.push(`/anime/${notif.media_id}`);
                 }
               }}
@@ -238,6 +242,18 @@ function NotificationsPage() {
                     </p>
                     <p className="text-xs text-gray-500">
                       {formatTimeAgo(Math.floor(new Date(notif.created_at).getTime() / 1000))}
+                    </p>
+                  </>
+                ) : notif.type === 'achievement' ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-amber-900/60 text-amber-300">Achievement</span>
+                    </div>
+                    <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
+                      {notif.title}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Unlocked &middot; {formatTimeAgo(Math.floor(new Date(notif.created_at).getTime() / 1000))}
                     </p>
                   </>
                 ) : (
