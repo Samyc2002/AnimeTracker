@@ -39,9 +39,20 @@ export default function BadgeSlots({ username }: { username: string }) {
               unoptimized
             />
           </div>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-[#0b0e14] border border-[#253040] rounded-lg opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none z-20 min-w-[120px] text-center">
-            <p className="text-[11px] font-semibold text-amber-300">{badge.name}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{badge.description}</p>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0b0e14] border border-[#253040] rounded-full opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none z-20 flex items-stretch place-items-center w-max">
+            <Image
+              src={getBadgeUrl(badge.asset_name)}
+              alt={badge.name}
+              width={80}
+              height={80}
+              className="p-2 h-20 object-cover flex-shrink-0"
+              style={{ borderRadius: '11px 0 0 11px' }}
+              unoptimized
+            />
+            <div className="pr-3 py-2.5 flex flex-col justify-center w-36">
+              <p className="text-[11px] font-semibold text-amber-300 leading-tight">{badge.name}</p>
+              <p className="text-[10px] text-gray-400 mt-1 leading-snug overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{badge.description}</p>
+            </div>
           </div>
         </div>
       ))}
