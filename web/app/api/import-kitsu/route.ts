@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { fetchKitsuUserId, fetchKitsuLibrary } from '@/lib/providers/kitsu';
 import { mediaToWatchlistEntry } from '@/lib/anime-provider';
+import { fireAchievementEvent } from '@/lib/achievements/engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,6 +90,8 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    fireAchievementEvent(userId, 'import_complete', supabase).catch(() => {});
 
     return NextResponse.json({ created, updated });
   } catch (err) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { fireAchievementEvent } from '@/lib/achievements/engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -151,6 +152,7 @@ export async function POST(req: NextRequest) {
               created_at: new Date().toISOString(),
             });
 
+          fireAchievementEvent(userId, 'sequel_alert', supabase).catch(() => {});
           created++;
         }
 
