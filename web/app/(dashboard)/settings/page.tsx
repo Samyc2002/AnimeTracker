@@ -350,7 +350,7 @@ function SettingsPage() {
                       }
                     } catch (err) {
                       if (err instanceof DOMException && err.name === 'AbortError') {
-                        setKitsuImportResult('Import is taking longer than expected. Large libraries may need a few tries. Please try again.');
+                        setKitsuImportResult('Import is still processing on the server. Your anime should appear in your watchlist shortly. Refresh the page in a minute to check.');
                       } else {
                         setKitsuImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
                       }
