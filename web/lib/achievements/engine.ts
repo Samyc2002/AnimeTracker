@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getEvaluator } from './evaluators';
+import { getBadgeUrl } from './badge-url';
 import type { Achievement, AchievementEventType } from './types';
 
 export async function fireAchievementEvent(
@@ -61,17 +62,28 @@ export async function fireAchievementEvent(
         if (isUnlocked && (!existing || existing.length === 0 || !existing[0].unlocked)) {
           unlocked.push(achievement.id);
 
-          await supabase.from('notifications').insert({
-            user_id: userId,
-            media_id: 0,
-            episode: 0,
-            title: `Achievement unlocked: ${achievement.name}`,
-            cover_url: '',
-            airing_at: 0,
-            is_read: false,
-            type: 'achievement',
-            created_at: new Date().toISOString(),
-          });
+          // Dedup: skip if a notification for this achievement already exists
+          const { data: existingNotif } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('type', 'achievement')
+            .eq('title', achievement.name)
+            .limit(1);
+
+          if (!existingNotif || existingNotif.length === 0) {
+            await supabase.from('notifications').insert({
+              user_id: userId,
+              media_id: 0,
+              episode: 0,
+              title: achievement.name,
+              cover_url: getBadgeUrl(achievement.asset_name),
+              airing_at: 0,
+              is_read: false,
+              type: 'achievement',
+              created_at: new Date().toISOString(),
+            });
+          }
         }
       } catch {
         // Individual achievement evaluation failure shouldn't block others

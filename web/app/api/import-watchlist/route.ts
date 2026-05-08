@@ -88,8 +88,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    fireAchievementEvent(userId, 'import_complete', supabase).catch(() => {});
-    fireAchievementEvent(userId, 'watchlist_add', supabase).catch(() => {});
+    // Sequential — prevents race condition where both events unlock the same achievement before either write commits
+    fireAchievementEvent(userId, 'import_complete', supabase)
+      .then(() => fireAchievementEvent(userId, 'watchlist_add', supabase))
+      .catch(() => {});
 
     return NextResponse.json({ created, updated });
   } catch (err) {
