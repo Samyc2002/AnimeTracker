@@ -153,9 +153,16 @@ export interface KitsuLibraryEntry {
 
 export async function fetchKitsuUserId(username: string): Promise<number | null> {
   try {
-    const data = await kitsuFetch<{ data: any[] }>(
-      `/users?filter[name]=${encodeURIComponent(username)}&page[limit]=1`
-    );
+    const res = await fetch(`${KITSU_BASE}/users?filter[name]=${encodeURIComponent(username)}&page[limit]=1`, {
+      headers: {
+        'Accept': 'application/vnd.api+json',
+        'Content-Type': 'application/vnd.api+json',
+      },
+    });
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('json')) return null;
+    const data = await res.json();
     if (!data.data || data.data.length === 0) return null;
     return parseInt(data.data[0].id, 10) || null;
   } catch {
@@ -176,6 +183,8 @@ export async function fetchKitsuLibrary(userId: number): Promise<KitsuLibraryEnt
       },
     });
     if (!res.ok) break;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('json')) break;
 
     const data: any = await res.json();
     const included = new Map<string, any>();

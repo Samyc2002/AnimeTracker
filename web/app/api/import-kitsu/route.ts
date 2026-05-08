@@ -32,10 +32,14 @@ export async function POST(req: NextRequest) {
 
     const kitsuUserId = await fetchKitsuUserId(kitsuUsername);
     if (!kitsuUserId) {
-      return NextResponse.json({ error: 'Kitsu user not found' }, { status: 404 });
+      return NextResponse.json({ error: `Kitsu user "${kitsuUsername}" not found. Check the username and try again. Kitsu may also be temporarily down.` }, { status: 404 });
     }
 
     const kitsuEntries = await fetchKitsuLibrary(kitsuUserId);
+
+    if (kitsuEntries.length === 0) {
+      return NextResponse.json({ error: 'No anime found in Kitsu library. The library may be empty or Kitsu may be temporarily unavailable.' }, { status: 404 });
+    }
 
     const { data: existingDocs } = await supabase
       .from('watchlist_entries')
