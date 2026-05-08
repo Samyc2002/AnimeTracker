@@ -327,33 +327,27 @@ function SettingsPage() {
                   onClick={async () => {
                     if (!userId) return;
                     setKitsuImporting(true);
-                    setKitsuImportResult('Fetching your Kitsu library...');
+                    setKitsuImportResult('Starting import...');
                     try {
-                      const controller = new AbortController();
-                      const timeout = setTimeout(() => controller.abort(), 55000);
-                      const res = await fetch('/api/import-kitsu', {
+                      const res = await fetch('/.netlify/functions/import-kitsu-background', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId }),
-                        signal: controller.signal,
                       });
-                      clearTimeout(timeout);
-                      const data = await res.json();
-                      if (!res.ok) {
-                        const msg = data.possiblePrivate
-                          ? `${data.error} If this user's library is private on Kitsu, make it public first at kitsu.app/settings/privacy.`
-                          : `Import failed: ${data.error}`;
-                        setKitsuImportResult(msg);
+                      // Background functions return 202 immediately
+                      if (res.status === 202 || res.status === 200) {
+                        setKitsuImportResult('Import started! Your anime will appear in your watchlist over the next minute. Refresh to check.');
+                        enqueueSnackbar('Kitsu import started in background', { variant: 'success' });
                       } else {
-                        setKitsuImportResult(`Imported ${data.created} new, updated ${data.updated} existing (${data.total} total from Kitsu).`);
-                        enqueueSnackbar(`Imported ${data.created} new, updated ${data.updated} existing anime`, { variant: 'success' });
+                        let data: { error?: string; possiblePrivate?: boolean } = {};
+                        try { data = await res.json(); } catch { /* ignore */ }
+                        const msg = data.possiblePrivate
+                          ? `${data.error} Make the library public at kitsu.app/settings/privacy first.`
+                          : `Import failed: ${data.error || 'Unknown error'}`;
+                        setKitsuImportResult(msg);
                       }
                     } catch (err) {
-                      if (err instanceof DOMException && err.name === 'AbortError') {
-                        setKitsuImportResult('Import is still processing on the server. Your anime should appear in your watchlist shortly. Refresh the page in a minute to check.');
-                      } else {
-                        setKitsuImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-                      }
+                      setKitsuImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
                     }
                     setKitsuImporting(false);
                   }}
