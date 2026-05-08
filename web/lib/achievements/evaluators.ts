@@ -7,6 +7,7 @@ const evaluators: Record<string, Evaluator> = {
   founding_member_check: async (userId, config, supabase) => {
     const maxMembers = (config.max_members as number) || 100;
     const minWatchlist = (config.min_watchlist as number) || 3;
+    const testAccounts = (process.env.TEST_ACCOUNTS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
 
     try {
       const { data: existing } = await supabase
@@ -36,10 +37,21 @@ const evaluators: Record<string, Evaluator> = {
         return { progress: 0, target: 1 };
       }
 
-      await supabase
-        .from('founding_member_config')
-        .update({ count: (counterRow.count as number) + 1 })
-        .eq('id', 'counter');
+      // Check if this is a test account — award badge but don't count toward the 100 limit
+      let isTestAccount = false;
+      if (testAccounts.length > 0) {
+        const { data: userData } = await supabase.auth.admin.getUserById(userId);
+        if (userData?.user?.email && testAccounts.includes(userData.user.email.toLowerCase())) {
+          isTestAccount = true;
+        }
+      }
+
+      if (!isTestAccount) {
+        await supabase
+          .from('founding_member_config')
+          .update({ count: (counterRow.count as number) + 1 })
+          .eq('id', 'counter');
+      }
 
       return { progress: 1, target: 1 };
     } catch {
