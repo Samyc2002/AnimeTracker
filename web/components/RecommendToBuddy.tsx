@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
@@ -20,6 +20,7 @@ interface Props {
 }
 
 export default function RecommendToBuddy({ mediaId, title, coverUrl }: Props) {
+  const { userId } = useAuth();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const [open, setOpen] = useState(false);
@@ -33,9 +34,8 @@ export default function RecommendToBuddy({ mediaId, title, coverUrl }: Props) {
     async function load() {
       setLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const res = await fetch(`/api/buddies?userId=${user.id}`);
+        if (!userId) return;
+        const res = await fetch(`/api/buddies?userId=${userId}`);
         const data = await res.json();
         setBuddies(data.buddies || []);
       } catch {
@@ -49,13 +49,12 @@ export default function RecommendToBuddy({ mediaId, title, coverUrl }: Props) {
   async function send(buddy: BuddyEntry) {
     setSending(buddy.userId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not logged in');
+      if (!userId) throw new Error('Not logged in');
       const res = await fetch('/api/buddy-recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fromUserId: user.id,
+          fromUserId: userId,
           toUserId: buddy.userId,
           mediaId,
           title,

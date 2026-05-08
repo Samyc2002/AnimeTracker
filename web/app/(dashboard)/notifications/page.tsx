@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
@@ -41,18 +42,18 @@ function NotificationsPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
+  const { userId } = useAuth();
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
 
   const loadNotifications = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -61,24 +62,23 @@ function NotificationsPage() {
       // Not authenticated
     }
     setLoading(false);
-  }, []);
+  }, [userId]);
 
   const pollForNew = useCallback(async () => {
     setPolling(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
       await fetch('/api/notifications/poll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId }),
       });
       await loadNotifications();
     } catch {
       // Poll failed
     }
     setPolling(false);
-  }, [loadNotifications]);
+  }, [loadNotifications, userId]);
 
   useEffect(() => {
     pollForNew();

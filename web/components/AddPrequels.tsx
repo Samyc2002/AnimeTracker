@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 import { fetchAnimeDetail, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { backfillSeriesId } from '@/lib/series-resolver';
 import { enqueueSnackbar } from 'notistack';
@@ -40,6 +41,7 @@ async function collectPrequels(animeId: number): Promise<AnimeDetail[]> {
 }
 
 export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
+  const { userId } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [adding, setAdding] = useState(false);
   const [hasPrequels, setHasPrequels] = useState<boolean | null>(null);
@@ -60,8 +62,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
 
     async function checkPrequels() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { setChecking(false); return; }
+        if (!userId) { setChecking(false); return; }
         const prequels = await collectPrequels(anime.id);
         if (prequels.length === 0) {
           setAllAdded(true);
@@ -71,7 +72,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
         const { data: existing } = await supabase
           .from('watchlist_entries')
           .select('media_id, id_mal')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .limit(500);
         const existingIds = new Set<number>();
         for (const doc of existing || []) {
@@ -132,8 +133,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
     setShowDropdown(false);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not logged in');
+      if (!userId) throw new Error('Not logged in');
       const prequels = await collectPrequels(anime.id);
 
       if (prequels.length === 0) {
@@ -146,7 +146,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
       const { data: existing } = await supabase
         .from('watchlist_entries')
         .select('media_id, id_mal')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .limit(500);
       const existingIds = new Set<number>();
       for (const doc of existing || []) {
@@ -170,7 +170,7 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
           .from('watchlist_entries')
           .insert({
             ...entry,
-            user_id: user.id,
+            user_id: userId,
             watch_status: status,
           })
           .select()

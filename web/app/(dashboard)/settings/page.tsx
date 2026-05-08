@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { useAuth } from '@/lib/auth-context';
 import SeriesBackfill from '@/components/SeriesBackfill';
 import { AVATAR_OPTIONS } from '@/lib/avatars';
 import { useSfw } from '@/lib/sfw-context';
@@ -36,11 +37,10 @@ function SettingsPage() {
   useTitle('Settings');
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
+  const { userId, userEmail } = useAuth();
   const searchParams = useSearchParams();
   const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);
-  const [email, setEmail] = useState('');
-  const [userId, setUserId] = useState('');
   const [profileDocId, setProfileDocId] = useState<string | null>(null);
   const [anilistConnected, setAnilistConnected] = useState(false);
   const [anilistUserId, setAnilistUserId] = useState<number | null>(null);
@@ -76,15 +76,12 @@ function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setEmail(user.email || '');
-      setUserId(user.id);
+      if (!userId) return;
 
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, display_language, anilist_user_id, username, display_name, is_public, hide_nsfw_public, avatar, social_twitter, social_discord, social_instagram, social_reddit, kitsu_username')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .limit(1);
 
       if (profiles && profiles.length > 0) {
@@ -111,14 +108,14 @@ function SettingsPage() {
       } else {
         const { data: newProfile } = await supabase
           .from('profiles')
-          .insert({ user_id: user.id, display_language: 'English' })
+          .insert({ user_id: userId, display_language: 'English' })
           .select()
           .single();
         if (newProfile) setProfileDocId(newProfile.id);
       }
     }
     load();
-  }, []);
+  }, [userId]);
 
   async function saveLanguage(value: string) {
     setLanguage(value);
@@ -204,17 +201,15 @@ function SettingsPage() {
   }
 
   async function importWatchlist() {
-    if (!anilistConnected) return;
+    if (!anilistConnected || !userId) return;
     setImporting(true);
     setImportResult(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
       const res = await fetch('/api/import-watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -237,7 +232,7 @@ function SettingsPage() {
       <div className="space-y-8">
         <div>
           <p className="text-sm text-gray-400 mb-1">Signed in as</p>
-          <p className="text-gray-200">{email}</p>
+          <p className="text-gray-200">{userEmail}</p>
         </div>
 
         <div className="flex items-center justify-between">
@@ -316,15 +311,14 @@ function SettingsPage() {
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
+                    if (!userId) return;
                     setKitsuImporting(true);
                     setKitsuImportResult(null);
                     try {
-                      const { data: { user } } = await supabase.auth.getUser();
-                      if (!user) throw new Error('Not authenticated');
                       const res = await fetch('/api/import-kitsu', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: user.id }),
+                        body: JSON.stringify({ userId }),
                       });
                       const data = await res.json();
                       if (!res.ok) {
@@ -511,7 +505,7 @@ function SettingsPage() {
               </div>
             ) : (
               <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${theme.gradientBold} flex items-center justify-center text-3xl font-bold text-white`}>
-                {(displayName || username || email || '?').charAt(0).toUpperCase()}
+                {(displayName || username || userEmail || '?').charAt(0).toUpperCase()}
               </div>
             )}
           </div>
@@ -524,7 +518,7 @@ function SettingsPage() {
               }`}
             >
               <div className={`w-full h-full rounded-full bg-gradient-to-br ${theme.gradientBold} flex items-center justify-center text-sm font-bold text-white`}>
-                {(displayName || username || email || '?').charAt(0).toUpperCase()}
+                {(displayName || username || userEmail || '?').charAt(0).toUpperCase()}
               </div>
             </button>
             {AVATAR_OPTIONS.map((opt) => (

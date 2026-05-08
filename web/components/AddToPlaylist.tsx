@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
@@ -13,6 +14,7 @@ interface PlaylistDoc {
 }
 
 export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
+  const { userId } = useAuth();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const [open, setOpen] = useState(false);
@@ -36,12 +38,11 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
     if (!open || loaded) return;
     async function load() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!userId) return;
         const { data } = await supabase
           .from('playlists')
           .select('id, title, anime_ids')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(50);
         setPlaylists((data as PlaylistDoc[]) || []);

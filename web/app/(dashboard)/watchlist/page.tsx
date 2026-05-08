@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
+import { useAuth } from '@/lib/auth-context';
 import RequireAuth from '@/components/RequireAuth';
 import type { WatchStatus } from '@/lib/types';
 
@@ -60,6 +61,7 @@ function WatchlistPage() {
   const searchParams = useSearchParams();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
+  const { userId } = useAuth();
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -97,13 +99,12 @@ function WatchlistPage() {
   const loadWatchlist = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
 
       let query = supabase
         .from('watchlist_entries')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -124,7 +125,7 @@ function WatchlistPage() {
       let countQuery = supabase
         .from('watchlist_entries')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
       if (filter !== ALL_FILTER) countQuery = countQuery.eq('watch_status', filter);
       if (airingFilter !== ALL_AIRING) countQuery = countQuery.eq('status', airingFilter);
       const { count: totalCount } = await countQuery;
@@ -134,7 +135,7 @@ function WatchlistPage() {
       const { data: allStatusDocs } = await supabase
         .from('watchlist_entries')
         .select('watch_status')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .limit(5000);
 
       const newCounts: Record<string, number> = { [ALL_FILTER]: (allStatusDocs || []).length };
@@ -143,29 +144,27 @@ function WatchlistPage() {
       }
       setCounts(newCounts);
 
-      // Fetch episode progress for displayed entries
+      // Fetch episode progress in a single RPC call
       const wlDocs = (docs || []) as WatchlistDoc[];
-      const allIds = new Set<number>();
+      const allIds: number[] = [];
       const malToMedia = new Map<number, number>();
       for (const d of wlDocs) {
-        allIds.add(d.media_id);
+        allIds.push(d.media_id);
         if (d.id_mal) {
-          allIds.add(d.id_mal);
+          allIds.push(d.id_mal);
           malToMedia.set(d.id_mal, d.media_id);
         }
       }
-      if (allIds.size > 0) {
+      if (allIds.length > 0) {
+        const { data: progressData } = await supabase.rpc('get_episode_progress', {
+          p_user_id: userId,
+          p_media_ids: allIds,
+        });
         const epMap: Record<number, number> = {};
-        for (const mid of allIds) {
-          const { count } = await supabase
-            .from('watched_episodes')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('media_id', mid);
-          if (count && count > 0) {
-            const canonical = malToMedia.get(mid) ?? mid;
-            epMap[canonical] = (epMap[canonical] || 0) + count;
-          }
+        for (const row of (progressData || [])) {
+          const mid = row.media_id as number;
+          const canonical = malToMedia.get(mid) ?? mid;
+          epMap[canonical] = (epMap[canonical] || 0) + (row.count as number);
         }
         setEpisodeProgress(epMap);
       }
@@ -173,7 +172,7 @@ function WatchlistPage() {
       // Not authenticated — layout will redirect
     }
     setLoading(false);
-  }, [filter, airingFilter, page]);
+  }, [filter, airingFilter, page, userId]);
 
   useEffect(() => {
     loadWatchlist();

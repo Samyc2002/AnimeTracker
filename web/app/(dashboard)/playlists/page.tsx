@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { searchAnime, fetchAnimeDetail } from '@/lib/anime-provider';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
@@ -37,6 +38,7 @@ function PlaylistsPage() {
   useTitle('Playlists');
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
+  const { userId } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -47,12 +49,11 @@ function PlaylistsPage() {
 
   const loadPlaylists = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
       const { data, error } = await supabase
         .from('playlists')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       setPlaylists((data || []) as PlaylistDoc[]);
@@ -60,7 +61,7 @@ function PlaylistsPage() {
       // Not authenticated
     }
     setLoading(false);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     loadPlaylists();
@@ -70,11 +71,10 @@ function PlaylistsPage() {
     if (!newTitle.trim()) return;
     setCreating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
       const slug = `${slugify(newTitle)}-${Date.now().toString(36)}`;
       await supabase.from('playlists').insert({
-        user_id: user.id,
+        user_id: userId,
         title: newTitle.trim(),
         description: newDescription.trim(),
         anime_ids: '[]',

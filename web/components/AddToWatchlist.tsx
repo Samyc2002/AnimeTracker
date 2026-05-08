@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
@@ -20,6 +21,7 @@ const statusColors: Record<WatchStatus, string> = {
 };
 
 export default function AddToWatchlist({ media }: { media: AniListMedia }) {
+  const { userId } = useAuth();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const [added, setAdded] = useState(false);
@@ -42,8 +44,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
     setUpdating(true);
     setShowDropdown(false);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not logged in');
+      if (!userId) throw new Error('Not logged in');
 
       if (added && docId) {
         const { error } = await supabase
@@ -59,7 +60,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
           .from('watchlist_entries')
           .insert({
             ...entry,
-            user_id: user.id,
+            user_id: userId,
             watch_status: status,
           })
           .select()
@@ -81,13 +82,12 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
 
   async function checkIfAdded() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!userId) return;
 
       let { data } = await supabase
         .from('watchlist_entries')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('media_id', media.id)
         .limit(1);
 
@@ -95,7 +95,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         const res = await supabase
           .from('watchlist_entries')
           .select()
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('id_mal', media.idMal)
           .limit(1);
         data = res.data;

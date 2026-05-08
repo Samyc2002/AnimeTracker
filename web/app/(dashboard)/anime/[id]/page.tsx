@@ -54,7 +54,7 @@ export default function AnimeDetailPage() {
   const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>([]);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
 
-  const { authed } = useAuth();
+  const { authed, userId } = useAuth();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const id = Number(params.id);
@@ -84,21 +84,19 @@ export default function AnimeDetailPage() {
   }, [id]);
 
   const loadWatchedEpisodes = useCallback(async () => {
-    if (!authed) return;
+    if (!authed || !userId) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
       let { data: wlData } = await supabase
         .from('watchlist_entries')
         .select('id, media_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('media_id', id)
         .limit(1);
       if ((!wlData || wlData.length === 0)) {
         const { data: malData } = await supabase
           .from('watchlist_entries')
           .select('id, media_id')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('id_mal', id)
           .limit(1);
         wlData = malData;
@@ -111,14 +109,14 @@ export default function AnimeDetailPage() {
       const { data: epData } = await supabase
         .from('watched_episodes')
         .select('episode_number')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('media_id', trackedMediaId)
         .limit(5000);
       setWatchedEpisodes((epData || []).map((d) => d.episode_number as number).sort((a, b) => a - b));
     } catch {
       // Non-critical
     }
-  }, [authed, id]);
+  }, [authed, userId, id]);
 
   useEffect(() => { loadWatchedEpisodes(); }, [loadWatchedEpisodes]);
 
@@ -130,13 +128,12 @@ export default function AnimeDetailPage() {
     if (isNaN(epNum)) return;
 
     async function autoMark() {
+      if (!userId) return;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         const { data: existingEps } = await supabase
           .from('watched_episodes')
           .select('episode_number')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('media_id', resolvedMediaId)
           .limit(5000);
         const watched = new Set((existingEps || []).map((d) => d.episode_number as number));
@@ -146,7 +143,7 @@ export default function AnimeDetailPage() {
         }
         if (toMark.length > 0) {
           await supabase.from('watched_episodes').upsert(
-            toMark.map((e) => ({ user_id: user.id, media_id: resolvedMediaId, episode_number: e }))
+            toMark.map((e) => ({ user_id: userId, media_id: resolvedMediaId, episode_number: e }))
           );
           setWatchedEpisodes((prev) => {
             const set = new Set([...prev, ...toMark]);
@@ -163,17 +160,14 @@ export default function AnimeDetailPage() {
   }, [authed, id, resolvedMediaId, isInWatchlist, searchParams]);
 
   async function toggleEpisode(ep: number) {
-    if (!authed) return;
+    if (!authed || !userId) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const allWatchedUpTo = Array.from({ length: ep }, (_, i) => i + 1).every((e) => watchedEpisodes.includes(e));
       if (allWatchedUpTo && watchedEpisodes.includes(ep)) {
         const { data: docs } = await supabase
           .from('watched_episodes')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('media_id', resolvedMediaId)
           .eq('episode_number', ep)
           .limit(1);
@@ -188,7 +182,7 @@ export default function AnimeDetailPage() {
         }
         if (toMark.length > 0) {
           await supabase.from('watched_episodes').upsert(
-            toMark.map((e) => ({ user_id: user.id, media_id: resolvedMediaId, episode_number: e }))
+            toMark.map((e) => ({ user_id: userId, media_id: resolvedMediaId, episode_number: e }))
           );
         }
         setWatchedEpisodes((prev) => {

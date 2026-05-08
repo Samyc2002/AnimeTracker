@@ -4,6 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia } from '@/lib/types';
 
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: vi.fn(() => ({ authed: true, loading: false, userId: 'user1', userEmail: 'test@test.com' })),
+}));
+
 vi.mock('@/lib/anime-provider', () => ({
   mediaToWatchlistEntry: vi.fn(() => ({
     media_id: 1,
@@ -54,10 +58,6 @@ function mockSupabaseChain(data: unknown[] = [], error: unknown = null) {
 describe('AddToWatchlist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (supabase.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'user1', email: 'test@test.com' } },
-      error: null,
-    });
   });
 
   it('shows "+ Add" button when anime is not in watchlist', async () => {

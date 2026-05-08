@@ -58,7 +58,7 @@ export default function AiringPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
-  const { authed } = useAuth();
+  const { authed, userId } = useAuth();
   const [schedules, setSchedules] = useState<AiringSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -112,13 +112,12 @@ export default function AiringPage() {
 
   useEffect(() => {
     async function loadTracked() {
+      if (!userId) return;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         const { data: existing } = await supabase
           .from('watchlist_entries')
           .select('media_id, id_mal')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .limit(500);
         const ids = new Set<number>();
         for (const doc of (existing || [])) {
@@ -131,21 +130,19 @@ export default function AiringPage() {
       }
     }
     loadTracked();
-  }, []);
+  }, [userId]);
 
   async function handleTrack(e: React.MouseEvent, s: AiringSchedule) {
     e.stopPropagation();
     const media = s.media;
-    if (!media || trackingId === s.mediaId) return;
+    if (!media || trackingId === s.mediaId || !userId) return;
 
     setTrackingId(s.mediaId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
       const entry = mediaToWatchlistEntry(media);
       const { data: doc, error } = await supabase
         .from('watchlist_entries')
-        .insert({ ...entry, user_id: user.id })
+        .insert({ ...entry, user_id: userId })
         .select()
         .single();
       if (error) throw error;

@@ -232,6 +232,8 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
 export default function ProfileClient({ profile, selfMode }: { profile: (PublicProfile & { is_public?: boolean; owner_user_id?: string }) | null; selfMode?: boolean }) {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authUserEmail, setAuthUserEmail] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [selfProfile, setSelfProfile] = useState<PublicProfile | null>(null);
@@ -241,6 +243,10 @@ export default function ProfileClient({ profile, selfMode }: { profile: (PublicP
     supabase.auth.getUser()
       .then(async ({ data: { user } }) => {
         setAuthed(!!user);
+        if (user) {
+          setAuthUserId(user.id);
+          setAuthUserEmail(user.email || null);
+        }
         if (user && profile?.owner_user_id) {
           setIsOwner(user.id === profile.owner_user_id);
         }
@@ -295,7 +301,7 @@ export default function ProfileClient({ profile, selfMode }: { profile: (PublicP
     }
     if (selfProfile) {
       return (
-        <AuthContext.Provider value={{ authed: true, loading: false }}>
+        <AuthContext.Provider value={{ authed: true, loading: false, userId: authUserId, userEmail: authUserEmail }}>
           <SfwProvider>
             <AuthedProfileContent profile={selfProfile} />
           </SfwProvider>
@@ -330,7 +336,7 @@ export default function ProfileClient({ profile, selfMode }: { profile: (PublicP
 
   if (authed) {
     return (
-      <AuthContext.Provider value={{ authed: true, loading: false }}>
+      <AuthContext.Provider value={{ authed: true, loading: false, userId: authUserId, userEmail: authUserEmail }}>
         <SfwProvider>
           <AuthedProfileContent profile={profile} />
         </SfwProvider>

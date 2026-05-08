@@ -17,6 +17,8 @@ export default function DashboardLayout({
 }) {
   const [authed, setAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser()
@@ -27,6 +29,8 @@ export default function DashboardLayout({
           return;
         }
         setAuthed(true);
+        setUserId(user.id);
+        setUserEmail(user.email || null);
         setLoading(false);
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -60,15 +64,13 @@ export default function DashboardLayout({
   }, [authed]);
 
   useEffect(() => {
-    if (!authed) return;
+    if (!authed || !userId) return;
     async function pollNotifications() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         await fetch('/api/notifications/poll', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
+          body: JSON.stringify({ userId }),
         });
       } catch {
         // Non-critical
@@ -77,18 +79,16 @@ export default function DashboardLayout({
     pollNotifications();
     const pollInterval = setInterval(pollNotifications, 15 * 60 * 1000);
     return () => clearInterval(pollInterval);
-  }, [authed]);
+  }, [authed, userId]);
 
   useEffect(() => {
-    if (!authed) return;
+    if (!authed || !userId) return;
     async function heartbeat() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         await fetch('/api/heartbeat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
+          body: JSON.stringify({ userId }),
         });
       } catch {
         // Non-critical
@@ -97,10 +97,10 @@ export default function DashboardLayout({
     heartbeat();
     const interval = setInterval(heartbeat, 60_000);
     return () => clearInterval(interval);
-  }, [authed]);
+  }, [authed, userId]);
 
   return (
-    <AuthContext.Provider value={{ authed, loading }}>
+    <AuthContext.Provider value={{ authed, loading, userId, userEmail }}>
       <SfwProvider>
         <div data-dashboard-layout className="min-h-screen bg-[#0b0e14] flex flex-col">
           <ProviderStatusBanner />
