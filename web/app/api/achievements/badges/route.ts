@@ -12,95 +12,42 @@ export async function GET(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    const { data: badges } = await supabase
-      .from('user_badges')
-      .select('achievement_id, pin_order')
+    const { data: badgeRows } = await supabase
+      .from('user_achievements')
+      .select('achievement_id, is_pinned, pinned_at, unlocked_at')
       .eq('user_id', userId)
-      .order('pin_order');
+      .eq('unlocked', true)
+      .order('is_pinned', { ascending: false })
+      .order('unlocked_at', { ascending: false });
 
-    if (!badges || badges.length === 0) {
+    if (!badgeRows || badgeRows.length === 0) {
       return NextResponse.json({ badges: [] });
     }
 
-    const achievementIds = badges.map((b) => b.achievement_id as string);
+    const achievementIds = badgeRows.map((b) => b.achievement_id as string);
     const { data: achievements } = await supabase
       .from('achievements')
-      .select('id, name, description, asset_name')
-      .in('id', achievementIds);
+      .select('id, name, description, asset_name, type')
+      .in('id', achievementIds)
+      .eq('type', 'badge');
 
     const achievementMap = new Map(
       (achievements || []).map((a) => [a.id as string, a])
     );
 
-    const result = badges.map((b) => ({
-      ...achievementMap.get(b.achievement_id as string),
-      pin_order: b.pin_order,
-    }));
+    const badges = badgeRows
+      .filter((b) => achievementMap.has(b.achievement_id as string))
+      .map((b) => ({
+        ...achievementMap.get(b.achievement_id as string),
+        is_pinned: b.is_pinned,
+        pinned_at: b.pinned_at,
+        unlocked_at: b.unlocked_at,
+      }));
 
-    return NextResponse.json({ badges: result });
+    return NextResponse.json({ badges });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to load badges' },
-      { status: 500 },
-    );
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const { userId, achievementId, pinOrder, action } = await req.json();
-    if (!userId || !achievementId) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    }
-
-    const supabase = getServiceSupabase();
-
-    if (action === 'unpin') {
-      await supabase
-        .from('user_badges')
-        .delete()
-        .eq('user_id', userId)
-        .eq('achievement_id', achievementId);
-      return NextResponse.json({ success: true });
-    }
-
-    const { data: unlocked } = await supabase
-      .from('user_achievements')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('achievement_id', achievementId)
-      .eq('unlocked', true)
-      .limit(1);
-
-    if (!unlocked || unlocked.length === 0) {
-      return NextResponse.json({ error: 'Achievement not unlocked' }, { status: 400 });
-    }
-
-    const { count: badgeCount } = await supabase
-      .from('user_badges')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    if ((badgeCount || 0) >= 5) {
-      return NextResponse.json({ error: 'Maximum 5 badges allowed' }, { status: 400 });
-    }
-
-    const order = pinOrder || ((badgeCount || 0) + 1);
-
-    const { error } = await supabase
-      .from('user_badges')
-      .upsert({
-        user_id: userId,
-        achievement_id: achievementId,
-        pin_order: order,
-      }, { onConflict: 'user_id,achievement_id' });
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to update badge' },
       { status: 500 },
     );
   }

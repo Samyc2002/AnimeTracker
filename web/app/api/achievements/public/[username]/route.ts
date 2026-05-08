@@ -24,32 +24,37 @@ export async function GET(
 
     const userId = profiles[0].user_id as string;
 
-    const { data: badges } = await supabase
-      .from('user_badges')
-      .select('achievement_id, pin_order')
+    const { data: badgeRows } = await supabase
+      .from('user_achievements')
+      .select('achievement_id, is_pinned, pinned_at, unlocked_at')
       .eq('user_id', userId)
-      .order('pin_order');
+      .eq('unlocked', true)
+      .order('is_pinned', { ascending: false })
+      .order('unlocked_at', { ascending: false });
 
-    if (!badges || badges.length === 0) {
+    if (!badgeRows || badgeRows.length === 0) {
       return NextResponse.json({ badges: [] });
     }
 
-    const achievementIds = badges.map((b) => b.achievement_id as string);
     const { data: achievements } = await supabase
       .from('achievements')
-      .select('id, name, description, asset_name')
-      .in('id', achievementIds);
+      .select('id, name, description, asset_name, type')
+      .eq('type', 'badge');
 
     const achievementMap = new Map(
       (achievements || []).map((a) => [a.id as string, a])
     );
 
-    const result = badges.map((b) => ({
-      ...achievementMap.get(b.achievement_id as string),
-      pin_order: b.pin_order,
-    }));
+    const badges = badgeRows
+      .filter((b) => achievementMap.has(b.achievement_id as string))
+      .map((b) => ({
+        ...achievementMap.get(b.achievement_id as string),
+        is_pinned: b.is_pinned,
+        unlocked_at: b.unlocked_at,
+      }))
+      .slice(0, 3);
 
-    return NextResponse.json({ badges: result });
+    return NextResponse.json({ badges });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to load badges' },

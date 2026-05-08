@@ -12,7 +12,7 @@ import NavBar from '@/components/NavBar';
 import SfwToggle from '@/components/SfwToggle';
 import Footer from '@/components/Footer';
 import { getTheme } from '@/lib/theme';
-import { getBadgeUrl } from '@/lib/achievements/badge-url';
+import BadgeSlots from '@/components/BadgeSlots';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Completed', 'Planned', 'Dropped'];
@@ -115,15 +115,6 @@ function GuestProfileContent({ profile }: { profile: PublicProfile }) {
 function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: PublicProfile; sfwMode: boolean; authed: boolean; onToggleSfw?: () => void }) {
   const theme = getTheme(sfwMode);
   useTitle(`Profile | ${profile.display_name || profile.username}`);
-  const [badges, setBadges] = useState<{ id: string; name: string; asset_name: string; description: string }[]>([]);
-
-  useEffect(() => {
-    fetch(`/api/achievements/public/${profile.username}`)
-      .then((r) => r.ok ? r.json() : { badges: [] })
-      .then((d) => setBadges(d.badges || []))
-      .catch(() => {});
-  }, [profile.username]);
-
   const [activeTab, setActiveTab] = useState<WatchStatus | 'All'>(() => {
     if (typeof window !== 'undefined') {
       const param = new URLSearchParams(window.location.search).get('status');
@@ -204,25 +195,7 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
               )}
             </div>
           )}
-          {badges.length > 0 && (
-            <div className="flex items-center justify-center gap-2 mt-3">
-              {badges.map((badge) => (
-                <div key={badge.id} className="group/badge relative">
-                  <Image
-                    src={getBadgeUrl(badge.asset_name)}
-                    alt={badge.name}
-                    width={32}
-                    height={32}
-                    className="rounded"
-                    unoptimized
-                  />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0b0e14]/90 border border-[#253040] rounded text-[10px] text-gray-200 whitespace-nowrap opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none z-10">
-                    {badge.name}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <BadgeSlots username={profile.username} />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
