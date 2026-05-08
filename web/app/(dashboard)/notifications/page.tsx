@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
+import { ACHIEVEMENTS_UI_VISIBLE, FOUNDING_MEMBER_ENABLED } from '@/lib/feature-flags';
 
 interface NotificationDoc {
   id: string;
@@ -160,7 +161,12 @@ function NotificationsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {notifications.map((notif) => (
+          {notifications.filter((n) => {
+            if (n.type !== 'achievement') return true;
+            if (ACHIEVEMENTS_UI_VISIBLE) return true;
+            if (FOUNDING_MEMBER_ENABLED && n.title.includes('Founding Member')) return true;
+            return false;
+          }).map((notif) => (
             <div
               key={notif.id}
               className={`flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors ${

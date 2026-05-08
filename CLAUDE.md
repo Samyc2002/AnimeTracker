@@ -135,6 +135,13 @@ cd scripts
 SUPABASE_SERVICE_KEY="your-key" node migrate_users_to_supabase.js
 ```
 
+## Feature Flags
+
+In `web/lib/feature-flags.ts`:
+
+- **`ACHIEVEMENTS_UI_VISIBLE`** (`false`) — Controls all achievement UI surfaces except Founding Member. When `false`: achievements page hidden, achievement notifications filtered, progress bars hidden. The engine still runs and accumulates progress silently.
+- **`FOUNDING_MEMBER_ENABLED`** (`true`) — Controls the Founding Member badge specifically: awareness banner, badge on profile, achievement notification for founding member only.
+
 ## Badge Asset Convention
 
 Badge images live in `web/public/badges/[asset_name].png`. The database stores only the `asset_name` (e.g., `founder_badge`), never the full path. Use `getBadgeUrl(assetName)` from `web/lib/achievements/badge-url.ts` to resolve the full URL.

@@ -7,6 +7,7 @@ import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import Image from 'next/image';
 import { getBadgeUrl } from '@/lib/achievements/badge-url';
+import { FOUNDING_MEMBER_ENABLED } from '@/lib/feature-flags';
 
 type BannerState = 'loading' | 'eligible' | 'progress' | 'earned' | 'closed' | 'hidden';
 
@@ -20,7 +21,7 @@ export default function FoundingMemberBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!userId) { setState('hidden'); return; }
+    if (!FOUNDING_MEMBER_ENABLED || !userId) { setState('hidden'); return; }
     if (typeof window !== 'undefined' && localStorage.getItem('founding_banner_dismissed')) {
       setState('hidden');
       return;
