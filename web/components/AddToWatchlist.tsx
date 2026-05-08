@@ -2,11 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { backfillSeriesId } from '@/lib/series-resolver';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
 
@@ -20,6 +22,7 @@ const statusColors: Record<WatchStatus, string> = {
 };
 
 export default function AddToWatchlist({ media }: { media: AniListMedia }) {
+  const { userId } = useAuth();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const [added, setAdded] = useState(false);
@@ -42,8 +45,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
     setUpdating(true);
     setShowDropdown(false);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not logged in');
+      if (!userId) throw new Error('Not logged in');
 
       if (added && docId) {
         const { error } = await supabase
@@ -53,13 +55,14 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         if (error) throw error;
         setCurrentStatus(status);
         enqueueSnackbar(`Status changed to ${status}`, { variant: 'success' });
+        fireClientAchievementEvent(userId, 'status_change');
       } else {
         const entry = mediaToWatchlistEntry(media);
         const { data: doc, error } = await supabase
           .from('watchlist_entries')
           .insert({
             ...entry,
-            user_id: user.id,
+            user_id: userId,
             watch_status: status,
           })
           .select()
@@ -69,6 +72,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         setAdded(true);
         setCurrentStatus(status);
         enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
+        fireClientAchievementEvent(userId, 'watchlist_add');
         backfillSeriesId(doc.id, media.id, async (id, data) => {
           await supabase.from('watchlist_entries').update(data).eq('id', id);
         }).catch(() => {});
@@ -81,13 +85,12 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
 
   async function checkIfAdded() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!userId) return;
 
       let { data } = await supabase
         .from('watchlist_entries')
         .select()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('media_id', media.id)
         .limit(1);
 
@@ -95,7 +98,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         const res = await supabase
           .from('watchlist_entries')
           .select()
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('id_mal', media.idMal)
           .limit(1);
         data = res.data;

@@ -13,7 +13,6 @@ import Image from 'next/image';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
 import type { AniListMedia } from '@/lib/types';
 
 function RecommendationGrid({
@@ -72,7 +71,7 @@ export default function SearchPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
-  const { authed } = useAuth();
+  const { authed, userId } = useAuth();
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -96,15 +95,13 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
-    if (!authed) return;
+    if (!authed || !userId) return;
     async function loadForYou() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         const profileRes = await fetch('/api/taste-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
+          body: JSON.stringify({ userId }),
         });
         const profileData = await profileRes.json();
         if (profileData.insufficient || !profileData.profile) return;
@@ -114,7 +111,7 @@ export default function SearchPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: user.id,
+            userId,
             filters: { genres: topGenres, status: null, minScore: 70, maxEpisodes: null, sort: 'SCORE_DESC', excludeMediaIds: [] },
           }),
         });
@@ -125,7 +122,7 @@ export default function SearchPage() {
       }
     }
     loadForYou();
-  }, [authed]);
+  }, [authed, userId]);
 
   const handleSearch = useCallback(async (query: string) => {
     setLoading(true);

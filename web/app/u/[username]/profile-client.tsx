@@ -12,6 +12,8 @@ import NavBar from '@/components/NavBar';
 import SfwToggle from '@/components/SfwToggle';
 import Footer from '@/components/Footer';
 import { getTheme } from '@/lib/theme';
+import BadgeSlots from '@/components/BadgeSlots';
+import AchievementSection from '@/components/AchievementSection';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Completed', 'Planned', 'Dropped'];
@@ -114,7 +116,6 @@ function GuestProfileContent({ profile }: { profile: PublicProfile }) {
 function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: PublicProfile; sfwMode: boolean; authed: boolean; onToggleSfw?: () => void }) {
   const theme = getTheme(sfwMode);
   useTitle(`Profile | ${profile.display_name || profile.username}`);
-
   const [activeTab, setActiveTab] = useState<WatchStatus | 'All'>(() => {
     if (typeof window !== 'undefined') {
       const param = new URLSearchParams(window.location.search).get('status');
@@ -195,6 +196,10 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
               )}
             </div>
           )}
+          <div className="flex items-center justify-center gap-1.5 flex-wrap mt-3">
+            <BadgeSlots username={profile.username} />
+            {authed && <AchievementSection />}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
@@ -232,6 +237,8 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
 export default function ProfileClient({ profile, selfMode }: { profile: (PublicProfile & { is_public?: boolean; owner_user_id?: string }) | null; selfMode?: boolean }) {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authUserEmail, setAuthUserEmail] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [selfProfile, setSelfProfile] = useState<PublicProfile | null>(null);
@@ -241,6 +248,10 @@ export default function ProfileClient({ profile, selfMode }: { profile: (PublicP
     supabase.auth.getUser()
       .then(async ({ data: { user } }) => {
         setAuthed(!!user);
+        if (user) {
+          setAuthUserId(user.id);
+          setAuthUserEmail(user.email || null);
+        }
         if (user && profile?.owner_user_id) {
           setIsOwner(user.id === profile.owner_user_id);
         }
@@ -295,7 +306,7 @@ export default function ProfileClient({ profile, selfMode }: { profile: (PublicP
     }
     if (selfProfile) {
       return (
-        <AuthContext.Provider value={{ authed: true, loading: false }}>
+        <AuthContext.Provider value={{ authed: true, loading: false, userId: authUserId, userEmail: authUserEmail }}>
           <SfwProvider>
             <AuthedProfileContent profile={selfProfile} />
           </SfwProvider>
@@ -330,7 +341,7 @@ export default function ProfileClient({ profile, selfMode }: { profile: (PublicP
 
   if (authed) {
     return (
-      <AuthContext.Provider value={{ authed: true, loading: false }}>
+      <AuthContext.Provider value={{ authed: true, loading: false, userId: authUserId, userEmail: authUserEmail }}>
         <SfwProvider>
           <AuthedProfileContent profile={profile} />
         </SfwProvider>

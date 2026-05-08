@@ -1,34 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useProviderHealth } from '@/lib/provider-status';
 
 export default function ProviderStatusBanner() {
-  const [anilistDown, setAnilistDown] = useState(false);
+  const health = useProviderHealth();
   const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    async function checkAnilist() {
-      try {
-        const res = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: '{ Page(perPage:1) { media(type:ANIME) { id } } }' }),
-        });
-        setAnilistDown(!res.ok);
-      } catch {
-        setAnilistDown(true);
-      }
-    }
-    checkAnilist();
-  }, []);
+  if (!health.checked || dismissed) return null;
 
-  if (!anilistDown || dismissed) return null;
+  const providers = [
+    { name: 'AniList', up: health.anilist },
+    { name: 'Jikan', up: health.jikan },
+    { name: 'Kitsu', up: health.kitsu },
+  ];
+
+  const downProviders = providers.filter((p) => !p.up);
+  if (downProviders.length === 0) return null;
+
+  const allDown = downProviders.length === providers.length;
+  const names = downProviders.map((p) => p.name).join(', ');
 
   return (
     <div className="bg-amber-900/30 border-b border-amber-500/30 px-4 py-2 flex items-center justify-center gap-3">
-      <p className="text-xs text-amber-300">
-        AniList is currently experiencing issues. Some content may be limited as a backup provider is being used.
-      </p>
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1">
+          {providers.map((p) => (
+            <span
+              key={p.name}
+              className={`w-2 h-2 rounded-full ${p.up ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`}
+              title={`${p.name}: ${p.up ? 'Online' : 'Down'}`}
+            />
+          ))}
+        </div>
+        <p className="text-xs text-amber-300">
+          {allDown
+            ? 'All anime providers are currently down. Content may be unavailable.'
+            : `${names} ${downProviders.length === 1 ? 'is' : 'are'} currently experiencing issues. Backup providers are being used.`}
+        </p>
+      </div>
       <button
         onClick={() => setDismissed(true)}
         className="text-amber-400 hover:text-amber-200 flex-shrink-0 cursor-pointer"

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
 import { getSeriesId } from '@/lib/series-resolver';
 import { enqueueSnackbar } from 'notistack';
 
@@ -10,6 +11,7 @@ function delay(ms: number) {
 }
 
 export default function SeriesBackfill() {
+  const { userId } = useAuth();
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState('');
   const [stats, setStats] = useState<{ updated: number; skipped: number; errors: number } | null>(null);
@@ -20,8 +22,7 @@ export default function SeriesBackfill() {
     const result = { updated: 0, skipped: 0, errors: 0 };
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not logged in');
+      if (!userId) throw new Error('Not logged in');
       setProgress('Fetching watchlist...');
 
       const allDocs: { id: string; media_id: number; series_id?: number | null }[] = [];
@@ -31,7 +32,7 @@ export default function SeriesBackfill() {
         const { data } = await supabase
           .from('watchlist_entries')
           .select('id, media_id, series_id')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .range(offset, offset + 99);
         const rows = data || [];
         allDocs.push(...rows);

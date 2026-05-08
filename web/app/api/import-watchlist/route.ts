@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { fetchUserList, mediaToWatchlistEntry, ANILIST_STATUS_MAP } from '@/lib/anime-provider';
+import { fireAchievementEvent } from '@/lib/achievements/engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,6 +87,9 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    fireAchievementEvent(userId, 'import_complete', supabase).catch(() => {});
+    fireAchievementEvent(userId, 'watchlist_add', supabase).catch(() => {});
 
     return NextResponse.json({ created, updated });
   } catch (err) {

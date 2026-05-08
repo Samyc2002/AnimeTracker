@@ -6,11 +6,14 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { useAuth } from '@/lib/auth-context';
 import SeriesBackfill from '@/components/SeriesBackfill';
 import { AVATAR_OPTIONS } from '@/lib/avatars';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
+import { useProviderHealth } from '@/lib/provider-status';
 
 interface ProfileDoc {
   id: string;
@@ -36,11 +39,11 @@ function SettingsPage() {
   useTitle('Settings');
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
+  const { userId, userEmail } = useAuth();
+  const providerHealth = useProviderHealth();
   const searchParams = useSearchParams();
   const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);
-  const [email, setEmail] = useState('');
-  const [userId, setUserId] = useState('');
   const [profileDocId, setProfileDocId] = useState<string | null>(null);
   const [anilistConnected, setAnilistConnected] = useState(false);
   const [anilistUserId, setAnilistUserId] = useState<number | null>(null);
@@ -76,15 +79,12 @@ function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setEmail(user.email || '');
-      setUserId(user.id);
+      if (!userId) return;
 
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, display_language, anilist_user_id, username, display_name, is_public, hide_nsfw_public, avatar, social_twitter, social_discord, social_instagram, social_reddit, kitsu_username')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .limit(1);
 
       if (profiles && profiles.length > 0) {
@@ -111,14 +111,14 @@ function SettingsPage() {
       } else {
         const { data: newProfile } = await supabase
           .from('profiles')
-          .insert({ user_id: user.id, display_language: 'English' })
+          .insert({ user_id: userId, display_language: 'English' })
           .select()
           .single();
         if (newProfile) setProfileDocId(newProfile.id);
       }
     }
     load();
-  }, []);
+  }, [userId]);
 
   async function saveLanguage(value: string) {
     setLanguage(value);
@@ -197,6 +197,7 @@ function SettingsPage() {
         social_reddit: socialReddit || null,
       }).eq('id', profileDocId);
       enqueueSnackbar('Profile saved!', { variant: 'success' });
+      if (userId) fireClientAchievementEvent(userId, 'profile_update');
     } catch (err) {
       enqueueSnackbar(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`, { variant: 'error' });
     }
@@ -204,17 +205,15 @@ function SettingsPage() {
   }
 
   async function importWatchlist() {
-    if (!anilistConnected) return;
+    if (!anilistConnected || !userId) return;
     setImporting(true);
     setImportResult(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
       const res = await fetch('/api/import-watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -237,7 +236,7 @@ function SettingsPage() {
       <div className="space-y-8">
         <div>
           <p className="text-sm text-gray-400 mb-1">Signed in as</p>
-          <p className="text-gray-200">{email}</p>
+          <p className="text-gray-200">{userEmail}</p>
         </div>
 
         <div className="flex items-center justify-between">
@@ -266,10 +265,15 @@ function SettingsPage() {
                 </span>
               </div>
 
+              {providerHealth.checked && !providerHealth.anilist && (
+                <p className="text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded-lg px-3 py-2">
+                  AniList is currently down. Import is temporarily unavailable.
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={importWatchlist}
-                  disabled={importing}
+                  disabled={importing || (providerHealth.checked && !providerHealth.anilist)}
                   className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
                 >
                   {importing ? 'Importing...' : 'Import Watchlist'}
@@ -313,32 +317,41 @@ function SettingsPage() {
                 </span>
               </div>
 
+              {providerHealth.checked && !providerHealth.kitsu && (
+                <p className="text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded-lg px-3 py-2">
+                  Kitsu is currently down. Import is temporarily unavailable.
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
+                    if (!userId) return;
                     setKitsuImporting(true);
-                    setKitsuImportResult(null);
+                    setKitsuImportResult('Starting import...');
                     try {
-                      const { data: { user } } = await supabase.auth.getUser();
-                      if (!user) throw new Error('Not authenticated');
-                      const res = await fetch('/api/import-kitsu', {
+                      const res = await fetch('/.netlify/functions/import-kitsu-background', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: user.id }),
+                        body: JSON.stringify({ userId }),
                       });
-                      const data = await res.json();
-                      if (!res.ok) {
-                        setKitsuImportResult(`Import failed: ${data.error}`);
+                      // Background functions return 202 immediately
+                      if (res.status === 202 || res.status === 200) {
+                        setKitsuImportResult('Import started! Your anime will appear in your watchlist over the next minute. Refresh to check.');
+                        enqueueSnackbar('Kitsu import started in background', { variant: 'success' });
                       } else {
-                        setKitsuImportResult(`Imported ${data.created} new, updated ${data.updated} existing anime.`);
-                        enqueueSnackbar(`Imported ${data.created} new, updated ${data.updated} existing anime`, { variant: 'success' });
+                        let data: { error?: string; possiblePrivate?: boolean } = {};
+                        try { data = await res.json(); } catch { /* ignore */ }
+                        const msg = data.possiblePrivate
+                          ? `${data.error} Make the library public at kitsu.app/settings/privacy first.`
+                          : `Import failed: ${data.error || 'Unknown error'}`;
+                        setKitsuImportResult(msg);
                       }
                     } catch (err) {
                       setKitsuImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
                     }
                     setKitsuImporting(false);
                   }}
-                  disabled={kitsuImporting}
+                  disabled={kitsuImporting || (providerHealth.checked && !providerHealth.kitsu)}
                   className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
                 >
                   {kitsuImporting ? 'Importing...' : 'Import Watchlist'}
@@ -511,7 +524,7 @@ function SettingsPage() {
               </div>
             ) : (
               <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${theme.gradientBold} flex items-center justify-center text-3xl font-bold text-white`}>
-                {(displayName || username || email || '?').charAt(0).toUpperCase()}
+                {(displayName || username || userEmail || '?').charAt(0).toUpperCase()}
               </div>
             )}
           </div>
@@ -524,7 +537,7 @@ function SettingsPage() {
               }`}
             >
               <div className={`w-full h-full rounded-full bg-gradient-to-br ${theme.gradientBold} flex items-center justify-center text-sm font-bold text-white`}>
-                {(displayName || username || email || '?').charAt(0).toUpperCase()}
+                {(displayName || username || userEmail || '?').charAt(0).toUpperCase()}
               </div>
             </button>
             {AVATAR_OPTIONS.map((opt) => (

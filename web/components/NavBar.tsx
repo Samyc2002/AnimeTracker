@@ -29,7 +29,7 @@ export default function NavBar() {
   const router = useRouter();
   const { sfwMode, setSfwMode } = useSfw();
   const theme = getTheme(sfwMode);
-  const { authed, loading } = useAuth();
+  const { authed, loading, userId } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [profilePublic, setProfilePublic] = useState(false);
@@ -38,15 +38,13 @@ export default function NavBar() {
   const navItems = loading ? [] : authed ? authNavItems : publicNavItems;
 
   useEffect(() => {
-    if (!authed) return;
+    if (!authed || !userId) return;
     async function loadUnread() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         const { count } = await supabase
           .from('notifications')
           .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('is_read', false);
         setUnreadCount(count ?? 0);
       } catch {
@@ -54,20 +52,18 @@ export default function NavBar() {
       }
     }
     loadUnread();
-    const interval = setInterval(loadUnread, 60_000);
+    const interval = setInterval(loadUnread, 5 * 60_000);
     return () => clearInterval(interval);
-  }, [authed]);
+  }, [authed, userId]);
 
   useEffect(() => {
-    if (!authed) return;
+    if (!authed || !userId) return;
     async function loadProfile() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         const { data } = await supabase
           .from('profiles')
           .select('username, is_public')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .limit(1);
         if (data && data.length > 0 && data[0].username) setProfileUsername(data[0].username);
         if (data && data.length > 0) setProfilePublic(!!(data[0].is_public));
@@ -76,7 +72,7 @@ export default function NavBar() {
       }
     }
     loadProfile();
-  }, [authed]);
+  }, [authed, userId]);
 
   useEffect(() => {
     setMoreOpen(false);

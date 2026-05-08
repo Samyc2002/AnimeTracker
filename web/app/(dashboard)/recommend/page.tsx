@@ -3,8 +3,8 @@
 import { useTitle } from '@/lib/useTitle';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { enqueueSnackbar } from 'notistack';
+import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { buildFiltersFromAnswers } from '@/lib/taste-profile';
@@ -21,6 +21,7 @@ function RecommendPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
+  const { userId } = useAuth();
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [profile, setProfile] = useState<TasteProfile | null>(null);
@@ -33,12 +34,11 @@ function RecommendPage() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
+        if (!userId) throw new Error('Not authenticated');
         const res = await fetch('/api/taste-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
+          body: JSON.stringify({ userId }),
         });
         const data = await res.json();
         if (data.insufficient) {
@@ -54,19 +54,17 @@ function RecommendPage() {
       }
     }
     loadProfile();
-  }, []);
+  }, [userId]);
 
   const fetchRecommendations = useCallback(async () => {
-    if (!profile) return;
+    if (!profile || !userId) return;
     setPhase('searching');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
       const filters = buildFiltersFromAnswers(profile, answers);
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, filters }),
+        body: JSON.stringify({ userId, filters }),
       });
       const data = await res.json();
       const media = sfwMode
@@ -78,7 +76,7 @@ function RecommendPage() {
       enqueueSnackbar('Failed to get recommendations', { variant: 'error' });
       setPhase('quiz');
     }
-  }, [profile, answers, sfwMode]);
+  }, [profile, answers, sfwMode, userId]);
 
   function selectAnswer(questionId: string, value: string) {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));

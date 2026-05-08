@@ -3,8 +3,8 @@
 import { useTitle } from '@/lib/useTitle';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { enqueueSnackbar } from 'notistack';
+import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import RequireAuth from '@/components/RequireAuth';
@@ -24,7 +24,7 @@ function BuddiesPage() {
   const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
-  const [userId, setUserId] = useState('');
+  const { userId } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<BuddyProfile[]>([]);
   const [searching, setSearching] = useState(false);
@@ -47,14 +47,9 @@ function BuddiesPage() {
   }, []);
 
   useEffect(() => {
-    async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUserId(user.id);
-      loadBuddies(user.id);
-    }
-    init();
-  }, [loadBuddies]);
+    if (!userId) return;
+    loadBuddies(userId);
+  }, [loadBuddies, userId]);
 
   async function handleSearch() {
     if (searchQuery.length < 2) return;
@@ -72,6 +67,7 @@ function BuddiesPage() {
   }
 
   async function sendRequest(username: string) {
+    if (!userId) return;
     try {
       const res = await fetch('/api/buddies', {
         method: 'POST',
@@ -93,6 +89,7 @@ function BuddiesPage() {
   }
 
   async function respondToRequest(buddyId: string, action: 'accept' | 'decline') {
+    if (!userId) return;
     try {
       await fetch(`/api/buddies/${buddyId}`, {
         method: 'PATCH',
@@ -107,6 +104,7 @@ function BuddiesPage() {
   }
 
   async function removeBuddy(buddyId: string) {
+    if (!userId) return;
     try {
       await fetch(`/api/buddies/${buddyId}`, {
         method: 'DELETE',

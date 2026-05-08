@@ -108,4 +108,40 @@ chrome.storage.local.set({ lastPollTimestamp: 0, airingCache: {}, notifications:
 ```bash
 cd web && npm run dev
 ```
-Requires Appwrite Cloud project + `.env.local` configured. See `.env.local.example` for all required variables.
+Requires Supabase project + `.env.local` configured. See `.env.local.example` for all required variables.
+
+## Admin Scripts
+
+Scripts are in `scripts/` (gitignored). All require `SUPABASE_SERVICE_KEY` env var.
+
+### Delete a user
+```bash
+cd scripts
+SUPABASE_SERVICE_KEY="your-key" node delete-user.js user@example.com
+# or by user ID:
+SUPABASE_SERVICE_KEY="your-key" node delete-user.js d6d09e7c-f04e-4190-85b5-6975746a2a49
+```
+Prints a summary of all records to delete, asks for confirmation, then deletes in FK-safe order. Auto-discovers all user-related tables via `get_user_fk_tables()` RPC (falls back to hardcoded list if RPC not installed).
+
+### Generate badge placeholders
+```bash
+node scripts/generate-badge-placeholders.js
+```
+Creates 256x256 placeholder PNGs in `web/public/badges/` for each achievement. Skips files that already exist.
+
+### Migrate users from Appwrite backup
+```bash
+cd scripts
+SUPABASE_SERVICE_KEY="your-key" node migrate_users_to_supabase.js
+```
+
+## Feature Flags
+
+In `web/lib/feature-flags.ts`:
+
+- **`ACHIEVEMENTS_UI_VISIBLE`** (`false`) — Controls all achievement UI surfaces except Founding Member. When `false`: achievements page hidden, achievement notifications filtered, progress bars hidden. The engine still runs and accumulates progress silently.
+- **`FOUNDING_MEMBER_ENABLED`** (`true`) — Controls the Founding Member badge specifically: awareness banner, badge on profile, achievement notification for founding member only.
+
+## Badge Asset Convention
+
+Badge images live in `web/public/badges/[asset_name].png`. The database stores only the `asset_name` (e.g., `founder_badge`), never the full path. Use `getBadgeUrl(assetName)` from `web/lib/achievements/badge-url.ts` to resolve the full URL.

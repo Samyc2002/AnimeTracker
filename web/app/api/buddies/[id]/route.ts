@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { fireAchievementEvent } from '@/lib/achievements/engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,9 @@ export async function PATCH(
           type: 'buddy_accept',
           created_at: new Date().toISOString(),
         });
+
+      fireAchievementEvent(userId, 'buddy_accept', supabase).catch(() => {});
+      fireAchievementEvent(doc.sender_id as string, 'buddy_accept', supabase).catch(() => {});
     }
 
     return NextResponse.json({ success: true, status: newStatus });
