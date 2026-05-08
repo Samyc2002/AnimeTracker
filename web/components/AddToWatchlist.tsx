@@ -8,6 +8,7 @@ import { enqueueSnackbar } from 'notistack';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { backfillSeriesId } from '@/lib/series-resolver';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
 
@@ -54,6 +55,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         if (error) throw error;
         setCurrentStatus(status);
         enqueueSnackbar(`Status changed to ${status}`, { variant: 'success' });
+        fireClientAchievementEvent(userId, 'status_change');
       } else {
         const entry = mediaToWatchlistEntry(media);
         const { data: doc, error } = await supabase
@@ -70,6 +72,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         setAdded(true);
         setCurrentStatus(status);
         enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
+        fireClientAchievementEvent(userId, 'watchlist_add');
         backfillSeriesId(doc.id, media.id, async (id, data) => {
           await supabase.from('watchlist_entries').update(data).eq('id', id);
         }).catch(() => {});

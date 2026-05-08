@@ -4,6 +4,49 @@ type EvalResult = { progress: number; target: number };
 type Evaluator = (userId: string, config: Record<string, unknown>, supabase: SupabaseClient) => Promise<EvalResult>;
 
 const evaluators: Record<string, Evaluator> = {
+  founding_member_check: async (userId, config, supabase) => {
+    const maxMembers = (config.max_members as number) || 100;
+    const minWatchlist = (config.min_watchlist as number) || 3;
+
+    try {
+      const { data: existing } = await supabase
+        .from('user_achievements')
+        .select('unlocked')
+        .eq('user_id', userId)
+        .eq('achievement_id', 'founding_member')
+        .limit(1);
+      if (existing && existing.length > 0 && existing[0].unlocked) {
+        return { progress: 1, target: 1 };
+      }
+
+      const { data: counterRow } = await supabase
+        .from('founding_member_config')
+        .select('count, max_members')
+        .eq('id', 'counter')
+        .single();
+      if (!counterRow || (counterRow.count as number) >= maxMembers) {
+        return { progress: 0, target: 1 };
+      }
+
+      const { count: wlCount } = await supabase
+        .from('watchlist_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+      if ((wlCount || 0) < minWatchlist) {
+        return { progress: 0, target: 1 };
+      }
+
+      await supabase
+        .from('founding_member_config')
+        .update({ count: (counterRow.count as number) + 1 })
+        .eq('id', 'counter');
+
+      return { progress: 1, target: 1 };
+    } catch {
+      return { progress: 0, target: 1 };
+    }
+  },
+
   account_created_before: async (userId, config, supabase) => {
     const cutoff = config.date as string;
     try {

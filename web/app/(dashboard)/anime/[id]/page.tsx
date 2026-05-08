@@ -17,6 +17,7 @@ import AddPrequels from '@/components/AddPrequels';
 import RecommendToBuddy from '@/components/RecommendToBuddy';
 import EpisodeGrid from '@/components/EpisodeGrid';
 import type { AnimeDetail } from '@/lib/types';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   RELEASING: { label: 'Airing', className: 'bg-emerald-900 text-emerald-300' },
@@ -192,6 +193,7 @@ export default function AnimeDetailPage() {
         if (toMark.length > 1) {
           enqueueSnackbar(`Marked episodes 1-${ep} as watched`, { variant: 'success' });
         }
+        if (userId) fireClientAchievementEvent(userId, 'episode_watched');
       }
     } catch {
       enqueueSnackbar('Failed to update episode', { variant: 'error' });

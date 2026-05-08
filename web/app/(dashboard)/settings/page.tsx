@@ -12,6 +12,7 @@ import { AVATAR_OPTIONS } from '@/lib/avatars';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 
 interface ProfileDoc {
   id: string;
@@ -194,6 +195,7 @@ function SettingsPage() {
         social_reddit: socialReddit || null,
       }).eq('id', profileDocId);
       enqueueSnackbar('Profile saved!', { variant: 'success' });
+      if (userId) fireClientAchievementEvent(userId, 'profile_update');
     } catch (err) {
       enqueueSnackbar(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`, { variant: 'error' });
     }

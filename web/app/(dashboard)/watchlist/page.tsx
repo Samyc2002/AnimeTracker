@@ -12,6 +12,7 @@ import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
 import RequireAuth from '@/components/RequireAuth';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import type { WatchStatus } from '@/lib/types';
 
 function upgradeImageUrl(url: string): string {
@@ -219,6 +220,7 @@ function WatchlistPage() {
   async function updateWatchStatus(entry: WatchlistDoc, newStatus: WatchStatus) {
     await supabase.from('watchlist_entries').update({ watch_status: newStatus }).eq('id', entry.id);
     enqueueSnackbar(`Status changed to ${newStatus}`, { variant: 'success' });
+    if (userId) fireClientAchievementEvent(userId, 'status_change');
     setSelectedFolder(null);
     loadWatchlist();
   }

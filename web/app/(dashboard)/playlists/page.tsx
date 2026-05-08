@@ -11,6 +11,7 @@ import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 
 interface PlaylistDoc {
   id: string;
@@ -85,6 +86,7 @@ function PlaylistsPage() {
       setNewDescription('');
       loadPlaylists();
       enqueueSnackbar('Playlist created', { variant: 'success' });
+      if (userId) fireClientAchievementEvent(userId, 'playlist_create');
     } catch {
       enqueueSnackbar('Failed to create playlist', { variant: 'error' });
     }
