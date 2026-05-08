@@ -10,15 +10,15 @@ import type { AniListMedia } from '@/lib/types';
 
 function CarouselStrip({ items, prefix }: { items: AniListMedia[]; prefix: string }) {
   return (
-    <div className="flex gap-4 shrink-0" aria-hidden={prefix !== 'a'}>
+    <div className="flex gap-3 shrink-0" aria-hidden={prefix !== 'a'}>
       {items.map((anime, i) => (
-        <div key={`${prefix}-${anime.id}-${i}`} className="flex-shrink-0 w-40 sm:w-44">
-          <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden">
+        <div key={`${prefix}-${anime.id}-${i}`} className="flex-shrink-0 w-20">
+          <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
               alt={anime.title.english || anime.title.romaji}
-              className="absolute inset-0 w-full h-full object-cover opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-300"
+              className="absolute inset-0 w-full h-full object-cover opacity-60 hover:opacity-90 hover:scale-105 transition-all duration-300"
               draggable={false}
             />
           </div>
@@ -69,13 +69,13 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
   }, [items]);
 
   return (
-    <div className="relative mx-auto pb-12">
+    <div className="relative">
       <div ref={containerRef} className={`relative overflow-hidden transition-opacity duration-700 ${ready ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-r from-[#0b0e14] to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-l from-[#0b0e14] to-transparent z-10 pointer-events-none" />
         <div
           ref={trackRef}
-          className={`flex gap-4 w-max hover:[animation-play-state:paused] ${ready ? 'carousel-scroll' : ''}`}
+          className={`flex gap-3 w-max hover:[animation-play-state:paused] ${ready ? 'carousel-scroll' : ''}`}
           style={{ '--carousel-offset': offset } as React.CSSProperties}
         >
           <CarouselStrip items={items} prefix="a" />
@@ -83,7 +83,6 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
           <CarouselStrip items={items} prefix="c" />
         </div>
       </div>
-      <p className="text-center text-xs text-gray-600 mt-4">Trending on AniList right now</p>
     </div>
   );
 }
@@ -91,33 +90,33 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
 const FEATURES = [
   {
     icon: '📋',
-    title: 'Track Your Watchlist',
-    description: 'Organize anime with statuses — Watching, Planned, Completed, or Dropped. Never lose track of what you\'re watching.',
+    title: 'Watchlist with episode tracking',
+    description: 'Watching, Planned, Completed, Dropped — plus per-episode checkboxes so you always know exactly where you left off.',
   },
   {
     icon: '📅',
-    title: 'Airing Schedule',
-    description: 'See what\'s airing this week in a clean day-by-day grid. Track new episodes the moment they drop.',
+    title: 'Airing schedule',
+    description: 'A day-by-day grid of what\'s airing this season. Get browser notifications when new episodes drop for shows on your list.',
   },
   {
     icon: '🔗',
-    title: 'AniList Sync',
-    description: 'Already tracking on AniList? Connect your account and import your entire watchlist in one click.',
+    title: 'AniList & Kitsu import',
+    description: 'Already tracking elsewhere? Connect AniList or enter your Kitsu username to pull your entire library in one shot.',
   },
   {
     icon: '🎵',
-    title: 'Shareable Playlists',
-    description: 'Curate themed anime collections and share them with friends via a public link.',
+    title: 'Shareable playlists',
+    description: 'Build themed collections — gateway anime, underrated gems, comfort rewatches — and share them with a public link.',
   },
   {
     icon: '🧩',
-    title: 'Chrome Extension',
-    description: 'Quick access from any tab — track anime, get airing notifications, and sync with the web app.',
+    title: 'Chrome extension',
+    description: 'Track shows, check airing times, and get notifications without leaving whatever you\'re already browsing.',
   },
   {
-    icon: '👤',
-    title: 'Public Profiles',
-    description: 'Share your taste with the world. Show off your watchlist and stats with a shareable profile link.',
+    icon: '👥',
+    title: 'Buddy system',
+    description: 'Add friends, see what they\'re watching, and recommend shows to each other directly from any anime page.',
   },
 ];
 
@@ -200,104 +199,123 @@ export default function LandingPage() {
       </nav>
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden pb-8">
+        {/* Viewport 1 — Hero: tagline + carousel band + single CTA */}
+        <section className="relative overflow-hidden">
           <div className="absolute top-20 left-1/4 w-72 h-72 bg-teal-500/5 rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
 
-          <div className="relative max-w-4xl mx-auto px-6 py-24 sm:py-32 text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-100 leading-tight mb-6">
+          <div className="relative max-w-4xl mx-auto px-6 pt-20 pb-0 text-center">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-100 leading-tight mb-5">
               Your Anime,{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
                 Organized
               </span>
             </h1>
-            <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-8">
+            <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto">
               Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.
             </p>
-            <div className="w-full max-w-3xl mx-auto mb-10 rounded-2xl overflow-hidden border border-[#253040] px-2">
-              <iframe
-                src="https://app.arcade.software/share/JVAbYM1R0pJjUvwY2pQb?embed&show_title=true&animated_cursor=true&chat=false"
-                title="Anime Tracker Demo"
-                frameBorder="0"
-                loading="lazy"
-                allowFullScreen
-                allow="clipboard-write"
-                className="w-full aspect-[16/9] rounded-lg"
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {loggedIn ? (
-                <Link
-                  href="/watchlist"
-                  className="px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base sm:text-lg transition-colors"
-                >
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/signup"
-                    className="px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base sm:text-lg transition-colors"
-                  >
-                    Get Started
-                  </Link>
-                  <Link
-                    href="/login"
-                    className="px-6 sm:px-8 py-2.5 sm:py-3 bg-[#141925] hover:bg-[#1c2333] text-gray-300 rounded-lg font-semibold text-base sm:text-lg border border-[#253040] transition-colors"
-                  >
-                    Sign In
-                  </Link>
-                </>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
-              <a
-                href="https://chromewebstore.google.com/detail/anime-tracker/biidimfpepakgljgokmoiljgakehbhod"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 bg-[#141925] hover:bg-[#1c2333] text-gray-400 rounded-lg text-sm font-medium border border-[#253040] transition-colors inline-flex items-center gap-1.5"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <circle cx="12" cy="12" r="4" />
-                  <line x1="21.17" y1="8" x2="12" y2="8" />
-                  <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
-                  <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
-                </svg>
-                Chrome Extension
-              </a>
-              <a
-                href="https://discord.gg/AtDUykhnG4"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-[#8b9eff] rounded-lg text-sm font-medium border border-[#5865F2]/30 transition-colors inline-flex items-center gap-1.5"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
-                </svg>
-                Discord
-              </a>
-              <a
-                href="https://www.producthunt.com/products/anime-tracker?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-anime-tracker"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <img
-                  alt="Anime Tracker on Product Hunt"
-                  width={180}
-                  height={40}
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark"
-                  className="h-[36px] w-auto"
-                />
-              </a>
-            </div>
           </div>
 
-          {/* Trending preview — inside hero for seamless gradient */}
+          {/* Carousel band */}
           {trending.length > 0 && (
-            <TrendingCarousel items={trending} />
+            <div className="relative mt-4 mb-4 h-[112px] overflow-hidden">
+              <TrendingCarousel items={trending} />
+            </div>
           )}
+
+          {/* Single primary CTA */}
+          <div className="relative text-center pt-2 pb-6">
+            {loggedIn ? (
+              <Link
+                href="/watchlist"
+                className="inline-block px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base transition-colors"
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link
+                href="/signup"
+                className="inline-block px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base transition-colors"
+              >
+                Get Started — it&apos;s free
+              </Link>
+            )}
+          </div>
+        </section>
+
+        {/* Viewport 2 — Proof: demo + secondary CTAs */}
+        <section className="max-w-3xl mx-auto px-6 pb-16">
+          <div className="rounded-2xl px-2 overflow-hidden border border-[#253040]">
+            <iframe
+              src="https://app.arcade.software/share/JVAbYM1R0pJjUvwY2pQb?embed&show_title=true&animated_cursor=true&chat=false"
+              title="Anime Tracker Demo"
+              frameBorder="0"
+              loading="lazy"
+              allowFullScreen
+              allow="clipboard-write"
+              className="w-full aspect-[16/9]"
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <a
+              href="https://chromewebstore.google.com/detail/anime-tracker/biidimfpepakgljgokmoiljgakehbhod"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2 bg-[#141925] hover:bg-[#1c2333] text-gray-300 rounded-lg text-sm font-medium border border-[#253040] transition-colors inline-flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="4" />
+                <line x1="21.17" y1="8" x2="12" y2="8" />
+                <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
+                <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
+              </svg>
+              Chrome Extension
+            </a>
+            <a
+              href="https://discord.gg/AtDUykhnG4"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2 bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-[#8b9eff] rounded-lg text-sm font-medium border border-[#5865F2]/30 transition-colors inline-flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
+              </svg>
+              Discord
+            </a>
+            <a
+              href="https://www.producthunt.com/products/anime-tracker?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-anime-tracker"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                alt="Anime Tracker on Product Hunt"
+                width={180}
+                height={40}
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1133474&theme=dark"
+                className="h-[34px] w-auto"
+              />
+            </a>
+          </div>
+        </section>
+
+        {/* Why this app */}
+        <section className="max-w-2xl mx-auto px-6 py-16">
+          <h2 className="text-2xl font-bold text-gray-200 mb-8">Why I built this</h2>
+          <div className="space-y-5 text-gray-400 leading-relaxed">
+            <p>
+              I&apos;ve been watching anime for over a decade. The kind of fan who has favorite studios, follows seasonal releases, and rewatches Death Note every couple of years.
+            </p>
+            <p>
+              When my completed list crossed a few hundred, I started losing track. Sequels would air for shows I&apos;d loved years ago and I&apos;d find out by accident. Episode tracking lived across three different apps. Trying to figure out what to watch next meant scrolling through a wall of similar-looking titles.
+            </p>
+            <p className="text-gray-300 font-medium">So I built what I wanted to use.</p>
+            <p>
+              I&apos;m not building this to monetize you. I&apos;m building it because I love anime, I love watching anime with friends, and I wanted a place where fans like me could keep up with what they&apos;re watching without the friction. The core app stays free. If I ever charge for anything down the line, it&apos;ll be cosmetic stuff — skins, profile themes, that sort of thing — never features that matter.
+            </p>
+            <p>If you watch a lot of anime, this was built for you. Hope you stick around.</p>
+            <p className="text-gray-500 text-sm pt-2">— Samriddha</p>
+          </div>
         </section>
 
         {/* Features */}
