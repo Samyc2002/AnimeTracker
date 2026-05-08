@@ -50,30 +50,64 @@ export async function POST(req: NextRequest) {
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const oneDayAgo = now - 86400;
+    const threeDaysAgo = now - 3 * 86400;
 
-    const anilistRes = await fetch(ANILIST_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: AIRING_QUERY,
-        variables: { mediaIds, from: oneDayAgo, to: now },
-      }),
-    });
+    let schedules: { mediaId: number; episode: number; airingAt: number }[] = [];
 
-    if (!anilistRes.ok) {
-      pollCache.delete(userId);
-      return NextResponse.json({ error: 'AniList API error' }, { status: 502 });
+    try {
+      const anilistRes = await fetch(ANILIST_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: AIRING_QUERY,
+          variables: { mediaIds, from: threeDaysAgo, to: now },
+        }),
+      });
+
+      if (anilistRes.ok) {
+        const anilistData = await anilistRes.json();
+        schedules = anilistData.data?.Page?.airingSchedules || [];
+      }
+    } catch {
+      // AniList down — try Jikan fallback
     }
 
-    const anilistData = await anilistRes.json();
-    const schedules = anilistData.data?.Page?.airingSchedules || [];
+    if (schedules.length === 0) {
+      try {
+        for (const doc of (watchlistDocs || []).slice(0, 20)) {
+          const malId = (doc.id_mal as number) || (doc.media_id as number);
+          const jikanRes = await fetch(`https://api.jikan.moe/v4/anime/${malId}`);
+          if (!jikanRes.ok) continue;
+          const jikanData = await jikanRes.json();
+          const airing = jikanData.data?.airing;
+          if (airing && jikanData.data?.episodes) {
+            const latestEp = jikanData.data.episodes;
+            const broadcastTime = jikanData.data?.broadcast?.time;
+            if (broadcastTime) {
+              schedules.push({
+                mediaId: doc.media_id as number,
+                episode: latestEp,
+                airingAt: now - 3600,
+              });
+            }
+          }
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      } catch {
+        // Jikan also failed — give up
+      }
+    }
+
+    if (schedules.length === 0) {
+      pollCache.delete(userId);
+      return NextResponse.json({ created: 0, provider_down: true });
+    }
 
     const { data: existingDocs, error: existingError } = await supabase
       .from('notifications')
       .select()
       .eq('user_id', userId)
-      .gt('created_at', new Date(oneDayAgo * 1000).toISOString())
+      .gt('created_at', new Date(threeDaysAgo * 1000).toISOString())
       .limit(500);
 
     if (existingError) throw existingError;
