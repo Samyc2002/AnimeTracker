@@ -50,8 +50,17 @@ export default function AchievementSection() {
         className="flex items-center gap-1.5 rounded-full px-1.5 py-1 hover:bg-[#141925] transition-colors cursor-pointer"
       >
         {recentEarned.map((a) => (
-          <div key={a.id} className="w-7 h-7 rounded-full overflow-hidden border border-[#253040]">
-            <Image src={getBadgeUrl(a.asset_name)} alt={a.name} width={28} height={28} className="w-full h-full object-cover" unoptimized />
+          <div key={a.id} className="group/ach relative">
+            <div className="w-7 h-7 rounded-full overflow-hidden border border-[#253040]">
+              <Image src={getBadgeUrl(a.asset_name)} alt={a.name} width={28} height={28} className="w-full h-full object-cover" unoptimized />
+            </div>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0b0e14] border border-[#253040] rounded-full opacity-0 group-hover/ach:opacity-100 transition-opacity pointer-events-none z-20 flex items-stretch place-items-center w-max">
+              <Image src={getBadgeUrl(a.asset_name)} alt={a.name} width={80} height={80} className="p-2 h-20 object-cover flex-shrink-0" style={{ borderRadius: '11px 0 0 11px' }} unoptimized />
+              <div className="pr-3 py-2.5 flex flex-col justify-center w-36">
+                <p className="text-[11px] font-semibold text-gray-200 leading-tight">{a.name}</p>
+                <p className="text-[10px] text-gray-400 mt-1 leading-snug overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{a.description}</p>
+              </div>
+            </div>
           </div>
         ))}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-500 ml-0.5">
