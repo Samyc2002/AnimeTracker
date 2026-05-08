@@ -188,11 +188,11 @@ function NotificationsPage() {
               }}
             >
               <Image
-                src={upgradeImageUrl(notif.cover_url) || '/placeholder.png'}
+                src={notif.type === 'achievement' ? notif.cover_url : (upgradeImageUrl(notif.cover_url) || '/placeholder.png')}
                 alt=""
                 width={48}
-                height={68}
-                className="rounded object-cover flex-shrink-0"
+                height={notif.type === 'achievement' ? 48 : 68}
+                className={`rounded flex-shrink-0 ${notif.type === 'achievement' ? 'object-contain' : 'object-cover'}`}
                 unoptimized
               />
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
