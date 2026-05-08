@@ -327,22 +327,33 @@ function SettingsPage() {
                   onClick={async () => {
                     if (!userId) return;
                     setKitsuImporting(true);
-                    setKitsuImportResult(null);
+                    setKitsuImportResult('Fetching your Kitsu library...');
                     try {
+                      const controller = new AbortController();
+                      const timeout = setTimeout(() => controller.abort(), 55000);
                       const res = await fetch('/api/import-kitsu', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId }),
+                        signal: controller.signal,
                       });
+                      clearTimeout(timeout);
                       const data = await res.json();
                       if (!res.ok) {
-                        setKitsuImportResult(`Import failed: ${data.error}`);
+                        const msg = data.possiblePrivate
+                          ? `${data.error} If this user's library is private on Kitsu, make it public first at kitsu.app/settings/privacy.`
+                          : `Import failed: ${data.error}`;
+                        setKitsuImportResult(msg);
                       } else {
-                        setKitsuImportResult(`Imported ${data.created} new, updated ${data.updated} existing anime.`);
+                        setKitsuImportResult(`Imported ${data.created} new, updated ${data.updated} existing (${data.total} total from Kitsu).`);
                         enqueueSnackbar(`Imported ${data.created} new, updated ${data.updated} existing anime`, { variant: 'success' });
                       }
                     } catch (err) {
-                      setKitsuImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                      if (err instanceof DOMException && err.name === 'AbortError') {
+                        setKitsuImportResult('Import is taking longer than expected. Large libraries may need a few tries. Please try again.');
+                      } else {
+                        setKitsuImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                      }
                     }
                     setKitsuImporting(false);
                   }}

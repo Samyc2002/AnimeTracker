@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     fireAchievementEvent(userId, 'import_complete', supabase).catch(() => {});
+    fireAchievementEvent(userId, 'watchlist_add', supabase).catch(() => {});
 
     return NextResponse.json({ created, updated });
   } catch (err) {

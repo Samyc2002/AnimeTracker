@@ -5,6 +5,7 @@ import { mediaToWatchlistEntry } from '@/lib/anime-provider';
 import { fireAchievementEvent } from '@/lib/achievements/engine';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,13 +33,16 @@ export async function POST(req: NextRequest) {
 
     const kitsuUserId = await fetchKitsuUserId(kitsuUsername);
     if (!kitsuUserId) {
-      return NextResponse.json({ error: `Kitsu user "${kitsuUsername}" not found. Check the username and try again. Kitsu may also be temporarily down.` }, { status: 404 });
+      return NextResponse.json({ error: `Kitsu user "${kitsuUsername}" not found. Check the username and try again.` }, { status: 404 });
     }
 
     const kitsuEntries = await fetchKitsuLibrary(kitsuUserId);
 
     if (kitsuEntries.length === 0) {
-      return NextResponse.json({ error: 'No anime found in Kitsu library. The library may be empty or Kitsu may be temporarily unavailable.' }, { status: 404 });
+      return NextResponse.json({
+        error: 'No anime found in Kitsu library. The library may be private, empty, or Kitsu may be temporarily unavailable.',
+        possiblePrivate: true,
+      }, { status: 404 });
     }
 
     const { data: existingDocs } = await supabase
@@ -72,32 +76,20 @@ export async function POST(req: NextRequest) {
       }
 
       if (entry.progress > 0) {
-        const { data: watchedDocs } = await supabase
-          .from('watched_episodes')
-          .select('episode_number')
-          .eq('user_id', userId)
-          .eq('media_id', entry.media.id)
-          .limit(5000);
-
-        const watchedEps = new Set(
-          (watchedDocs || []).map((d) => d.episode_number as number)
-        );
-
-        for (let ep = 1; ep <= entry.progress; ep++) {
-          if (!watchedEps.has(ep)) {
-            await supabase.from('watched_episodes').upsert({
-              user_id: userId,
-              media_id: entry.media.id,
-              episode_number: ep,
-            });
-          }
-        }
+        const rows = Array.from({ length: entry.progress }, (_, i) => ({
+          user_id: userId,
+          media_id: entry.media.id,
+          episode_number: i + 1,
+        }));
+        await supabase.from('watched_episodes').upsert(rows, { onConflict: 'user_id,media_id,episode_number' });
       }
     }
 
+    // Fire both events so founding_member and importer badges trigger
     fireAchievementEvent(userId, 'import_complete', supabase).catch(() => {});
+    fireAchievementEvent(userId, 'watchlist_add', supabase).catch(() => {});
 
-    return NextResponse.json({ created, updated });
+    return NextResponse.json({ created, updated, total: kitsuEntries.length });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Import failed' },
