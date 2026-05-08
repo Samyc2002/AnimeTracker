@@ -180,7 +180,14 @@ export default async (req: Request) => {
       }
     }
 
-    await chunkUpsert(supabase, "watchlist_entries", toInsert, "user_id,media_id");
+    // Insert watchlist entries in chunks (no upsert — no unique constraint on user_id+media_id)
+    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+      const { error } = await supabase.from("watchlist_entries").insert(chunk);
+      if (error) console.error(`watchlist insert chunk ${i} error:`, error.message);
+    }
+
+    // Upsert episodes — unique constraint exists on (user_id, media_id, episode_number)
     await chunkUpsert(supabase, "watched_episodes", episodeRows, "user_id,media_id,episode_number");
 
     console.log(`Kitsu import done for ${userId}: ${toInsert.length} created, total ${kitsuEntries.length}`);
