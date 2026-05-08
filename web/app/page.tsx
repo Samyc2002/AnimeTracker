@@ -81,6 +81,8 @@ function TrendingCarousel({ items }: { items: AniListMedia[] }) {
           <CarouselStrip items={items} prefix="a" />
           <CarouselStrip items={items} prefix="b" />
           <CarouselStrip items={items} prefix="c" />
+          <CarouselStrip items={items} prefix="d" />
+          <CarouselStrip items={items} prefix="e" />
         </div>
       </div>
     </div>
