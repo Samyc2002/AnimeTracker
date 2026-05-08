@@ -13,6 +13,7 @@ import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
+import { useProviderHealth } from '@/lib/provider-status';
 
 interface ProfileDoc {
   id: string;
@@ -39,6 +40,7 @@ function SettingsPage() {
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { userId, userEmail } = useAuth();
+  const providerHealth = useProviderHealth();
   const searchParams = useSearchParams();
   const [language, setLanguage] = useState('English');
   const [saving, setSaving] = useState(false);
@@ -263,10 +265,15 @@ function SettingsPage() {
                 </span>
               </div>
 
+              {providerHealth.checked && !providerHealth.anilist && (
+                <p className="text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded-lg px-3 py-2">
+                  AniList is currently down. Import is temporarily unavailable.
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={importWatchlist}
-                  disabled={importing}
+                  disabled={importing || (providerHealth.checked && !providerHealth.anilist)}
                   className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
                 >
                   {importing ? 'Importing...' : 'Import Watchlist'}
@@ -310,6 +317,11 @@ function SettingsPage() {
                 </span>
               </div>
 
+              {providerHealth.checked && !providerHealth.kitsu && (
+                <p className="text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded-lg px-3 py-2">
+                  Kitsu is currently down. Import is temporarily unavailable.
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
@@ -334,7 +346,7 @@ function SettingsPage() {
                     }
                     setKitsuImporting(false);
                   }}
-                  disabled={kitsuImporting}
+                  disabled={kitsuImporting || (providerHealth.checked && !providerHealth.kitsu)}
                   className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
                 >
                   {kitsuImporting ? 'Importing...' : 'Import Watchlist'}

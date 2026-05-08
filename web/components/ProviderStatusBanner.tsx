@@ -1,31 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-interface ProviderStatus {
-  name: string;
-  up: boolean;
-}
+import { useState } from 'react';
+import { useProviderHealth } from '@/lib/provider-status';
 
 export default function ProviderStatusBanner() {
-  const [providers, setProviders] = useState<ProviderStatus[]>([]);
+  const health = useProviderHealth();
   const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    async function checkProviders() {
-      const results = await Promise.all([
-        checkAniList(),
-        checkJikan(),
-        checkKitsu(),
-      ]);
-      setProviders(results);
-    }
-    checkProviders();
-  }, []);
+  if (!health.checked || dismissed) return null;
+
+  const providers = [
+    { name: 'AniList', up: health.anilist },
+    { name: 'Jikan', up: health.jikan },
+    { name: 'Kitsu', up: health.kitsu },
+  ];
 
   const downProviders = providers.filter((p) => !p.up);
-
-  if (downProviders.length === 0 || dismissed) return null;
+  if (downProviders.length === 0) return null;
 
   const allDown = downProviders.length === providers.length;
   const names = downProviders.map((p) => p.name).join(', ');
@@ -60,39 +51,4 @@ export default function ProviderStatusBanner() {
       </button>
     </div>
   );
-}
-
-async function checkAniList(): Promise<ProviderStatus> {
-  try {
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: '{ Page(perPage:1) { media(type:ANIME) { id } } }' }),
-    });
-    return { name: 'AniList', up: res.ok };
-  } catch {
-    return { name: 'AniList', up: false };
-  }
-}
-
-async function checkJikan(): Promise<ProviderStatus> {
-  try {
-    const res = await fetch('https://api.jikan.moe/v4/anime/1');
-    const contentType = res.headers.get('content-type') || '';
-    return { name: 'Jikan', up: res.ok && contentType.includes('json') };
-  } catch {
-    return { name: 'Jikan', up: false };
-  }
-}
-
-async function checkKitsu(): Promise<ProviderStatus> {
-  try {
-    const res = await fetch('https://kitsu.io/api/edge/anime?page[limit]=1', {
-      headers: { 'Accept': 'application/vnd.api+json' },
-    });
-    const contentType = res.headers.get('content-type') || '';
-    return { name: 'Kitsu', up: res.ok && contentType.includes('json') };
-  } catch {
-    return { name: 'Kitsu', up: false };
-  }
 }
