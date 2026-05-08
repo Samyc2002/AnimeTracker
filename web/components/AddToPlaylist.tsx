@@ -124,7 +124,7 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
               <p className="text-xs text-gray-500">No playlists yet. Create one in the Playlists tab.</p>
             </div>
           ) : (
-            <div className="max-h-48 overflow-y-auto">
+            <div className="max-h-48 overflow-y-auto thin-scrollbar">
               {playlists.map((pl) => {
                 const ids: number[] = JSON.parse(pl.anime_ids || '[]');
                 const isIn = ids.includes(mediaId);

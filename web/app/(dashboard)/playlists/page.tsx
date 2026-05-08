@@ -336,7 +336,7 @@ function PlaylistEditor({
         </div>
 
         {searchResults.length > 0 && (
-          <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+          <div className="space-y-2 mb-6 max-h-60 overflow-y-auto thin-scrollbar">
             {searchResults.map((media) => {
               const inPlaylist = animeIds.includes(media.id);
               const mediaTitle = media.title.english || media.title.romaji;

@@ -13,6 +13,7 @@ import SfwToggle from '@/components/SfwToggle';
 import Footer from '@/components/Footer';
 import { getTheme } from '@/lib/theme';
 import BadgeSlots from '@/components/BadgeSlots';
+import AchievementSection from '@/components/AchievementSection';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Completed', 'Planned', 'Dropped'];
@@ -195,7 +196,10 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
               )}
             </div>
           )}
-          <BadgeSlots username={profile.username} />
+          <div className="flex items-center justify-center gap-1.5 flex-wrap mt-3">
+            <BadgeSlots username={profile.username} />
+            {authed && <AchievementSection />}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
