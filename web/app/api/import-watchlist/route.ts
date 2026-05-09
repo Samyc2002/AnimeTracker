@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       .from('watchlist_entries')
       .select('media_id, id')
       .eq('user_id', userId)
-      .limit(500);
+      .limit(5000);
 
     const existingMap = new Map(
       (existingDocs || []).map((d) => [d.media_id as number, d.id as string])
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
 
     let created = 0;
     let updated = 0;
+    let skipped = 0;
 
     for (const entry of anilistEntries) {
       const docData = {
@@ -57,43 +58,40 @@ export async function POST(req: NextRequest) {
       const existingDocId = existingMap.get(entry.media.id);
 
       if (existingDocId) {
+        // Entry exists — update metadata but preserve watch_status if already set
         await supabase.from('watchlist_entries').update(docData).eq('id', existingDocId);
         updated++;
       } else {
-        await supabase.from('watchlist_entries').insert(docData);
-        created++;
+        const { error } = await supabase.from('watchlist_entries').insert(docData);
+        if (error?.code === '23505') {
+          // Unique constraint violation — duplicate from a concurrent import
+          skipped++;
+        } else if (error) {
+          throw error;
+        } else {
+          created++;
+        }
       }
 
       if (entry.progress > 0) {
-        const { data: watchedDocs } = await supabase
-          .from('watched_episodes')
-          .select()
-          .eq('user_id', userId)
-          .eq('media_id', entry.media.id)
-          .limit(5000);
-
-        const watchedEps = new Set(
-          (watchedDocs || []).map((d) => d.episode_number as number)
-        );
-
-        for (let ep = 1; ep <= entry.progress; ep++) {
-          if (!watchedEps.has(ep)) {
-            await supabase.from('watched_episodes').upsert({
-              user_id: userId,
-              media_id: entry.media.id,
-              episode_number: ep,
-            });
-          }
-        }
+        const rows = Array.from({ length: entry.progress }, (_, i) => ({
+          user_id: userId,
+          media_id: entry.media.id,
+          episode_number: i + 1,
+        }));
+        await supabase.from('watched_episodes').upsert(rows, { onConflict: 'user_id,media_id,episode_number' });
       }
     }
+
+    // Record import timestamp for re-import warning
+    await supabase.from('profiles').update({ anilist_imported_at: new Date().toISOString() }).eq('user_id', userId);
 
     // Sequential — prevents race condition where both events unlock the same achievement before either write commits
     fireAchievementEvent(userId, 'import_complete', supabase)
       .then(() => fireAchievementEvent(userId, 'watchlist_add', supabase))
       .catch(() => {});
 
-    return NextResponse.json({ created, updated });
+    return NextResponse.json({ created, updated, skipped });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Import failed' },

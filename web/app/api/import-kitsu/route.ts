@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
 
     let created = 0;
     let updated = 0;
+    let skipped = 0;
 
     for (const entry of kitsuEntries) {
       const docData = {
@@ -71,8 +72,14 @@ export async function POST(req: NextRequest) {
         await supabase.from('watchlist_entries').update(docData).eq('id', existingDocId);
         updated++;
       } else {
-        await supabase.from('watchlist_entries').insert(docData);
-        created++;
+        const { error } = await supabase.from('watchlist_entries').insert(docData);
+        if (error?.code === '23505') {
+          skipped++;
+        } else if (error) {
+          throw error;
+        } else {
+          created++;
+        }
       }
 
       if (entry.progress > 0) {
@@ -85,11 +92,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fire both events so founding_member and importer badges trigger
-    fireAchievementEvent(userId, 'import_complete', supabase).catch(() => {});
-    fireAchievementEvent(userId, 'watchlist_add', supabase).catch(() => {});
+    // Record import timestamp for re-import warning
+    await supabase.from('profiles').update({ kitsu_imported_at: new Date().toISOString() }).eq('user_id', userId);
 
-    return NextResponse.json({ created, updated, total: kitsuEntries.length });
+    // Sequential — prevents race condition where both events unlock the same achievement before either write commits
+    fireAchievementEvent(userId, 'import_complete', supabase)
+      .then(() => fireAchievementEvent(userId, 'watchlist_add', supabase))
+      .catch(() => {});
+
+    return NextResponse.json({ created, updated, skipped, total: kitsuEntries.length });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Import failed' },

@@ -29,6 +29,8 @@ interface ProfileDoc {
   social_instagram?: string;
   social_reddit?: string;
   kitsu_username?: string;
+  anilist_imported_at?: string;
+  kitsu_imported_at?: string;
 }
 
 export default function SettingsPageGuarded() {
@@ -64,6 +66,8 @@ function SettingsPage() {
   const [kitsuConnected, setKitsuConnected] = useState(false);
   const [kitsuImporting, setKitsuImporting] = useState(false);
   const [kitsuImportResult, setKitsuImportResult] = useState<string | null>(null);
+  const [anilistImportedAt, setAnilistImportedAt] = useState<string | null>(null);
+  const [kitsuImportedAt, setKitsuImportedAt] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -83,7 +87,7 @@ function SettingsPage() {
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, display_language, anilist_user_id, username, display_name, is_public, hide_nsfw_public, avatar, social_twitter, social_discord, social_instagram, social_reddit, kitsu_username')
+        .select('id, display_language, anilist_user_id, username, display_name, is_public, hide_nsfw_public, avatar, social_twitter, social_discord, social_instagram, social_reddit, kitsu_username, anilist_imported_at, kitsu_imported_at')
         .eq('user_id', userId)
         .limit(1);
 
@@ -108,6 +112,8 @@ function SettingsPage() {
           setAnilistConnected(true);
           setAnilistUserId(profile.anilist_user_id);
         }
+        if (profile.anilist_imported_at) setAnilistImportedAt(profile.anilist_imported_at);
+        if (profile.kitsu_imported_at) setKitsuImportedAt(profile.kitsu_imported_at);
       } else {
         const { data: newProfile } = await supabase
           .from('profiles')
@@ -219,8 +225,10 @@ function SettingsPage() {
       if (!res.ok) {
         setImportResult(`Import failed: ${data.error}`);
       } else {
-        setImportResult(`Imported ${data.created} new, updated ${data.updated} existing anime.`);
-        enqueueSnackbar(`Imported ${data.created} new, updated ${data.updated} existing anime`, { variant: 'success' });
+        const skippedMsg = data.skipped > 0 ? ` ${data.skipped} skipped (already in your watchlist).` : '';
+        setImportResult(`Imported ${data.created} new, updated ${data.updated} existing.${skippedMsg}`);
+        setAnilistImportedAt(new Date().toISOString());
+        enqueueSnackbar(`Imported ${data.created} new, updated ${data.updated} existing`, { variant: 'success' });
       }
     } catch (err) {
       setImportResult(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -268,6 +276,11 @@ function SettingsPage() {
               {providerHealth.checked && !providerHealth.anilist && (
                 <p className="text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded-lg px-3 py-2">
                   AniList is currently down. Import is temporarily unavailable.
+                </p>
+              )}
+              {anilistImportedAt && (
+                <p className="text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/30 rounded-lg px-3 py-2">
+                  You imported on {new Date(anilistImportedAt).toLocaleDateString()}. Running again will update existing entries but may create duplicates for any entries added manually since then.
                 </p>
               )}
               <div className="flex gap-2">
@@ -322,6 +335,11 @@ function SettingsPage() {
                   Kitsu is currently down. Import is temporarily unavailable.
                 </p>
               )}
+              {kitsuImportedAt && (
+                <p className="text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/30 rounded-lg px-3 py-2">
+                  You imported on {new Date(kitsuImportedAt).toLocaleDateString()}. Running again will update existing entries but may create duplicates for any entries added manually since then.
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
@@ -337,6 +355,7 @@ function SettingsPage() {
                       // Background functions return 202 immediately
                       if (res.status === 202 || res.status === 200) {
                         setKitsuImportResult('Import started! Your anime will appear in your watchlist over the next minute. Refresh to check.');
+                        setKitsuImportedAt(new Date().toISOString());
                         enqueueSnackbar('Kitsu import started in background', { variant: 'success' });
                       } else {
                         let data: { error?: string; possiblePrivate?: boolean } = {};
