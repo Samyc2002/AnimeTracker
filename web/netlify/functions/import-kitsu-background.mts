@@ -98,7 +98,10 @@ export default async (req: Request) => {
 
         const existingId = existingMap.get(entry.media.id);
         if (existingId) {
-          await supabase.from("watchlist_entries").update(docData).eq("id", existingId);
+          // Don't overwrite watch_status — preserve what the user set in-app
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { watch_status: _ws, ...updateData } = docData;
+          await supabase.from("watchlist_entries").update(updateData).eq("id", existingId);
           updated++;
         } else {
           toInsert.push(docData);
