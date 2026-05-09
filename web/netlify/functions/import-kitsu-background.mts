@@ -60,73 +60,84 @@ export default async (req: Request) => {
       );
     }
 
-    // Resolve Kitsu IDs → canonical AniList IDs before writing
-    const kitsuIds = kitsuEntries.map((e) => e.media.id);
-    const resolutions = await resolveKitsuToAniList(kitsuIds);
-    const kitsuToAniList = new Map(resolutions.map((r) => [r.kitsuId, r.anilistId]));
-
     const { data: existingDocs } = await supabase
       .from("watchlist_entries")
       .select("media_id, id")
       .eq("user_id", userId)
-      .limit(5000);
+      .limit(10000);
 
     const existingMap = new Map(
       (existingDocs || []).map((d) => [d.media_id as number, d.id as string])
     );
 
-    const toInsert: Record<string, unknown>[] = [];
-    const episodeRows: Record<string, unknown>[] = [];
     let updated = 0;
     let skipped = 0;
+    let created = 0;
 
-    for (const entry of kitsuEntries) {
-      const canonicalAnilistId = kitsuToAniList.get(entry.media.id) ?? null;
-      const docData: Record<string, unknown> = {
-        ...mediaToWatchlistEntry(entry.media),
-        user_id: userId,
-        watch_status: entry.watchStatus,
-        import_source: "kitsu",
-        canonical_anilist_id: canonicalAnilistId,
-      };
+    // Process in chunks of 50 — resolve and write each chunk before moving on.
+    // This means partial progress is saved even if the function is interrupted.
+    for (let i = 0; i < kitsuEntries.length; i += CHUNK_SIZE) {
+      const chunk = kitsuEntries.slice(i, i + CHUNK_SIZE);
+      const chunkIds = chunk.map((e) => e.media.id);
 
-      const existingId = existingMap.get(entry.media.id);
-      if (existingId) {
-        await supabase.from("watchlist_entries").update(docData).eq("id", existingId);
-        updated++;
-      } else {
-        toInsert.push(docData);
-      }
+      const resolutions = await resolveKitsuToAniList(chunkIds);
+      const kitsuToAniList = new Map(resolutions.map((r) => [r.kitsuId, r.anilistId]));
 
-      if (entry.progress > 0) {
-        for (let ep = 1; ep <= entry.progress; ep++) {
-          episodeRows.push({ user_id: userId, media_id: entry.media.id, episode_number: ep });
+      const toInsert: Record<string, unknown>[] = [];
+      const episodeRows: Record<string, unknown>[] = [];
+
+      for (const entry of chunk) {
+        const canonicalAnilistId = kitsuToAniList.get(entry.media.id) ?? null;
+        const docData: Record<string, unknown> = {
+          ...mediaToWatchlistEntry(entry.media),
+          user_id: userId,
+          watch_status: entry.watchStatus,
+          import_source: "kitsu",
+          canonical_anilist_id: canonicalAnilistId,
+        };
+
+        const existingId = existingMap.get(entry.media.id);
+        if (existingId) {
+          await supabase.from("watchlist_entries").update(docData).eq("id", existingId);
+          updated++;
+        } else {
+          toInsert.push(docData);
+        }
+
+        if (entry.progress > 0) {
+          for (let ep = 1; ep <= entry.progress; ep++) {
+            episodeRows.push({ user_id: userId, media_id: entry.media.id, episode_number: ep });
+          }
         }
       }
-    }
 
-    // Insert new entries in chunks
-    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
-      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
-      const { error } = await supabase.from("watchlist_entries").insert(chunk);
-      if (error?.code === "23505") {
-        skipped += chunk.length;
-      } else if (error) {
-        console.error(`watchlist insert chunk ${i} error:`, error.message);
+      // Insert watchlist entries for this chunk
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from("watchlist_entries").insert(toInsert);
+        if (error?.code === "23505") {
+          skipped += toInsert.length;
+        } else if (error) {
+          console.error(`watchlist insert chunk ${i} error:`, error.message);
+        } else {
+          created += toInsert.length;
+        }
       }
+
+      // Upsert episodes for this chunk
+      if (episodeRows.length > 0) {
+        await chunkUpsert(supabase, "watched_episodes", episodeRows, "user_id,media_id,episode_number");
+      }
+
+      // Upsert series metadata for resolved entries in this chunk
+      const resolvedMedia = resolutions.filter((r) => r.media !== null).map((r) => r.media!);
+      if (resolvedMedia.length > 0) await upsertSeriesMetadataBatch(supabase, resolvedMedia);
+
+      console.log(`[Kitsu import] chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(kitsuEntries.length / CHUNK_SIZE)} done`);
     }
-
-    // Upsert episodes
-    await chunkUpsert(supabase, "watched_episodes", episodeRows, "user_id,media_id,episode_number");
-
-    // Batch upsert series metadata from resolved entries
-    const resolvedMedia = resolutions.filter((r) => r.media !== null).map((r) => r.media!);
-    if (resolvedMedia.length > 0) await upsertSeriesMetadataBatch(supabase, resolvedMedia);
 
     // Record import timestamp
     await supabase.from("profiles").update({ kitsu_imported_at: new Date().toISOString() }).eq("user_id", userId);
 
-    const created = toInsert.length - skipped;
     console.log(`Kitsu import done for ${userId}: ${created} created, ${updated} updated, ${skipped} skipped, total ${kitsuEntries.length}`);
     return new Response(
       JSON.stringify({ created, updated, skipped, total: kitsuEntries.length }),
