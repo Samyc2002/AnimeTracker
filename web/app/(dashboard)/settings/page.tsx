@@ -1,7 +1,7 @@
 'use client';
 
 import { useTitle } from '@/lib/useTitle';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
@@ -31,6 +31,152 @@ interface ProfileDoc {
   kitsu_username?: string;
   anilist_imported_at?: string;
   kitsu_imported_at?: string;
+}
+
+function CanonicalIdResolver({ userId, theme }: { userId: string | null; theme: ReturnType<typeof getTheme> }) {
+  const [running, setRunning] = useState(false);
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const [summary, setSummary] = useState<Record<string, number> | null>(null);
+  const [runLabel, setRunLabel] = useState('');
+  const logRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll log to bottom as lines arrive
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logLines]);
+
+  async function run(dryRun: boolean, scopeUserId: string | null) {
+    if (running) return;
+    setRunning(true);
+    setLogLines([]);
+    setSummary(null);
+    setRunLabel(`${dryRun ? 'Dry run' : 'Applied'} · ${scopeUserId ? 'you only' : 'all users'}`);
+
+    try {
+      const res = await fetch('/api/admin/resolve-canonical-ids', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun, userId: scopeUserId }),
+      });
+
+      if (!res.ok || !res.body) {
+        enqueueSnackbar('Resolver failed to start', { variant: 'error' });
+        setRunning(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() ?? '';
+        for (const part of parts) {
+          const line = part.replace(/^data: /, '').trim();
+          if (!line) continue;
+          try {
+            const msg: string = JSON.parse(line);
+            setLogLines((prev) => [...prev, msg]);
+            // Parse the final REPORT line into the summary card
+            if (msg.includes('REPORT ')) {
+              const json = msg.slice(msg.indexOf('REPORT ') + 7);
+              const parsed = JSON.parse(json);
+              setSummary(parsed);
+            }
+          } catch { /* malformed line, skip */ }
+        }
+      }
+
+      enqueueSnackbar(dryRun ? 'Dry run complete' : 'Resolution complete', { variant: 'success' });
+    } catch (err) {
+      enqueueSnackbar(`Resolver error: ${err instanceof Error ? err.message : 'Unknown'}`, { variant: 'error' });
+    }
+
+    setRunning(false);
+  }
+
+  const summaryKeys: Record<string, string> = {
+    resolved_anilist_direct: 'resolved anilist direct',
+    resolved_anilist_verified: 'resolved anilist verified',
+    resolved_kitsu: 'resolved kitsu',
+    unresolved: 'unresolved',
+    errors: 'errors',
+  };
+
+  return (
+    <div className="border-t border-[#253040] pt-6">
+      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Canonical ID Resolver</h2>
+      <p className="text-xs text-gray-600 mb-4">
+        Resolves <code className="text-gray-500">canonical_anilist_id</code> for watchlist entries that are missing it.
+        Run dry-run first to preview, then apply.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => run(true, userId)}
+          disabled={running}
+          className="px-4 py-2 bg-[#141925] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg border border-[#253040] font-medium disabled:opacity-50 transition-colors"
+        >
+          {running ? 'Running...' : 'Dry Run (you)'}
+        </button>
+        <button
+          onClick={() => run(false, userId)}
+          disabled={running}
+          className={`px-4 py-2 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
+        >
+          {running ? 'Running...' : 'Run (you only)'}
+        </button>
+        <button
+          onClick={() => run(false, null)}
+          disabled={running}
+          className="px-4 py-2 bg-amber-700/40 hover:bg-amber-700/60 text-amber-300 text-sm rounded-lg border border-amber-700/40 font-medium disabled:opacity-50 transition-colors"
+        >
+          {running ? 'Running...' : 'Run (all users)'}
+        </button>
+      </div>
+
+      {(logLines.length > 0 || running) && (
+        <div className="mt-4 space-y-3">
+          {runLabel && <p className="text-xs text-gray-500 font-medium">{runLabel} · {running ? 'in progress...' : 'done'}</p>}
+
+          {/* Live log */}
+          <div ref={logRef} className="bg-[#0b0e14] border border-[#253040] rounded-lg p-3 h-48 overflow-y-auto thin-scrollbar">
+            {logLines.map((line, i) => (
+              <p key={i} className={`text-[10px] font-mono leading-relaxed ${
+                line.includes('ERROR') || line.includes('FATAL') ? 'text-red-400' :
+                line.includes('checkpoint') || line.includes('DONE') || line.includes('REPORT') ? 'text-teal-400' :
+                line.includes('unresolved') ? 'text-amber-400' :
+                'text-gray-500'
+              }`}>{line}</p>
+            ))}
+            {running && <p className="text-[10px] font-mono text-gray-600 animate-pulse">▌</p>}
+          </div>
+
+          {/* Summary card — appears when REPORT line is parsed */}
+          {summary && (
+            <div className="bg-[#0b0e14] border border-[#253040] rounded-lg p-3 text-xs font-mono space-y-1">
+              {Object.entries(summaryKeys).map(([k, label]) => {
+                const v = summary[k] ?? 0;
+                return (
+                  <div key={k} className="flex gap-4">
+                    <span className="text-gray-500 w-48 shrink-0">{label}</span>
+                    <span className={
+                      k === 'unresolved' && v > 0 ? 'text-amber-400' :
+                      k === 'errors' && v > 0 ? 'text-red-400' :
+                      v > 0 ? 'text-gray-200' : 'text-gray-600'
+                    }>{v}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function SettingsPageGuarded() {
@@ -530,6 +676,7 @@ function SettingsPage() {
         </div>
 
         <SeriesBackfill />
+        <CanonicalIdResolver userId={userId} theme={theme} />
       </div>
 
       <div className="space-y-8">

@@ -12,10 +12,17 @@ query SearchAnime($search: String) {
       coverImage { extraLarge large medium }
       status
       episodes
-      nextAiringEpisode {
-        airingAt
-        episode
-      }
+      nextAiringEpisode { airingAt episode }
+      genres
+      tags { name rank }
+      studios(isMain: true) { nodes { name isMain } }
+      format
+      season
+      seasonYear
+      source
+      duration
+      averageScore
+      popularity
     }
   }
 }`;
@@ -103,7 +110,17 @@ query UserList($userId: Int) {
           status
           episodes
           isAdult
-      nextAiringEpisode { airingAt episode }
+          nextAiringEpisode { airingAt episode }
+          genres
+          tags { name rank }
+          studios(isMain: true) { nodes { name isMain } }
+          format
+          season
+          seasonYear
+          source
+          duration
+          averageScore
+          popularity
         }
       }
     }
@@ -125,9 +142,13 @@ query AnimeDetail($id: Int) {
     season
     seasonYear
     genres
+    tags { name rank }
     isAdult
+    format
+    source
     averageScore
-    studios(isMain: true) { nodes { name } }
+    popularity
+    studios(isMain: true) { nodes { name isMain } }
     nextAiringEpisode { airingAt episode timeUntilAiring }
     relations {
       edges {

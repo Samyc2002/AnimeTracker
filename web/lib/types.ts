@@ -17,6 +17,17 @@ export interface AniListMedia {
     airingAt: number;
     episode: number;
   } | null;
+  // Metadata fields — present when fetched via metadata-enriched queries
+  genres?: string[];
+  tags?: { name: string; rank: number }[];
+  studios?: { nodes: { name: string; isMain?: boolean }[] };
+  format?: string | null;
+  season?: string | null;
+  seasonYear?: number | null;
+  source?: string | null;
+  duration?: number | null;
+  averageScore?: number | null;
+  popularity?: number | null;
 }
 
 export interface AiringSchedule {
@@ -47,10 +58,14 @@ export interface AnimeDetail {
   season: string | null;
   seasonYear: number | null;
   genres: string[];
+  tags?: { name: string; rank: number }[];
   isAdult?: boolean;
   averageScore: number | null;
+  format?: string | null;
+  source?: string | null;
+  popularity?: number | null;
   studios: {
-    nodes: { name: string }[];
+    nodes: { name: string; isMain?: boolean }[];
   };
   nextAiringEpisode: {
     airingAt: number;

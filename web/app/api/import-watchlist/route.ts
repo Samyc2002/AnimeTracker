@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { fetchUserList, mediaToWatchlistEntry, ANILIST_STATUS_MAP } from '@/lib/anime-provider';
 import { fireAchievementEvent } from '@/lib/achievements/engine';
+import { upsertSeriesMetadataBatch } from '@/lib/series-metadata';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,8 @@ export async function POST(req: NextRequest) {
         ...mediaToWatchlistEntry(entry.media),
         user_id: userId,
         watch_status: entry.watchStatus,
+        import_source: 'anilist',
+        canonical_anilist_id: entry.media.id,
       };
 
       const existingDocId = existingMap.get(entry.media.id);
@@ -82,6 +85,9 @@ export async function POST(req: NextRequest) {
         await supabase.from('watched_episodes').upsert(rows, { onConflict: 'user_id,media_id,episode_number' });
       }
     }
+
+    // Batch upsert series metadata — AniList entries carry full metadata from expanded USER_LIST_QUERY
+    await upsertSeriesMetadataBatch(supabase, anilistEntries.map((e) => e.media));
 
     // Record import timestamp for re-import warning
     await supabase.from('profiles').update({ anilist_imported_at: new Date().toISOString() }).eq('user_id', userId);

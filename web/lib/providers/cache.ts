@@ -1,5 +1,9 @@
+// Legacy cache layer. series_metadata is the authoritative source for genres, studio, etc.
+// This file only handles detail-page caching for AniList rate limit management.
+// Do not add new metadata fields here.
 import { supabase } from '@/lib/supabase';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
+import { upsertSeriesMetadata } from '@/lib/series-metadata';
 
 const STALE_MS = 24 * 60 * 60 * 1000;
 
@@ -164,6 +168,9 @@ export async function getCachedSearch(query: string): Promise<AniListMedia[]> {
 
 export async function saveAnimeToCache(anime: AnimeDetail): Promise<void> {
   try {
+    // Also upsert into series_metadata — the authoritative metadata store
+    if (anime.id) upsertSeriesMetadata(supabase, anime).catch(() => {});
+
     const data = detailToDoc(anime);
 
     let existingQuery = null;
