@@ -45,18 +45,18 @@ const STATUS_COLORS: Record<string, string> = {
 function loadingMessage(elapsedMs: number): { main: string; sub: string } {
   if (elapsedMs < 60_000) {
     return {
-      main: 'Building watch order — checking for related entries…',
+      main: 'Building watch order, checking for related entries…',
       sub:  '(this only happens once per franchise)',
     };
   }
   if (elapsedMs < 3 * 60_000) {
     return {
-      main: 'Taking longer than usual — checking AniList for related entries…',
+      main: 'Taking longer than usual, checking AniList for related entries…',
       sub:  '',
     };
   }
   return {
-    main: 'Still working — this is a large franchise',
+    main: 'Still working. This is a large franchise.',
     sub:  '',
   };
 }
@@ -464,7 +464,7 @@ function FranchiseTabsInner({
               }
             } else if (msg.type === 'error') {
               // Cooldown message: show as info toast, keep current watch order visible
-              if (msg.message?.includes('please wait')) {
+              if (msg.message?.toLowerCase().includes('please wait')) {
                 enqueueSnackbar(msg.message, { variant: 'info' });
                 setComputeStatus('done');
               } else {
@@ -697,8 +697,8 @@ function FranchiseTabsInner({
                 role="button"
                 title={
                   computeStatus === 'computing'
-                    ? 'Watch order is currently being rebuilt — please wait'
-                    : 'Rebuild watch order — useful if entries are missing or wrong'
+                    ? 'Watch order is currently being rebuilt. Please wait.'
+                    : 'Rebuild watch order (useful if entries are missing or wrong)'
                 }
                 onClick={(e) => {
                   e.stopPropagation();

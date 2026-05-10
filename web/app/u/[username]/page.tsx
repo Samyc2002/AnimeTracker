@@ -102,7 +102,7 @@ export async function generateMetadata(
   const totalAnime = profile.stats.total_anime;
   const completed = profile.stats.completed;
   const topStat = completed > 0 ? `${completed} completed` : `${totalAnime} tracked`;
-  const description = `Check out ${displayName}'s anime list on Anime Tracker — ${topStat}, ${totalAnime} total.`;
+  const description = `Check out ${displayName}'s anime list on Anime Tracker: ${topStat}, ${totalAnime} total.`;
 
   return {
     title: `${displayName}'s Anime List`,

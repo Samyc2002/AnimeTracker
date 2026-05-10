@@ -36,7 +36,7 @@ export { ANILIST_STATUS_MAP } from "@/lib/providers/anilist";
 export function getErrorMessage(err: unknown): string {
     if (!(err instanceof Error)) return "Something went wrong";
     if (err.message.includes("Rate limited")) {
-        return "Too many requests — please wait a moment and try again";
+        return "Too many requests. Please wait a moment and try again.";
     }
     return err.message;
 }

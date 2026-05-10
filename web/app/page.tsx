@@ -93,7 +93,7 @@ const FEATURES = [
   {
     icon: '📋',
     title: 'Watchlist with episode tracking',
-    description: 'Watching, Planned, Completed, Dropped — plus per-episode checkboxes so you always know exactly where you left off.',
+    description: 'Watching, Planned, Completed, Dropped, plus per-episode checkboxes so you always know exactly where you left off.',
   },
   {
     icon: '📅',
@@ -108,7 +108,7 @@ const FEATURES = [
   {
     icon: '🎵',
     title: 'Shareable playlists',
-    description: 'Build themed collections — gateway anime, underrated gems, comfort rewatches — and share them with a public link.',
+    description: 'Build themed collections (gateway anime, underrated gems, comfort rewatches) and share them with a public link.',
   },
   {
     icon: '🧩',
@@ -123,7 +123,7 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { number: '1', title: 'Create an account', description: 'Sign up in seconds — or import from AniList' },
+  { number: '1', title: 'Create an account', description: 'Sign up in seconds, or import from AniList' },
   { number: '2', title: 'Add anime', description: 'Search, browse airing schedules, or import your list' },
   { number: '3', title: 'Stay updated', description: 'Track progress, get notifications, share playlists' },
 ];
@@ -214,7 +214,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto">
-              Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists — all in one place.
+              Track your watchlist, follow airing schedules, sync with AniList, and share curated playlists, all in one place.
             </p>
           </div>
 
@@ -239,7 +239,7 @@ export default function LandingPage() {
                 href="/signup"
                 className="inline-block px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base transition-colors"
               >
-                Get Started — it&apos;s free
+                Get Started, it&apos;s free
               </Link>
             )}
           </div>
@@ -313,7 +313,7 @@ export default function LandingPage() {
             </p>
             <p className="text-gray-300 font-medium">So I built what I wanted to use.</p>
             <p>
-              I&apos;m not building this to monetize you. I&apos;m building it because I love anime, I love watching anime with friends, and I wanted a place where fans like me could keep up with what they&apos;re watching without the friction. The core app stays free. If I ever charge for anything down the line, it&apos;ll be cosmetic stuff — skins, profile themes, that sort of thing — never features that matter.
+              I&apos;m not building this to monetize you. I&apos;m building it because I love anime, I love watching anime with friends, and I wanted a place where fans like me could keep up with what they&apos;re watching without the friction. The core app stays free. If I ever charge for anything down the line, it&apos;ll be cosmetic stuff (skins, profile themes, that sort of thing), never features that matter.
             </p>
             <p>If you watch a lot of anime, this was built for you. Hope you stick around.</p>
             <p className="text-gray-500 text-sm pt-2">— Samriddha</p>
