@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
             Date.now() - new Date(row.computed_at as string).getTime() < 5 * 60 * 1000;
 
           if (succeededRecently) {
-            emit({ type: 'error', message: 'Watch order was just rebuilt — please wait a few minutes before retrying.' });
+            emit({ type: 'error', message: 'Watch order was just rebuilt. Please wait a few minutes before retrying.' });
             return;
           }
 

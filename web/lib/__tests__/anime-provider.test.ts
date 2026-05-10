@@ -59,7 +59,7 @@ beforeEach(() => {
 describe('getErrorMessage', () => {
   it('returns rate limit message for rate limit errors', () => {
     expect(getErrorMessage(new Error('Rate limited by AniList'))).toBe(
-      'Too many requests — please wait a moment and try again'
+      'Too many requests. Please wait a moment and try again.'
     );
   });
 

@@ -51,7 +51,7 @@ describe('getErrorMessage', () => {
   it('returns rate limit message for errors containing "Rate limited"', async () => {
     const { getErrorMessage } = await import('@/lib/anilist');
     const result = getErrorMessage(new Error('Rate limited by AniList'));
-    expect(result).toBe('Too many requests — please wait a moment and try again');
+    expect(result).toBe('Too many requests. Please wait a moment and try again.');
   });
 
   it('returns the error message for generic Error instances', async () => {

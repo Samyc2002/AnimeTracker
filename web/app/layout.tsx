@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL('https://www.animetracker.lol'),
   title: {
-    default: 'Anime Tracker — Smart Recs, Buddy System & Airing Alerts',
+    default: 'Anime Tracker: Smart Recs, Buddy System & Airing Alerts',
     template: '%s | Anime Tracker',
   },
   description: 'Free anime tracker with smart recommendations, buddy system, sequel alerts, and a Chrome extension. AniList import. No ads, no feature locks.',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'Anime Tracker',
-    title: 'Anime Tracker — Smart Recs, Buddy System & Airing Alerts',
+    title: 'Anime Tracker: Smart Recs, Buddy System & Airing Alerts',
     description: 'Free anime tracker with smart recommendations, buddy system, sequel alerts, and a Chrome extension. AniList import. No ads, no feature locks.',
     url: 'https://www.animetracker.lol',
     locale: 'en_US',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Anime Tracker — Smart Recs, Buddy System & Airing Alerts',
+    title: 'Anime Tracker: Smart Recs, Buddy System & Airing Alerts',
     description: 'Free anime tracker with smart recommendations, buddy system, sequel alerts, and a Chrome extension. AniList import. No ads, no feature locks.',
     images: ['/og.png'],
   },
