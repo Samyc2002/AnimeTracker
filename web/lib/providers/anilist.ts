@@ -366,8 +366,6 @@ export async function searchAnilistFiltered(filters: {
     };
   }>('filteredSearch', variables, FILTERED_SEARCH_QUERY, variables);
 
-  saveAnimeToCache(data).catch(() => {});
-
   return {
     media: data.Page.media,
     hasNextPage: data.Page.pageInfo.hasNextPage,
