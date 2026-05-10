@@ -74,7 +74,7 @@ export async function fetchAnimeDetail(id: number): Promise<AnimeDetail> {
     },
   );
 
-  saveAnimeToCache(detail).catch(() => {});
+  /* saveAnimeToCache(detail).catch(() => {}); */
   return detail;
 }
 

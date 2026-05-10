@@ -11,7 +11,7 @@ query ResolveByMalIds($malIds: [Int]) {
       idMal
       genres
       tags { name rank }
-      studios(isMain: true) { nodes { name isMain } }
+      studios(isMain: true) { nodes { name } }
       format
       season
       seasonYear

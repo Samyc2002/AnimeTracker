@@ -42,7 +42,7 @@ function docToDetail(doc: CacheDoc): AnimeDetail {
   } catch { /* ignore */ }
 
   return {
-    id: doc.anilist_id || doc.mal_id || 0,
+    id: doc.anilist_id ?? (() => { throw new Error(`[AnimeCache] docToDetail: anilist_id is null for cache row (mal_id=${doc.mal_id}). Jikan-sourced rows must not reach docToDetail.`); })(),
     idMal: doc.mal_id,
     title: {
       romaji: doc.title_romaji,
@@ -146,7 +146,12 @@ export async function getCachedAnime(opts: {
     if (!data || data.length === 0) return null;
 
     const doc = data[0] as unknown as CacheDoc;
-    return { detail: docToDetail(doc), stale: isStale(doc), complete: doc.relations_json !== null };
+    // Reject Jikan-sourced rows (anilist_id = null) when caller asked for an AniList ID.
+    // Those rows have MAL IDs in relations_json — returning them poisons the traversal
+    // by making it operate in MAL-ID space instead of AniList-ID space.
+    // Reject rows where anilist_id = mal_id — written by the Jikan path, not trustworthy as AniList-sourced
+    if (opts.anilistId && (!doc.anilist_id || doc.anilist_id === doc.mal_id)) return null;
+    return { detail: docToDetail(doc), stale: isStale(doc), complete: doc.relations_json !== null && doc.anilist_id !== null };
   } catch (err) {
     console.error('[AnimeCache] Read failed:', err instanceof Error ? err.message : err);
     return null;

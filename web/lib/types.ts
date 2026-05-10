@@ -20,7 +20,7 @@ export interface AniListMedia {
   // Metadata fields — present when fetched via metadata-enriched queries
   genres?: string[];
   tags?: { name: string; rank: number }[];
-  studios?: { nodes: { name: string; isMain?: boolean }[] };
+  studios?: { nodes: { name: string }[] };
   format?: string | null;
   season?: string | null;
   seasonYear?: number | null;
@@ -65,7 +65,7 @@ export interface AnimeDetail {
   source?: string | null;
   popularity?: number | null;
   studios: {
-    nodes: { name: string; isMain?: boolean }[];
+    nodes: { name: string }[];
   };
   nextAiringEpisode: {
     airingAt: number;

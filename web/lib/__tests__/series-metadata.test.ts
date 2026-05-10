@@ -14,7 +14,7 @@ function makeMedia(overrides: Partial<AniListMedia> = {}): AniListMedia {
     nextAiringEpisode: null,
     genres: ['Action', 'Adventure'],
     tags: [{ name: 'Shounen', rank: 90 }],
-    studios: { nodes: [{ name: 'MAPPA', isMain: true }] },
+    studios: { nodes: [{ name: 'MAPPA' }] },
     format: 'TV',
     season: 'FALL',
     seasonYear: 2023,
@@ -46,7 +46,7 @@ function makeDetail(overrides: Partial<AnimeDetail> = {}): AnimeDetail {
     source: 'ORIGINAL',
     averageScore: 90,
     popularity: 2000,
-    studios: { nodes: [{ name: 'KyoAni', isMain: true }] },
+    studios: { nodes: [{ name: 'KyoAni' }] },
     nextAiringEpisode: null,
     relations: { edges: [] },
     ...overrides,
@@ -136,23 +136,6 @@ describe('upsertSeriesMetadata', () => {
     expect(sb.from).not.toHaveBeenCalled();
   });
 
-  it('picks isMain studio over non-main', async () => {
-    const { upsertSeriesMetadata } = await import('@/lib/series-metadata');
-    const sb = makeSupabase();
-    const media = makeMedia({
-      studios: { nodes: [
-        { name: 'SubStudio', isMain: false },
-        { name: 'MainStudio', isMain: true },
-      ] },
-    });
-
-    await upsertSeriesMetadata(sb as never, media);
-
-    expect(sb._upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ studio: 'MainStudio' }),
-      { onConflict: 'anilist_id' },
-    );
-  });
 });
 
 // ─── upsertSeriesMetadataBatch ────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { saveAnimeToCache } from '@/lib/providers/cache';
 import type { AniListMedia, AiringSchedule, AnimeDetail } from '@/lib/types';
 
 const ANILIST_API = 'https://graphql.anilist.co';
@@ -15,7 +16,7 @@ query SearchAnime($search: String) {
       nextAiringEpisode { airingAt episode }
       genres
       tags { name rank }
-      studios(isMain: true) { nodes { name isMain } }
+      studios(isMain: true) { nodes { name } }
       format
       season
       seasonYear
@@ -113,7 +114,7 @@ query UserList($userId: Int) {
           nextAiringEpisode { airingAt episode }
           genres
           tags { name rank }
-          studios(isMain: true) { nodes { name isMain } }
+          studios(isMain: true) { nodes { name } }
           format
           season
           seasonYear
@@ -148,7 +149,7 @@ query AnimeDetail($id: Int) {
     source
     averageScore
     popularity
-    studios(isMain: true) { nodes { name isMain } }
+    studios(isMain: true) { nodes { name } }
     nextAiringEpisode { airingAt episode timeUntilAiring }
     relations {
       edges {
@@ -364,6 +365,8 @@ export async function searchAnilistFiltered(filters: {
       media: (AniListMedia & { averageScore?: number; genres?: string[] })[];
     };
   }>('filteredSearch', variables, FILTERED_SEARCH_QUERY, variables);
+
+  saveAnimeToCache(data).catch(() => {});
 
   return {
     media: data.Page.media,

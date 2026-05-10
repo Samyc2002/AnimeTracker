@@ -21,10 +21,7 @@ function mediaToMetadataRow(media: AniListMedia | AnimeDetail): SeriesMetadataRo
   if (!media.id) return null;
 
   const nodes = media.studios?.nodes ?? [];
-  const primaryStudio =
-    nodes.find((n) => n.isMain)?.name ??
-    nodes[0]?.name ??
-    null;
+  const primaryStudio = nodes[0]?.name ?? null;
 
   return {
     anilist_id: media.id,
