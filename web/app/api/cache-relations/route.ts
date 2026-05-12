@@ -55,7 +55,9 @@ export async function POST(req: NextRequest) {
         if (existingDocs && existingDocs.length > 0 && existingDocs[0].relations_json) continue;
 
         await delay(1000);
-        const res = await fetch(`${JIKAN_BASE}/anime/${normalizedMalId}/full`, {
+        const safeMalId = String(Math.trunc(normalizedMalId));
+        const url = new URL(`/anime/${encodeURIComponent(safeMalId)}/full`, JIKAN_BASE);
+        const res = await fetch(url.toString(), {
           headers: { 'User-Agent': 'AnimeTracker/1.0' },
         });
         if (!res.ok) continue;
