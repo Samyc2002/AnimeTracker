@@ -37,16 +37,25 @@ export async function POST(req: NextRequest) {
 
     for (const malId of malIds.slice(0, 10)) {
       try {
+        let normalizedMalId: number | null = null;
+        if (typeof malId === 'number' && Number.isInteger(malId) && malId > 0) {
+          normalizedMalId = malId;
+        } else if (typeof malId === 'string' && /^\d+$/.test(malId)) {
+          const parsed = Number.parseInt(malId, 10);
+          if (parsed > 0) normalizedMalId = parsed;
+        }
+        if (normalizedMalId === null) continue;
+
         const { data: existingDocs } = await supabase
           .from('anime_cache')
           .select()
-          .eq('mal_id', malId)
+          .eq('mal_id', normalizedMalId)
           .limit(1);
 
         if (existingDocs && existingDocs.length > 0 && existingDocs[0].relations_json) continue;
 
         await delay(1000);
-        const res = await fetch(`${JIKAN_BASE}/anime/${malId}/full`, {
+        const res = await fetch(`${JIKAN_BASE}/anime/${normalizedMalId}/full`, {
           headers: { 'User-Agent': 'AnimeTracker/1.0' },
         });
         if (!res.ok) continue;
