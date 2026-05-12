@@ -30,6 +30,21 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Target host is not allowed', { status: 403 });
   }
 
+  if (targetUrl.username || targetUrl.password) {
+    return new NextResponse('URL credentials are not allowed', { status: 400 });
+  }
+
+  if (targetUrl.port && !['80', '443'].includes(targetUrl.port)) {
+    return new NextResponse('Target port is not allowed', { status: 403 });
+  }
+
+  const normalizedPathSegments = targetUrl.pathname.split('/').filter(Boolean);
+  if (normalizedPathSegments.some((segment) => segment === '.' || segment === '..')) {
+    return new NextResponse('Invalid URL path', { status: 400 });
+  }
+
+  const safeTargetUrl = new URL(`${targetUrl.protocol}//${targetUrl.hostname}${targetUrl.pathname}${targetUrl.search}`);
+
   try {
     const headers: Record<string, string> = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
@@ -46,7 +61,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const upstream = await fetch(targetUrl.toString(), { headers, cache: 'no-store' });
+    const upstream = await fetch(safeTargetUrl.toString(), {
+      headers,
+      cache: 'no-store',
+      redirect: 'error',
+    });
 
     if (!upstream.ok) {
       return new NextResponse(`Upstream error: ${upstream.status}`, { status: upstream.status });
