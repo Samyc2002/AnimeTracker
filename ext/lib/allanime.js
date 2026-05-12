@@ -154,7 +154,22 @@ async function fetchProviderLinks(providerPath) {
 
   const sources = [];
 
-  if (text.includes('repackager.wixmp.com')) {
+  const linkHostRegex = /"link":"([^"]*)"/g;
+  let linkHostMatch;
+  let hasWixmpHost = false;
+  while ((linkHostMatch = linkHostRegex.exec(text)) !== null) {
+    try {
+      const parsed = new URL(linkHostMatch[1]);
+      if (parsed.hostname === 'repackager.wixmp.com') {
+        hasWixmpHost = true;
+        break;
+      }
+    } catch (_) {
+      // Ignore invalid URLs in payload.
+    }
+  }
+
+  if (hasWixmpHost) {
     const regex = /"link":"([^"]*)","resolutionStr":"([^"]*)"/g;
     let m;
     while ((m = regex.exec(text)) !== null) {
