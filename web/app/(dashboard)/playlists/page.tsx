@@ -12,6 +12,7 @@ import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
+import { DashboardInput } from '@/components/ui/DashboardInput';
 
 interface PlaylistDoc {
   id: string;
@@ -127,20 +128,24 @@ function PlaylistsPage() {
 
       <div className="bg-[#141925] rounded-lg p-4 mb-6 border border-[#253040]">
         <h2 className="text-sm font-semibold text-gray-300 mb-3">Create New Playlist</h2>
-        <input
-          type="text"
-          placeholder="Playlist title"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          className={`w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm mb-2 outline-none focus:border-${theme.accent}-500`}
-        />
-        <input
-          type="text"
-          placeholder="Description (optional)"
-          value={newDescription}
-          onChange={(e) => setNewDescription(e.target.value)}
-          className={`w-full px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm mb-3 outline-none focus:border-${theme.accent}-500`}
-        />
+        <div className="mb-2">
+          <DashboardInput
+            type="text"
+            placeholder="Playlist title"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            focusColor="accent"
+          />
+        </div>
+        <div className="mb-3">
+          <DashboardInput
+            type="text"
+            placeholder="Description (optional)"
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            focusColor="accent"
+          />
+        </div>
         <button
           onClick={createPlaylist}
           disabled={!newTitle.trim() || creating}
@@ -318,14 +323,16 @@ function PlaylistEditor({
       <div className="mt-6">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Add Anime</h2>
         <div className="flex flex-col sm:flex-row gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Search anime to add..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className={`flex-1 px-3 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 text-sm outline-none focus:border-${theme.accent}-500`}
-          />
+          <div className="flex-1">
+            <DashboardInput
+              type="text"
+              placeholder="Search anime to add..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              focusColor="accent"
+            />
+          </div>
           <button
             onClick={handleSearch}
             disabled={searching}

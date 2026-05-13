@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
+import { StatusBadge, type StatusBadgeTone } from '@/components/ui/StatusBadge';
 import type { AnimeDetail } from '@/lib/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -33,11 +34,11 @@ const RELATION_BADGE: Record<string, string> = {
   ALTERNATIVE: 'Alt version',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  Watching:  'bg-emerald-900/60 text-emerald-300',
-  Completed: 'bg-purple-900/60 text-purple-300',
-  Planned:   'bg-blue-900/60 text-blue-300',
-  Dropped:   'bg-red-900/60 text-red-300',
+const STATUS_TONES: Record<string, StatusBadgeTone> = {
+  Watching:  'emerald',
+  Completed: 'purple',
+  Planned:   'blue',
+  Dropped:   'red',
 };
 
 // ─── Loading state messages (client-side elapsed time) ───────────────────────
@@ -203,9 +204,7 @@ function WatchOrderTab({
                       {!statusesLoaded ? (
                         <div className="h-3 w-12 rounded bg-[#253040] animate-pulse" />
                       ) : status ? (
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${STATUS_COLORS[status.watch_status] ?? 'bg-gray-800 text-gray-400'}`}>
-                          {status.watch_status}
-                        </span>
+                        <StatusBadge tone={STATUS_TONES[status.watch_status] ?? 'gray'}>{status.watch_status}</StatusBadge>
                       ) : authed && !isCurrent ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleAdd(entry.anilist_id); }}

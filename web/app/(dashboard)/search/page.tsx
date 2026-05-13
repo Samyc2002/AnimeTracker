@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
+import { Spinner } from '@/components/ui/Spinner';
 import type { AniListMedia } from '@/lib/types';
 
 function RecommendationGrid({
@@ -182,7 +183,7 @@ export default function SearchPage() {
       {showRecommendations && (
         recsLoading ? (
           <div className="flex justify-center mt-8">
-            <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+            <Spinner />
           </div>
         ) : (
           <>

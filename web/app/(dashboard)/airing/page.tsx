@@ -11,6 +11,7 @@ import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
+import { Spinner } from '@/components/ui/Spinner';
 import { enqueueSnackbar } from 'notistack';
 import type { AiringSchedule } from '@/lib/types';
 
@@ -201,7 +202,7 @@ export default function AiringPage() {
 
       {loading ? (
         <div className="flex justify-center mt-12">
-          <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+          <Spinner />
         </div>
       ) : (
         <div className="-mx-4 sm:-mx-6 lg:-mx-[calc((100vw-64rem)/2+1.5rem)] px-4 sm:px-6 lg:px-8">

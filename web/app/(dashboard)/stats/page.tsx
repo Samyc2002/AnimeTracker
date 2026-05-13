@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import RequireAuth from '@/components/RequireAuth';
+import { Spinner } from '@/components/ui/Spinner';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -499,7 +500,7 @@ function AdminPage() {
   if (loading || forbidden) {
     return (
       <div className="flex justify-center mt-24">
-        <div className={`w-8 h-8 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+        <Spinner size="lg" />
       </div>
     );
   }

@@ -1,61 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getOnlineCount } from '@/lib/online-tracker';
+import { getEmailSets, getCallerUserIdFromRequest } from '@/lib/admin';
 
 const statsCache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
-
-let resolvedEmailSets: { excluded: Set<string>; admin: Set<string> } | null = null;
-
-function parseEmailList(envVar: string): string[] {
-  return (process.env[envVar] || '')
-    .split(',')
-    .map(e => e.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-async function getEmailSets(supabase: ReturnType<typeof getServiceSupabase>) {
-  if (resolvedEmailSets) return resolvedEmailSets;
-
-  const testEmails = parseEmailList('TEST_ACCOUNTS');
-  const adminEmails = parseEmailList('ADMIN_EMAILS');
-  const allEmails = new Set([...testEmails, ...adminEmails]);
-
-  if (allEmails.size === 0) {
-    resolvedEmailSets = { excluded: new Set(), admin: new Set() };
-    return resolvedEmailSets;
-  }
-
-  const { data } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const users = data?.users || [];
-
-  const excluded = new Set(
-    users.filter(u => u.email && testEmails.includes(u.email.toLowerCase())).map(u => u.id)
-  );
-  const admin = new Set(
-    users.filter(u => u.email && adminEmails.includes(u.email.toLowerCase())).map(u => u.id)
-  );
-
-  resolvedEmailSets = { excluded, admin };
-  return resolvedEmailSets;
-}
-
-async function getCallerUserId(req: NextRequest): Promise<string | null> {
-  const response = NextResponse.next();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => req.cookies.getAll().map(c => ({ name: c.name, value: c.value })),
-        setAll: (cookies) => { cookies.forEach(c => response.cookies.set(c.name, c.value, c.options)); },
-      },
-    },
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
-}
 
 function excludeTestUsers<T extends { user_id: string }>(rows: T[], excluded: Set<string>): T[] {
   if (excluded.size === 0) return rows;
@@ -306,7 +255,7 @@ export async function GET(req: NextRequest) {
     const supabase = getServiceSupabase();
     const { excluded, admin } = await getEmailSets(supabase);
 
-    const callerId = await getCallerUserId(req);
+    const callerId = await getCallerUserIdFromRequest(req);
     if (!callerId || !admin.has(callerId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

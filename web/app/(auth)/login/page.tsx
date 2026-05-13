@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import { AuthInput } from '@/components/ui/AuthInput';
+import { AuthSubmitButton } from '@/components/ui/AuthSubmitButton';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -63,31 +65,25 @@ export default function LoginPage() {
       <div className="w-full max-w-sm p-8 bg-[#111827] rounded-xl">
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400 mb-6 text-center">Anime Tracker</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
+          <AuthInput
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
           />
-          <input
+          <AuthInput
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
           {resetSent && <p className="text-emerald-400 text-sm">Password reset link sent! Check your email.</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50"
-          >
+          <AuthSubmitButton disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
-          </button>
+          </AuthSubmitButton>
         </form>
         <div className="mt-4 text-center text-sm">
           <button
