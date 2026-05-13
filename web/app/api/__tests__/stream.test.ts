@@ -16,29 +16,35 @@ describe('GET /api/stream', () => {
     expect(body.error).toBe('Missing title');
   });
 
-  it('returns correct URL when HTML contains a watch link', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: async () => '<a href="/watch/test-slug">Watch</a>',
-    });
+  it('returns 9anime and kickass URLs when both searches succeed', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => '<a href="/anime/naruto-shippuden/" itemprop="url">Naruto</a><a href="/anime/naruto/" itemprop="url">Naruto</a>',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => '<a href="/anime/naruto-shippuden/" itemprop="url">Naruto</a><a href="/anime/naruto/" itemprop="url">Naruto</a>',
+      });
 
     const req = new NextRequest(
-      new URL('http://localhost/api/stream?title=My+Anime')
+      new URL('http://localhost/api/stream?title=Naruto')
     );
     const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.url).toBe('https://animekai.to/watch/test-slug');
+    expect(body.url9anime).toBe('https://9anime.org.lv/naruto');
+    expect(body.urlKickass).toBe('https://kickassanime.com.es//naruto');
   });
 
-  it('returns null URL when no matches in HTML', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+  it('returns error when 9anime search returns no matches', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
-      text: async () => '<html><body>No links here</body></html>',
+      text: async () => '<html><body>No results</body></html>',
     });
 
     const req = new NextRequest(
-      new URL('http://localhost/api/stream?title=Nothing')
+      new URL('http://localhost/api/stream?title=NonexistentAnime')
     );
     const res = await GET(req);
     expect(res.status).toBe(200);
@@ -48,7 +54,7 @@ describe('GET /api/stream', () => {
   });
 
   it('returns 502 when upstream fetch is not ok', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 });
+    global.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 503 });
 
     const req = new NextRequest(
       new URL('http://localhost/api/stream?title=Fail')

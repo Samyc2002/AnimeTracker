@@ -4,16 +4,22 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTitle } from '@/lib/useTitle';
 import { supabase } from '@/lib/supabase';
-import { AuthContext } from '@/lib/auth-context';
+import { useAuth, AuthContext } from '@/lib/auth-context';
 import { SfwProvider, useSfw } from '@/lib/sfw-context';
 import NavBar from '@/components/NavBar';
 import SfwToggle from '@/components/SfwToggle';
 import Footer from '@/components/Footer';
+import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
+import { backfillSeriesId } from '@/lib/series-resolver';
+import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import { getTheme } from '@/lib/theme';
 import BadgeSlots from '@/components/BadgeSlots';
 import AchievementSection from '@/components/AchievementSection';
+import { enqueueSnackbar } from 'notistack';
+import type { AniListMedia } from '@/lib/types';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Completed', 'Planned', 'Dropped'];
@@ -41,7 +47,22 @@ function StatCard({ label, value, gradient }: { label: string; value: number | s
   );
 }
 
-function AnimeGrid({ entries }: { entries: PublicProfileEntry[] }) {
+function entryToMedia(entry: PublicProfileEntry): AniListMedia {
+  return {
+    id: entry.media_id,
+    idMal: null,
+    title: { romaji: entry.title_romaji || '', english: entry.title_english },
+    coverImage: { extraLarge: entry.cover_url, large: entry.cover_url, medium: entry.cover_url },
+    status: (entry.status as AniListMedia['status']) || 'FINISHED',
+    episodes: entry.total_episodes,
+    isAdult: entry.is_nsfw,
+    nextAiringEpisode: null,
+  };
+}
+
+const ADD_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
+
+function AnimeGrid({ entries, onContextMenu }: { entries: PublicProfileEntry[]; onContextMenu?: (e: React.MouseEvent, entry: PublicProfileEntry) => void }) {
   if (entries.length === 0) {
     return <p className="text-gray-500 text-center py-8">No anime in this category.</p>;
   }
@@ -54,6 +75,7 @@ function AnimeGrid({ entries }: { entries: PublicProfileEntry[] }) {
           <Link
             key={entry.media_id}
             href={`/anime/${entry.media_id}`}
+            onContextMenu={onContextMenu ? (e) => onContextMenu(e, entry) : undefined}
             className={`bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group ${entry.is_nsfw ? 'border border-red-500/40' : ''}`}
           >
             <div className="relative w-full aspect-[3/4]">
@@ -115,6 +137,7 @@ function GuestProfileContent({ profile }: { profile: PublicProfile }) {
 
 function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: PublicProfile; sfwMode: boolean; authed: boolean; onToggleSfw?: () => void }) {
   const theme = getTheme(sfwMode);
+  const { userId } = useAuth();
   useTitle(`Profile | ${profile.display_name || profile.username}`);
   const [activeTab, setActiveTab] = useState<WatchStatus | 'All'>(() => {
     if (typeof window !== 'undefined') {
@@ -123,6 +146,48 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
     }
     return 'All';
   });
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: PublicProfileEntry } | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  function handleContextMenu(e: React.MouseEvent, entry: PublicProfileEntry) {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, entry });
+  }
+
+  async function handleAddToWatchlist(entry: PublicProfileEntry, status: WatchStatus) {
+    if (adding || !userId) return;
+    setAdding(true);
+    setContextMenu(null);
+    try {
+      const { data: existing } = await supabase
+        .from('watchlist_entries')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('media_id', entry.media_id)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        enqueueSnackbar('Already in your watchlist', { variant: 'info' });
+        setAdding(false);
+        return;
+      }
+      const media = entryToMedia(entry);
+      const wlEntry = mediaToWatchlistEntry(media);
+      const { data: doc, error } = await supabase
+        .from('watchlist_entries')
+        .insert({ ...wlEntry, user_id: userId, watch_status: status })
+        .select()
+        .single();
+      if (error) throw error;
+      enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
+      fireClientAchievementEvent(userId, 'watchlist_add');
+      backfillSeriesId(doc.id, media.id, async (id, data) => {
+        await supabase.from('watchlist_entries').update(data).eq('id', id);
+      }).catch(() => {});
+    } catch (err) {
+      enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
+    }
+    setAdding(false);
+  }
 
   function updateTab(tab: WatchStatus | 'All') {
     setActiveTab(tab);
@@ -226,10 +291,42 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
           ))}
         </div>
 
-        <AnimeGrid entries={filteredWatchlist} />
+        <AnimeGrid entries={filteredWatchlist} onContextMenu={authed ? handleContextMenu : undefined} />
       </main>
 
       <Footer />
+
+      <AnimatePresence>
+        {contextMenu && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.12, ease: 'easeOut' }}
+              className="fixed z-50 bg-[#141925] border border-[#253040] rounded-lg shadow-xl py-1 min-w-[160px]"
+              style={{ left: Math.min(contextMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 1000) - 176), top: Math.min(contextMenu.y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 200) }}
+            >
+              <p className="px-3 py-1.5 text-xs text-gray-500 truncate max-w-[200px]">
+                {contextMenu.entry.title_english || contextMenu.entry.title_romaji}
+              </p>
+              <div className="border-t border-[#253040] my-1" />
+              <p className="px-3 py-1 text-[10px] text-gray-600 uppercase font-semibold">Add to Watchlist</p>
+              {ADD_STATUSES.map((s) => (
+                <button
+                  key={s}
+                  disabled={adding}
+                  onClick={() => handleAddToWatchlist(contextMenu.entry, s)}
+                  className="w-full text-left px-3 py-1.5 text-sm text-gray-300 hover:bg-[#1c2333] transition-colors disabled:opacity-50"
+                >
+                  {s}
+                </button>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

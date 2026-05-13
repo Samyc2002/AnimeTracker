@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { fetchAnimeDetail, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
@@ -202,19 +203,27 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
       >
         {checking ? '...' : adding ? 'Adding...' : allAdded ? 'Prequels Added' : '+ Add Prequels'}
       </button>
-      {showDropdown && (
-        <div className="absolute left-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden">
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={() => handleAdd(s)}
-              className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-[#1c2333] transition-colors"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute left-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+          >
+            {STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleAdd(s)}
+                className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-[#1c2333] transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

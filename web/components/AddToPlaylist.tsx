@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { enqueueSnackbar } from 'notistack';
@@ -104,13 +105,18 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
         </svg>
       </button>
 
-      {open && (
-        <div
-          ref={dropRef}
-          className="fixed z-[100] w-56 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
-          style={{ top: pos.top, left: pos.left }}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            ref={dropRef}
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="fixed z-[100] w-56 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+            style={{ top: pos.top, left: pos.left }}
+            onClick={(e) => e.stopPropagation()}
+          >
           <div className="px-3 py-2 border-b border-[#253040]">
             <p className="text-xs font-semibold text-gray-400 uppercase">Add to Playlist</p>
           </div>
@@ -149,8 +155,9 @@ export default function AddToPlaylist({ mediaId }: { mediaId: number }) {
               })}
             </div>
           )}
-        </div>
-      )}
+        </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

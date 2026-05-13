@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
@@ -22,6 +23,13 @@ const statusColors: Record<WatchStatus, string> = {
   Dropped: 'text-red-400',
 };
 
+const dropdownMotion = {
+  initial: { opacity: 0, scale: 0.95, y: -4 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.95, y: -4 },
+  transition: { duration: 0.15, ease: 'easeOut' as const },
+};
+
 export default function AddToWatchlist({ media }: { media: AniListMedia }) {
   const { userId } = useAuth();
   const { sfwMode } = useSfw();
@@ -31,6 +39,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [docId, setDocId] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,6 +83,8 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         setDocId(doc.id);
         setAdded(true);
         setCurrentStatus(status);
+        setJustAdded(true);
+        setTimeout(() => setJustAdded(false), 600);
         enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
         fireClientAchievementEvent(userId, 'watchlist_add');
         upsertSeriesMetadata(supabase, media).catch(() => {});
@@ -134,47 +145,61 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         >
           {updating ? '...' : '+ Add'}
         </button>
-        {showDropdown && (
-          <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden">
-            {STATUSES.map((s) => (
-              <button
-                key={s}
-                onClick={() => handleAdd(s)}
-                className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-[#1c2333] transition-colors"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
+        <AnimatePresence>
+          {showDropdown && (
+            <motion.div
+              {...dropdownMotion}
+              className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+            >
+              {STATUSES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleAdd(s)}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-[#1c2333] transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
-      <button
+    <div ref={ref} className={`relative ${justAdded ? 'animate-watchlist-burst' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <motion.button
+        key={String(added)}
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
         onClick={() => setShowDropdown(!showDropdown)}
         disabled={updating}
         className={`px-3 py-1.5 bg-[#141925] border border-[#253040] text-sm rounded-lg font-medium transition-colors hover:bg-[#1c2333] ${statusColors[currentStatus]}`}
       >
         {updating ? '...' : currentStatus}
-      </button>
-      {showDropdown && (
-        <div className="absolute right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden">
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={() => handleAdd(s)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-[#1c2333] transition-colors ${
-                currentStatus === s ? statusColors[s] : 'text-gray-300'
-              }`}
-            >
-              {currentStatus === s ? '● ' : '○ '}{s}
-            </button>
-          ))}
-        </div>
-      )}
+      </motion.button>
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            {...dropdownMotion}
+            className="absolute right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+          >
+            {STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleAdd(s)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-[#1c2333] transition-colors ${
+                  currentStatus === s ? statusColors[s] : 'text-gray-300'
+                }`}
+              >
+                {currentStatus === s ? '● ' : '○ '}{s}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

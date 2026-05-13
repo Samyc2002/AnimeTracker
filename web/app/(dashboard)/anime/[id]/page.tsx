@@ -1,33 +1,53 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { fetchAnimeDetail, getErrorMessage } from '@/lib/anime-provider';
-import { getCachedAnime } from '@/lib/providers/cache';
-import { enqueueSnackbar } from 'notistack';
-import { useAuth } from '@/lib/auth-context';
-import { useSfw } from '@/lib/sfw-context';
-import { getTheme } from '@/lib/theme';
-import { getWatchUrl } from '@/lib/stream-provider';
-import { supabase } from '@/lib/supabase';
-import AddToWatchlist from '@/components/AddToWatchlist';
-import AddPrequels from '@/components/AddPrequels';
-import RecommendToBuddy from '@/components/RecommendToBuddy';
-import EpisodeGrid from '@/components/EpisodeGrid';
-import SynopsisCollapse from '@/components/SynopsisCollapse';
-import FranchiseTabs from '@/components/FranchiseTabs';
-import type { AnimeDetail } from '@/lib/types';
-import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { fetchAnimeDetail, getErrorMessage } from "@/lib/anime-provider";
+import { getCachedAnime } from "@/lib/providers/cache";
+import { enqueueSnackbar } from "notistack";
+import { useAuth } from "@/lib/auth-context";
+import { useSfw } from "@/lib/sfw-context";
+import { getTheme } from "@/lib/theme";
+import { getWatchUrl } from "@/lib/stream-provider";
+import { supabase } from "@/lib/supabase";
+import AddToWatchlist from "@/components/AddToWatchlist";
+import AddPrequels from "@/components/AddPrequels";
+import RecommendToBuddy from "@/components/RecommendToBuddy";
+import EpisodeGrid from "@/components/EpisodeGrid";
+import SynopsisCollapse from "@/components/SynopsisCollapse";
+import FranchiseTabs from "@/components/FranchiseTabs";
+import type { AnimeDetail, WatchURLs } from "@/lib/types";
+import { fireClientAchievementEvent } from "@/lib/achievements/fire-event";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
-  RELEASING: { label: 'Airing', className: 'bg-emerald-900 text-emerald-300' },
-  FINISHED: { label: 'Finished', className: 'bg-blue-900 text-blue-300' },
-  NOT_YET_RELEASED: { label: 'Upcoming', className: 'bg-amber-900 text-amber-300' },
-  CANCELLED: { label: 'Cancelled', className: 'bg-red-900 text-red-300' },
-  HIATUS: { label: 'Hiatus', className: 'bg-gray-700 text-gray-300' },
+  RELEASING: { label: "Airing", className: "bg-emerald-900 text-emerald-300" },
+  FINISHED: { label: "Finished", className: "bg-blue-900 text-blue-300" },
+  NOT_YET_RELEASED: {
+    label: "Upcoming",
+    className: "bg-amber-900 text-amber-300",
+  },
+  CANCELLED: { label: "Cancelled", className: "bg-red-900 text-red-300" },
+  HIATUS: { label: "Hiatus", className: "bg-gray-700 text-gray-300" },
 };
+
+const streamThemes: Record<string, { bg: string; hover: string; text: string; border?: string }> = {
+  "Crunchyroll": { bg: "bg-[#f47521]", hover: "hover:bg-[#e0691d]", text: "text-white" },
+  "Netflix": { bg: "bg-[#e50914]", hover: "hover:bg-[#cc0812]", text: "text-white" },
+  "Hulu": { bg: "bg-[#1ce783]", hover: "hover:bg-[#17cc73]", text: "text-black" },
+  "Amazon Prime Video": { bg: "bg-[#00a8e1]", hover: "hover:bg-[#0095c8]", text: "text-white" },
+  "Bilibili Global": { bg: "bg-[#00a1d6]", hover: "hover:bg-[#0090bf]", text: "text-white" },
+  "Muse Asia": { bg: "bg-[#2d2d8a]", hover: "hover:bg-[#24247a]", text: "text-white" },
+  "Disney Plus": { bg: "bg-[#113ccf]", hover: "hover:bg-[#0e33b5]", text: "text-white" },
+  "Funimation": { bg: "bg-[#5b0bb5]", hover: "hover:bg-[#4e099d]", text: "text-white" },
+  "HIDIVE": { bg: "bg-[#00baef]", hover: "hover:bg-[#00a5d4]", text: "text-white" },
+  "iQIYI": { bg: "bg-[#00be06]", hover: "hover:bg-[#00a505]", text: "text-white" },
+  "9Anime": { bg: "bg-[#c026d3]", hover: "hover:bg-[#a821b8]", text: "text-white" },
+  "Kickass Anime": { bg: "bg-[#16a34a]", hover: "hover:bg-[#138a3f]", text: "text-white" },
+};
+
+const defaultStreamTheme = { bg: "bg-[#141925]", hover: "hover:bg-[#1c2333]", text: "text-gray-300", border: "border border-[#253040]" };
 
 function formatCountdown(seconds: number) {
   const d = Math.floor(seconds / 86400);
@@ -37,17 +57,18 @@ function formatCountdown(seconds: number) {
   if (d > 0) parts.push(`${d}d`);
   if (h > 0) parts.push(`${h}h`);
   parts.push(`${m}m`);
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 export default function AnimeDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [anime, setAnime] = useState<AnimeDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [watchUrl, setWatchUrl] = useState<string | null>(null);
-  const [streamingLinks, setStreamingLinks] = useState<{ name: string; url: string }[]>([]);
+  const [watchUrls, setWatchUrls] = useState<WatchURLs | null>(null);
+  const [streamingLinks, setStreamingLinks] = useState<
+    { name: string; url: string }[]
+  >([]);
   const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>([]);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
   // null = not cached (compute will run), number = cached root ID
@@ -66,8 +87,6 @@ export default function AnimeDetailPage() {
         const detail = await fetchAnimeDetail(id);
         setAnime(detail);
 
-        // Check franchise_membership server-side so the tab component renders
-        // the correct default tab immediately (no flash from "Watch Order" → "Related Anime")
         const { data: membership } = await supabase
           .from('franchise_membership')
           .select('franchise_root_id')
@@ -75,74 +94,76 @@ export default function AnimeDetailPage() {
           .limit(1);
 
         if (membership && membership.length > 0) {
-          // Franchise cached — Watch Order tab will be default
           setFranchiseMembershipRootId(membership[0].franchise_root_id as number);
         } else {
-          // Check if this series has any franchise-eligible relations
           const hasFranchiseRelations = detail.relations.edges.some(
             (e) => e.node.type === 'ANIME' &&
               ['PREQUEL','SEQUEL','SIDE_STORY','PARENT','ALTERNATIVE','SUMMARY','SPIN_OFF'].includes(e.relationType)
           );
           if (hasFranchiseRelations) {
-            // Not cached yet — compute will run, Related Anime is default tab
             setFranchiseMembershipRootId(null);
           } else {
-            // True singleton — no franchise, hide Watch Order tab
             setFranchiseMembershipRootId(undefined);
           }
         }
 
-        const title = detail.title.romaji || detail.title.english || '';
-        getWatchUrl(title).then(url => setWatchUrl(url));
+        const title = detail.title.english || detail.title.romaji || "";
+        getWatchUrl(title).then((urls) => setWatchUrls(urls));
 
         const malId = detail.idMal || id;
         fetch(`https://api.jikan.moe/v4/anime/${malId}/streaming`)
-          .then(r => r.ok ? r.json() : null)
-          .then(d => { if (d?.data) setStreamingLinks(d.data); })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (d?.data) setStreamingLinks(d.data);
+          })
           .catch(() => {});
       } catch (err) {
         setAnime(null);
-        enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
+        enqueueSnackbar(getErrorMessage(err), { variant: "error" });
       }
       setLoading(false);
     }
     load();
-  }, [id]);
+  }, [id, watchedEpisodes]);
 
   const loadWatchedEpisodes = useCallback(async () => {
     if (!authed || !userId) return;
     try {
       const { data: wlData } = await supabase
-        .from('watchlist_entries')
-        .select('id, media_id, canonical_anilist_id')
-        .eq('user_id', userId)
+        .from("watchlist_entries")
+        .select("id, media_id, canonical_anilist_id")
+        .eq("user_id", userId)
         .or(`canonical_anilist_id.eq.${id},id_mal.eq.${id},media_id.eq.${id}`)
-        .not('canonical_anilist_id', 'is', null)
+        .not("canonical_anilist_id", "is", null)
         .limit(1);
-      console.log("wlData", wlData);
       setIsInWatchlist(!!(wlData && wlData.length > 0));
       if (!wlData || wlData.length === 0) return;
 
       const trackedMediaId = wlData[0].media_id as number;
-      console.log("trackedMediaId", trackedMediaId)
       setResolvedMediaId(trackedMediaId);
       const { data: epData } = await supabase
-        .from('watched_episodes')
-        .select('episode_number')
-        .eq('user_id', userId)
-        .eq('media_id', trackedMediaId)
+        .from("watched_episodes")
+        .select("episode_number")
+        .eq("user_id", userId)
+        .eq("media_id", trackedMediaId)
         .limit(5000);
-      setWatchedEpisodes((epData || []).map((d) => d.episode_number as number).sort((a, b) => a - b));
+      setWatchedEpisodes(
+        (epData || [])
+          .map((d) => d.episode_number as number)
+          .sort((a, b) => a - b)
+      );
     } catch {
       // Non-critical
     }
   }, [authed, userId, id]);
 
-  useEffect(() => { loadWatchedEpisodes(); }, [loadWatchedEpisodes]);
+  useEffect(() => {
+    loadWatchedEpisodes();
+  }, [loadWatchedEpisodes]);
 
   useEffect(() => {
     if (!authed || !isInWatchlist) return;
-    const markEp = searchParams.get('mark_episode');
+    const markEp = searchParams.get("mark_episode");
     if (!markEp) return;
     const epNum = parseInt(markEp);
     if (isNaN(epNum)) return;
@@ -151,30 +172,38 @@ export default function AnimeDetailPage() {
       if (!userId) return;
       try {
         const { data: existingEps } = await supabase
-          .from('watched_episodes')
-          .select('episode_number')
-          .eq('user_id', userId)
-          .eq('media_id', resolvedMediaId)
+          .from("watched_episodes")
+          .select("episode_number")
+          .eq("user_id", userId)
+          .eq("media_id", resolvedMediaId)
           .limit(5000);
-        const watched = new Set((existingEps || []).map((d) => d.episode_number as number));
+        const watched = new Set(
+          (existingEps || []).map((d) => d.episode_number as number)
+        );
         const toMark: number[] = [];
         for (let i = 1; i <= epNum; i++) {
           if (!watched.has(i)) toMark.push(i);
         }
         if (toMark.length > 0) {
-          await supabase.from('watched_episodes').upsert(
-            toMark.map((e) => ({ user_id: userId, media_id: resolvedMediaId, episode_number: e }))
+          await supabase.from("watched_episodes").upsert(
+            toMark.map((e) => ({
+              user_id: userId,
+              media_id: resolvedMediaId,
+              episode_number: e,
+            }))
           );
           setWatchedEpisodes((prev) => {
             const set = new Set([...prev, ...toMark]);
             return [...set].sort((a, b) => a - b);
           });
-          enqueueSnackbar(`Marked episodes 1-${epNum} as watched`, { variant: 'success' });
+          enqueueSnackbar(`Marked episodes 1-${epNum} as watched`, {
+            variant: "success",
+          });
         }
       } catch {
         // Non-critical
       }
-      window.history.replaceState({}, '', `/anime/${id}`);
+      window.history.replaceState({}, "", `/anime/${id}`);
     }
     autoMark();
   }, [authed, id, resolvedMediaId, isInWatchlist, searchParams]);
@@ -182,17 +211,19 @@ export default function AnimeDetailPage() {
   async function toggleEpisode(ep: number) {
     if (!authed || !userId) return;
     try {
-      const allWatchedUpTo = Array.from({ length: ep }, (_, i) => i + 1).every((e) => watchedEpisodes.includes(e));
+      const allWatchedUpTo = Array.from({ length: ep }, (_, i) => i + 1).every(
+        (e) => watchedEpisodes.includes(e)
+      );
       if (allWatchedUpTo && watchedEpisodes.includes(ep)) {
         const { data: docs } = await supabase
-          .from('watched_episodes')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('media_id', resolvedMediaId)
-          .eq('episode_number', ep)
+          .from("watched_episodes")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("media_id", resolvedMediaId)
+          .eq("episode_number", ep)
           .limit(1);
         if (docs && docs.length > 0) {
-          await supabase.from('watched_episodes').delete().eq('id', docs[0].id);
+          await supabase.from("watched_episodes").delete().eq("id", docs[0].id);
         }
         setWatchedEpisodes((prev) => prev.filter((e) => e !== ep));
       } else {
@@ -201,8 +232,12 @@ export default function AnimeDetailPage() {
           if (!watchedEpisodes.includes(i)) toMark.push(i);
         }
         if (toMark.length > 0) {
-          await supabase.from('watched_episodes').upsert(
-            toMark.map((e) => ({ user_id: userId, media_id: resolvedMediaId, episode_number: e }))
+          await supabase.from("watched_episodes").upsert(
+            toMark.map((e) => ({
+              user_id: userId,
+              media_id: resolvedMediaId,
+              episode_number: e,
+            }))
           );
         }
         setWatchedEpisodes((prev) => {
@@ -210,19 +245,26 @@ export default function AnimeDetailPage() {
           return [...set].sort((a, b) => a - b);
         });
         if (toMark.length > 1) {
-          enqueueSnackbar(`Marked episodes 1-${ep} as watched`, { variant: 'success' });
+          enqueueSnackbar(`Marked episodes 1-${ep} as watched`, {
+            variant: "success",
+          });
         }
-        if (userId) fireClientAchievementEvent(userId, 'episode_watched');
+        if (userId) fireClientAchievementEvent(userId, "episode_watched");
       }
     } catch {
-      enqueueSnackbar('Failed to update episode', { variant: 'error' });
+      enqueueSnackbar("Failed to update episode", { variant: "error" });
     }
   }
 
   useEffect(() => {
     if (!anime) return;
-    const edges = anime.relations.edges.filter(e => e.node.type === 'ANIME');
-    const needsCovers = edges.some(e => !e.node.coverImage?.extraLarge && !e.node.coverImage?.large && !e.node.coverImage?.medium);
+    const edges = anime.relations.edges.filter((e) => e.node.type === "ANIME");
+    const needsCovers = edges.some(
+      (e) =>
+        !e.node.coverImage?.extraLarge &&
+        !e.node.coverImage?.large &&
+        !e.node.coverImage?.medium
+    );
     if (!needsCovers) return;
 
     async function enrichRelations() {
@@ -232,13 +274,20 @@ export default function AnimeDetailPage() {
 
       for (let i = 0; i < newEdges.length; i++) {
         const edge = newEdges[i];
-        if (edge.node.type !== 'ANIME') continue;
-        const hasImage = [edge.node.coverImage?.extraLarge, edge.node.coverImage?.large, edge.node.coverImage?.medium].some(u => u && u.length > 0);
+        if (edge.node.type !== "ANIME") continue;
+        const hasImage = [
+          edge.node.coverImage?.extraLarge,
+          edge.node.coverImage?.large,
+          edge.node.coverImage?.medium,
+        ].some((u) => u && u.length > 0);
         if (hasImage) continue;
 
         const cached = await getCachedAnime({ malId: edge.node.id });
         if (cached?.detail?.coverImage) {
-          newEdges[i] = { ...edge, node: { ...edge.node, coverImage: cached.detail.coverImage } };
+          newEdges[i] = {
+            ...edge,
+            node: { ...edge.node, coverImage: cached.detail.coverImage },
+          };
           updated = true;
         } else {
           uncachedIds.push(edge.node.id);
@@ -246,13 +295,15 @@ export default function AnimeDetailPage() {
       }
 
       if (updated) {
-        setAnime(prev => prev ? { ...prev, relations: { edges: newEdges } } : prev);
+        setAnime((prev) =>
+          prev ? { ...prev, relations: { edges: newEdges } } : prev
+        );
       }
 
       if (uncachedIds.length > 0) {
-        fetch('/api/cache-relations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        fetch("/api/cache-relations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ malIds: uncachedIds }),
         }).catch(() => {});
       }
@@ -261,17 +312,21 @@ export default function AnimeDetailPage() {
   }, [anime?.id]);
 
   useEffect(() => {
-    const layoutEl = document.querySelector('[data-dashboard-layout]') as HTMLElement | null;
-    if (layoutEl) layoutEl.style.background = 'transparent';
+    const layoutEl = document.querySelector(
+      "[data-dashboard-layout]"
+    ) as HTMLElement | null;
+    if (layoutEl) layoutEl.style.background = "transparent";
     return () => {
-      if (layoutEl) layoutEl.style.background = '';
+      if (layoutEl) layoutEl.style.background = "";
     };
   }, []);
 
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
-        <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+        <div
+          className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`}
+        />
       </div>
     );
   }
@@ -284,7 +339,11 @@ export default function AnimeDetailPage() {
   const statusInfo = statusLabels[anime.status] || statusLabels.FINISHED;
   const studio = anime.studios.nodes[0]?.name;
 
-  const backdropImage = anime.bannerImage || anime.coverImage.extraLarge || anime.coverImage.large || anime.coverImage.medium;
+  const backdropImage =
+    anime.bannerImage ||
+    anime.coverImage.extraLarge ||
+    anime.coverImage.large ||
+    anime.coverImage.medium;
 
   return (
     <div className="-mx-4 sm:-mx-6 -mt-6 sm:-mt-8 relative min-h-screen">
@@ -298,10 +357,18 @@ export default function AnimeDetailPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-24">
-        <div className={`flex flex-col items-center sm:flex-row sm:items-start gap-4 sm:gap-6 ${anime.bannerImage ? '-mt-20 relative z-10' : 'mt-8'}`}>
+        <div
+          className={`flex flex-col items-center sm:flex-row sm:items-start gap-4 sm:gap-6 ${
+            anime.bannerImage ? "-mt-20 relative z-10" : "mt-8"
+          }`}
+        >
           <div className="w-[120px] h-[170px] sm:w-[160px] sm:h-[230px] flex-shrink-0 relative">
             <Image
-              src={anime.coverImage.extraLarge || anime.coverImage.large || anime.coverImage.medium}
+              src={
+                anime.coverImage.extraLarge ||
+                anime.coverImage.large ||
+                anime.coverImage.medium
+              }
               alt={title}
               fill
               className="rounded-lg shadow-lg object-cover"
@@ -310,13 +377,17 @@ export default function AnimeDetailPage() {
           </div>
 
           <div className="flex-1 min-w-0 pt-4 text-center sm:text-left">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-100 mb-1">{title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-100 mb-1">
+              {title}
+            </h1>
             {anime.title.native && (
               <p className="text-sm text-gray-500 mb-3">{anime.title.native}</p>
             )}
 
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-4">
-              <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${statusInfo.className}`}>
+              <span
+                className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${statusInfo.className}`}
+              >
                 {statusInfo.label}
               </span>
               {anime.averageScore && (
@@ -324,33 +395,47 @@ export default function AnimeDetailPage() {
                   ★ {(anime.averageScore / 10).toFixed(1)}
                 </span>
               )}
-              {studio && <span className="text-sm text-gray-400">{studio}</span>}
+              {studio && (
+                <span className="text-sm text-gray-400">{studio}</span>
+              )}
             </div>
 
             <div className="flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-1 text-sm text-gray-400 mb-4">
               {anime.episodes && <span>{anime.episodes} episodes</span>}
               {anime.duration && <span>{anime.duration} min/ep</span>}
               {anime.season && anime.seasonYear && (
-                <span>{anime.season.charAt(0) + anime.season.slice(1).toLowerCase()} {anime.seasonYear}</span>
+                <span>
+                  {anime.season.charAt(0) + anime.season.slice(1).toLowerCase()}{" "}
+                  {anime.seasonYear}
+                </span>
               )}
             </div>
 
             {authed ? (
               <div className="flex items-center justify-center sm:justify-start gap-2">
-                <AddToWatchlist media={{
-                  id: anime.id,
-                  idMal: anime.idMal,
-                  title: { romaji: anime.title.romaji, english: anime.title.english },
-                  coverImage: anime.coverImage,
-                  status: anime.status,
-                  episodes: anime.episodes,
-                  nextAiringEpisode: anime.nextAiringEpisode,
-                }} />
+                <AddToWatchlist
+                  media={{
+                    id: anime.id,
+                    idMal: anime.idMal,
+                    title: {
+                      romaji: anime.title.romaji,
+                      english: anime.title.english,
+                    },
+                    coverImage: anime.coverImage,
+                    status: anime.status,
+                    episodes: anime.episodes,
+                    nextAiringEpisode: anime.nextAiringEpisode,
+                  }}
+                />
                 <AddPrequels anime={anime} />
                 <RecommendToBuddy
                   mediaId={anime.id}
                   title={anime.title.english || anime.title.romaji}
-                  coverUrl={anime.coverImage?.extraLarge || anime.coverImage?.large || ''}
+                  coverUrl={
+                    anime.coverImage?.extraLarge ||
+                    anime.coverImage?.large ||
+                    ""
+                  }
                 />
               </div>
             ) : (
@@ -366,9 +451,11 @@ export default function AnimeDetailPage() {
 
         {anime.nextAiringEpisode && (
           <div className="mt-6 bg-[#141925] rounded-lg p-4 flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full ${theme.pulse} animate-pulse`} />
+            <div
+              className={`w-2 h-2 rounded-full ${theme.pulse} animate-pulse`}
+            />
             <span className="text-sm text-gray-300">
-              Episode {anime.nextAiringEpisode.episode} airing in{' '}
+              Episode {anime.nextAiringEpisode.episode} airing in{" "}
               <span className={`${theme.btnText} font-semibold`}>
                 {formatCountdown(anime.nextAiringEpisode.timeUntilAiring)}
               </span>
@@ -379,7 +466,10 @@ export default function AnimeDetailPage() {
         {anime.genres.length > 0 && (
           <div className="mt-6 flex flex-wrap gap-2">
             {anime.genres.map((g) => (
-              <span key={g} className="px-3 py-1 bg-[#111827] border border-[#253040] rounded-full text-xs text-gray-300">
+              <span
+                key={g}
+                className="px-3 py-1 bg-[#111827] border border-[#253040] rounded-full text-xs text-gray-300"
+              >
                 {g}
               </span>
             ))}
@@ -387,96 +477,137 @@ export default function AnimeDetailPage() {
         )}
 
         <div className="mt-6">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Watch</h2>
-          {(watchUrl || streamingLinks.length > 0) ? (
+          <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
+            Watch
+          </h2>
+          {watchUrls || streamingLinks.length > 0 ? (
             <>
               <div className="flex flex-wrap gap-2">
-                {streamingLinks.map((link) => (
+                {streamingLinks.map((link) => {
+                  const st = streamThemes[link.name] || defaultStreamTheme;
+                  return (
+                    <a
+                      key={link.name}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 ${st.bg} ${st.hover} ${st.text} ${st.border || ''} text-sm rounded-lg font-medium transition-colors`}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      {link.name}
+                    </a>
+                  );
+                })}
+                {watchUrls?.url9anime && (
                   <a
-                    key={link.name}
-                    href={link.url}
+                    href={watchUrls.url9anime}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#141925] border border-[#253040] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg font-medium transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    {link.name}
-                  </a>
-                ))}
-                {watchUrl && (
-                  <a
-                    href={watchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${theme.gradientBold} ${theme.gradientHover} text-white text-sm rounded-lg font-medium transition-all`}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 ${streamThemes["9Anime"].bg} ${streamThemes["9Anime"].hover} ${streamThemes["9Anime"].text} text-sm rounded-lg font-medium transition-colors`}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M8 5v14l11-7z" />
                     </svg>
-                    AnimeKai
+                    9Anime
+                  </a>
+                )}
+                {watchUrls?.urlKickass && (
+                  <a
+                    href={watchUrls.urlKickass}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 ${streamThemes["Kickass Anime"].bg} ${streamThemes["Kickass Anime"].hover} ${streamThemes["Kickass Anime"].text} text-sm rounded-lg font-medium transition-colors`}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    Kickass Anime
                   </a>
                 )}
               </div>
               <p className="text-xs text-gray-400 mt-2">
-                * Streaming links are sourced from third-party databases and may be outdated or region-restricted. If a link doesn&apos;t work, please search for the title on the platform directly.
+                * Streaming links are sourced from third-party databases and may
+                be outdated or region-restricted. If a link doesn&apos;t work,
+                please search for the title on the platform directly.
               </p>
             </>
           ) : (
             <p className="text-xs text-gray-400">
-              * We couldn&apos;t find streaming links for this title. Please search for it on your preferred streaming platform.
+              * We couldn&apos;t find streaming links for this title. Please
+              search for it on your preferred streaming platform.
             </p>
           )}
         </div>
 
-        {authed && isInWatchlist && (() => {
-          const nextEp = anime.nextAiringEpisode?.episode ?? null;
-          const airedSoFar = nextEp ? nextEp - 1 : null;
-          const highestWatched = watchedEpisodes.length > 0 ? Math.max(...watchedEpisodes) : 0;
-          const effectiveTotal = anime.episodes || (nextEp ? nextEp : null) || Math.max(highestWatched + 1, 1);
-          if (effectiveTotal <= 0) return null;
-          const displayTotal = anime.episodes || (nextEp ? nextEp : highestWatched + 1);
+        {authed &&
+          isInWatchlist &&
+          (() => {
+            const nextEp = anime.nextAiringEpisode?.episode ?? null;
+            const airedSoFar = nextEp ? nextEp - 1 : null;
+            const highestWatched =
+              watchedEpisodes.length > 0 ? Math.max(...watchedEpisodes) : 0;
+            const effectiveTotal =
+              anime.episodes ||
+              (nextEp ? nextEp : null) ||
+              Math.max(highestWatched + 1, 1);
+            if (effectiveTotal <= 0) return null;
+            const displayTotal =
+              anime.episodes || (nextEp ? nextEp : highestWatched + 1);
 
-          let consecutive = 0;
-          for (let i = 1; i <= effectiveTotal; i++) {
-            if (watchedEpisodes.includes(i)) consecutive = i;
-            else break;
-          }
+            let consecutive = 0;
+            for (let i = 1; i <= effectiveTotal; i++) {
+              if (watchedEpisodes.includes(i)) consecutive = i;
+              else break;
+            }
 
-          return (
-            <div className="mt-6">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Episodes</h2>
-              {watchedEpisodes.length > 0 && (
-                <div className="mb-3 text-xs text-gray-500 space-y-0.5">
-                  <p>
-                    Watched up to Episode{' '}
-                    <span className={`${theme.btnText} font-semibold`}>
-                      {consecutive || watchedEpisodes[watchedEpisodes.length - 1]}
-                    </span>
+            return (
+              <div className="mt-6">
+                <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
+                  Episodes
+                </h2>
+                {watchedEpisodes.length > 0 && (
+                  <div className="mb-3 text-xs text-gray-500 space-y-0.5">
+                    <p>
+                      Watched up to Episode{" "}
+                      <span className={`${theme.btnText} font-semibold`}>
+                        {consecutive ||
+                          watchedEpisodes[watchedEpisodes.length - 1]}
+                      </span>
+                    </p>
+                    <p>
+                      <span className={`${theme.btnText} font-semibold`}>
+                        {watchedEpisodes.length}
+                      </span>
+                      /{displayTotal} episodes watched
+                    </p>
+                  </div>
+                )}
+                <EpisodeGrid
+                  totalEpisodes={effectiveTotal}
+                  watchedEpisodes={watchedEpisodes}
+                  onToggle={toggleEpisode}
+                  availableUpTo={
+                    anime.nextAiringEpisode
+                      ? anime.nextAiringEpisode.episode - 1
+                      : undefined
+                  }
+                />
+                {!anime.episodes && (
+                  <p className="text-[10px] text-gray-600 mt-2">
+                    * Total episodes unknown. Showing episodes aired so far.
                   </p>
-                  <p>
-                    <span className={`${theme.btnText} font-semibold`}>{watchedEpisodes.length}</span>
-                    /{displayTotal} episodes watched
-                  </p>
-                </div>
-              )}
-              <EpisodeGrid
-                totalEpisodes={effectiveTotal}
-                watchedEpisodes={watchedEpisodes}
-                onToggle={toggleEpisode}
-                availableUpTo={anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : undefined}
-              />
-              {!anime.episodes && (
-                <p className="text-[10px] text-gray-600 mt-2">* Total episodes unknown. Showing episodes aired so far.</p>
-              )}
-            </div>
-          );
-        })()}
+                )}
+              </div>
+            );
+          })()}
 
         {anime.description && (
           <div className="mt-6">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">Synopsis</h2>
+            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
+              Synopsis
+            </h2>
             <SynopsisCollapse html={anime.description} collapseKey={id} />
           </div>
         )}

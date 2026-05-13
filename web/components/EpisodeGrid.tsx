@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 
@@ -15,6 +16,11 @@ interface EpisodeGridProps {
 }
 
 const BATCH_SIZE = 100;
+
+const themeBtnHex: Record<string, string> = {
+  teal: '#0d9488',
+  rose: '#e11d48',
+};
 
 export default function EpisodeGrid({
   totalEpisodes,
@@ -36,6 +42,7 @@ export default function EpisodeGrid({
 
   const rangeStart = activeBatch * BATCH_SIZE + 1;
   const rangeEnd = Math.min((activeBatch + 1) * BATCH_SIZE, totalEpisodes);
+  const watchedBgColor = themeBtnHex[theme.accent] || '#0d9488';
 
   return (
     <div>
@@ -78,34 +85,54 @@ export default function EpisodeGrid({
             );
           }
 
-          const className = `h-9 rounded text-sm font-semibold transition-colors ${
-            isCurrent
-              ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
-              : isWatched
-                ? `${theme.btn} text-white`
-                : 'bg-[#1e2736] text-gray-500 hover:bg-[#2a3a4d]'
-          }`;
+          if (isCurrent) {
+            const currentClassName = 'h-9 rounded text-sm font-semibold bg-emerald-600 text-white ring-2 ring-emerald-400';
+            if (linkPrefix) {
+              return (
+                <Link key={ep} href={`${linkPrefix}/${ep}`} className={`${currentClassName} flex items-center justify-center`}>
+                  {ep}
+                </Link>
+              );
+            }
+            return (
+              <motion.button
+                key={ep}
+                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.08 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                onClick={() => onToggle?.(ep)}
+                className={currentClassName}
+              >
+                {ep}
+              </motion.button>
+            );
+          }
 
           if (linkPrefix) {
+            const className = `h-9 rounded text-sm font-semibold transition-colors ${
+              isWatched ? `${theme.btn} text-white` : 'bg-[#1e2736] text-gray-500 hover:bg-[#2a3a4d]'
+            }`;
             return (
-              <Link
-                key={ep}
-                href={`${linkPrefix}/${ep}`}
-                className={`${className} flex items-center justify-center`}
-              >
+              <Link key={ep} href={`${linkPrefix}/${ep}`} className={`${className} flex items-center justify-center`}>
                 {ep}
               </Link>
             );
           }
 
           return (
-            <button
+            <motion.button
               key={ep}
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.08 }}
+              animate={{ backgroundColor: isWatched ? watchedBgColor : '#1e2736' }}
+              transition={{ type: 'spring', stiffness: 500, damping: 20 }}
               onClick={() => onToggle?.(ep)}
-              className={className}
+              className={`h-9 rounded text-sm font-semibold ${
+                isWatched ? 'text-white' : 'text-gray-500'
+              }`}
             >
               {ep}
-            </button>
+            </motion.button>
           );
         })}
       </div>
