@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.105.3",
+    "@supabase/supabase-js": "^2.105.4",
     "@types/ws": "^8.18.1",
     "appwrite": "^24.2.0",
     "framer-motion": "^12.38.0",
