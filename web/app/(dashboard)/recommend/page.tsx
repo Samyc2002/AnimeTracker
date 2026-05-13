@@ -12,6 +12,7 @@ import AddToWatchlist from '@/components/AddToWatchlist';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
+import { Spinner } from '@/components/ui/Spinner';
 import type { TasteProfile, QuizQuestion, AniListMedia } from '@/lib/types';
 
 type Phase = 'loading' | 'quiz' | 'searching' | 'results';
@@ -96,7 +97,7 @@ function RecommendPage() {
   if (phase === 'loading') {
     return (
       <div className="text-center mt-16">
-        <div className={`w-8 h-8 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin mx-auto mb-4`} />
+        <div className="flex justify-center mb-4"><Spinner size="lg" /></div>
         <p className="text-gray-400 text-sm">Analyzing your taste...</p>
       </div>
     );
@@ -181,7 +182,7 @@ function RecommendPage() {
   if (phase === 'searching') {
     return (
       <div className="text-center mt-16">
-        <div className={`w-8 h-8 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin mx-auto mb-4`} />
+        <div className="flex justify-center mb-4"><Spinner size="lg" /></div>
         <p className="text-gray-400 text-sm">Finding your next watch...</p>
       </div>
     );

@@ -18,6 +18,7 @@ import RecommendToBuddy from "@/components/RecommendToBuddy";
 import EpisodeGrid from "@/components/EpisodeGrid";
 import SynopsisCollapse from "@/components/SynopsisCollapse";
 import FranchiseTabs from "@/components/FranchiseTabs";
+import { Spinner } from "@/components/ui/Spinner";
 import type { AnimeDetail, WatchURLs } from "@/lib/types";
 import { fireClientAchievementEvent } from "@/lib/achievements/fire-event";
 
@@ -32,22 +33,100 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   HIATUS: { label: "Hiatus", className: "bg-gray-700 text-gray-300" },
 };
 
-const streamThemes: Record<string, { bg: string; hover: string; text: string; border?: string }> = {
-  "Crunchyroll": { bg: "bg-[#f47521]", hover: "hover:bg-[#e0691d]", text: "text-white" },
-  "Netflix": { bg: "bg-[#e50914]", hover: "hover:bg-[#cc0812]", text: "text-white" },
-  "Hulu": { bg: "bg-[#1ce783]", hover: "hover:bg-[#17cc73]", text: "text-black" },
-  "Amazon Prime Video": { bg: "bg-[#00a8e1]", hover: "hover:bg-[#0095c8]", text: "text-white" },
-  "Bilibili Global": { bg: "bg-[#00a1d6]", hover: "hover:bg-[#0090bf]", text: "text-white" },
-  "Muse Asia": { bg: "bg-[#2d2d8a]", hover: "hover:bg-[#24247a]", text: "text-white" },
-  "Disney Plus": { bg: "bg-[#113ccf]", hover: "hover:bg-[#0e33b5]", text: "text-white" },
-  "Funimation": { bg: "bg-[#5b0bb5]", hover: "hover:bg-[#4e099d]", text: "text-white" },
-  "HIDIVE": { bg: "bg-[#00baef]", hover: "hover:bg-[#00a5d4]", text: "text-white" },
-  "iQIYI": { bg: "bg-[#00be06]", hover: "hover:bg-[#00a505]", text: "text-white" },
-  "9Anime": { bg: "bg-[#c026d3]", hover: "hover:bg-[#a821b8]", text: "text-white" },
-  "Kickass Anime": { bg: "bg-[#16a34a]", hover: "hover:bg-[#138a3f]", text: "text-white" },
+interface StreamTheme {
+  brand: string;
+  brandLight: string;
+  brandDark: string;
+  textTint: string;
+  hoverText: string;
+}
+
+const streamThemes: Record<string, StreamTheme> = {
+  "Crunchyroll": { brand: '#f47521', brandLight: '#f89b5a', brandDark: '#c45e1a', textTint: '#f4a76b', hoverText: '#fff' },
+  "Netflix": { brand: '#e50914', brandLight: '#ff3b44', brandDark: '#b50710', textTint: '#f06b72', hoverText: '#fff' },
+  "Hulu": { brand: '#1ce783', brandLight: '#4aeea0', brandDark: '#14b566', textTint: '#6ee8a8', hoverText: '#000' },
+  "Amazon Prime Video": { brand: '#00a8e1', brandLight: '#33bfef', brandDark: '#0086b4', textTint: '#5cc4e8', hoverText: '#fff' },
+  "Bilibili Global": { brand: '#00a1d6', brandLight: '#33b7e2', brandDark: '#0081ab', textTint: '#5cbfde', hoverText: '#fff' },
+  "Muse Asia": { brand: '#4a4adf', brandLight: '#6e6eeb', brandDark: '#3636b8', textTint: '#8e8eef', hoverText: '#fff' },
+  "Disney Plus": { brand: '#113ccf', brandLight: '#3d5fdb', brandDark: '#0d2fa5', textTint: '#6b87e0', hoverText: '#fff' },
+  "Funimation": { brand: '#5b0bb5', brandLight: '#7a2dd0', brandDark: '#480891', textTint: '#9a5fd4', hoverText: '#fff' },
+  "HIDIVE": { brand: '#00baef', brandLight: '#33caf3', brandDark: '#0095bf', textTint: '#5cd0f0', hoverText: '#fff' },
+  "iQIYI": { brand: '#00be06', brandLight: '#33ce39', brandDark: '#009805', textTint: '#5cd460', hoverText: '#fff' },
+  "9Anime": { brand: '#c026d3', brandLight: '#d04de0', brandDark: '#991ea8', textTint: '#d674e0', hoverText: '#fff' },
+  "Kickass Anime": { brand: '#16a34a', brandLight: '#3dba6a', brandDark: '#11823b', textTint: '#5ec47e', hoverText: '#fff' },
 };
 
-const defaultStreamTheme = { bg: "bg-[#141925]", hover: "hover:bg-[#1c2333]", text: "text-gray-300", border: "border border-[#253040]" };
+function streamStyle(theme: StreamTheme) {
+  return {
+    backgroundColor: `color-mix(in srgb, ${theme.brand} 15%, transparent)`,
+    borderColor: `color-mix(in srgb, ${theme.brand} 30%, transparent)`,
+    color: theme.textTint,
+  };
+}
+
+function streamHoverStyle(theme: StreamTheme) {
+  return {
+    backgroundImage: `linear-gradient(to bottom, ${theme.brandLight}, ${theme.brandDark})`,
+    borderColor: theme.brandLight,
+    color: theme.hoverText,
+  };
+}
+
+function streamDisabledStyle(theme: StreamTheme) {
+  return {
+    backgroundColor: '#141925',
+    borderColor: `color-mix(in srgb, ${theme.brand} 40%, transparent)`,
+    color: `color-mix(in srgb, ${theme.brand} 50%, #6b7280)`,
+  };
+}
+
+const playIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const defaultStreamTheme: StreamTheme = {
+  brand: '#253040', brandLight: '#354050', brandDark: '#1c2333',
+  textTint: '#9ca3af', hoverText: '#e5e7eb',
+};
+
+function StreamButton({ name, href, disabled }: { name: string; href?: string; disabled?: boolean }) {
+  const theme = streamThemes[name] || defaultStreamTheme;
+  const [hovered, setHovered] = useState(false);
+
+  const style = disabled
+    ? streamDisabledStyle(theme)
+    : hovered
+      ? streamHoverStyle(theme)
+      : streamStyle(theme);
+
+  const cls = 'inline-flex items-center gap-1.5 px-4 py-2 border text-sm rounded-lg font-medium transition-all duration-200';
+
+  if (disabled) {
+    return (
+      <span className={`${cls} cursor-not-allowed opacity-60`} style={style} title={`${name} not available for this title`}>
+        {playIcon}
+        {name}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cls}
+      style={style}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {playIcon}
+      {name}
+    </a>
+  );
+}
 
 function formatCountdown(seconds: number) {
   const d = Math.floor(seconds / 86400);
@@ -324,9 +403,7 @@ export default function AnimeDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
-        <div
-          className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`}
-        />
+        <Spinner />
       </div>
     );
   }
@@ -480,65 +557,18 @@ export default function AnimeDetailPage() {
           <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
             Watch
           </h2>
-          {watchUrls || streamingLinks.length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {streamingLinks.map((link) => {
-                  const st = streamThemes[link.name] || defaultStreamTheme;
-                  return (
-                    <a
-                      key={link.name}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`inline-flex items-center gap-1.5 px-4 py-2 ${st.bg} ${st.hover} ${st.text} ${st.border || ''} text-sm rounded-lg font-medium transition-colors`}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                      {link.name}
-                    </a>
-                  );
-                })}
-                {watchUrls?.url9anime && (
-                  <a
-                    href={watchUrls.url9anime}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 ${streamThemes["9Anime"].bg} ${streamThemes["9Anime"].hover} ${streamThemes["9Anime"].text} text-sm rounded-lg font-medium transition-colors`}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    9Anime
-                  </a>
-                )}
-                {watchUrls?.urlKickass && (
-                  <a
-                    href={watchUrls.urlKickass}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 ${streamThemes["Kickass Anime"].bg} ${streamThemes["Kickass Anime"].hover} ${streamThemes["Kickass Anime"].text} text-sm rounded-lg font-medium transition-colors`}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    Kickass Anime
-                  </a>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                * Streaming links are sourced from third-party databases and may
-                be outdated or region-restricted. If a link doesn&apos;t work,
-                please search for the title on the platform directly.
-              </p>
-            </>
-          ) : (
-            <p className="text-xs text-gray-400">
-              * We couldn&apos;t find streaming links for this title. Please
-              search for it on your preferred streaming platform.
-            </p>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {streamingLinks.map((link) => (
+              <StreamButton key={link.name} name={link.name} href={link.url} />
+            ))}
+            <StreamButton name="9Anime" href={watchUrls?.url9anime} disabled={!watchUrls?.url9anime} />
+            <StreamButton name="Kickass Anime" href={watchUrls?.urlKickass} disabled={!watchUrls?.urlKickass} />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            * Streaming links are sourced from third-party databases and may
+            be outdated or region-restricted. If a link doesn&apos;t work,
+            please search for the title on the platform directly.
+          </p>
         </div>
 
         {authed &&

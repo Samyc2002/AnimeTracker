@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import { AuthInput } from '@/components/ui/AuthInput';
+import { AuthSubmitButton } from '@/components/ui/AuthSubmitButton';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -52,31 +54,25 @@ export default function ResetPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <input
+              <AuthInput
                 type="password"
                 placeholder="New password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
               />
-              <input
+              <AuthInput
                 type="password"
                 placeholder="Confirm password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
-                className="w-full px-4 py-2 bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-200 focus:border-teal-500 outline-none"
               />
               {error && <p className="text-red-400 text-sm">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50"
-              >
+              <AuthSubmitButton disabled={loading}>
                 {loading ? 'Updating...' : 'Set New Password'}
-              </button>
+              </AuthSubmitButton>
             </form>
           )}
           <p className="mt-4 text-center text-sm text-gray-400">

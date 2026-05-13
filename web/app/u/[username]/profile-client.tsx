@@ -19,17 +19,18 @@ import { getTheme } from '@/lib/theme';
 import BadgeSlots from '@/components/BadgeSlots';
 import AchievementSection from '@/components/AchievementSection';
 import { enqueueSnackbar } from 'notistack';
+import { StatusBadge, type StatusBadgeTone } from '@/components/ui/StatusBadge';
 import type { AniListMedia } from '@/lib/types';
 import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Completed', 'Planned', 'Dropped'];
 const ALL_TABS = ['All', ...WATCH_STATUSES] as const;
 
-const statusColors: Record<WatchStatus, string> = {
-  Watching: 'bg-emerald-900/60 text-emerald-300',
-  Planned: 'bg-blue-900/60 text-blue-300',
-  Completed: 'bg-purple-900/60 text-purple-300',
-  Dropped: 'bg-red-900/60 text-red-300',
+const statusTones: Record<WatchStatus, StatusBadgeTone> = {
+  Watching: 'emerald',
+  Planned: 'blue',
+  Completed: 'purple',
+  Dropped: 'red',
 };
 
 function upgradeImageUrl(url: string): string {
@@ -87,9 +88,7 @@ function AnimeGrid({ entries, onContextMenu }: { entries: PublicProfileEntry[]; 
                 unoptimized
               />
               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${statusColors[entry.watch_status]}`}>
-                  {entry.watch_status}
-                </span>
+                <StatusBadge tone={statusTones[entry.watch_status]}>{entry.watch_status}</StatusBadge>
               </div>
             </div>
             <div className="p-2">

@@ -10,6 +10,8 @@ import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
+import { Spinner } from '@/components/ui/Spinner';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ACHIEVEMENTS_UI_VISIBLE, FOUNDING_MEMBER_ENABLED } from '@/lib/feature-flags';
 
 interface NotificationDoc {
@@ -115,7 +117,7 @@ function NotificationsPage() {
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
-        <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+        <Spinner />
       </div>
     );
   }
@@ -199,7 +201,7 @@ function NotificationsPage() {
                 {notif.type === 'sequel' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-purple-900/60 text-purple-300">Sequel</span>
+                      <StatusBadge tone="purple">Sequel</StatusBadge>
                       <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                         {notif.title}
                       </p>
@@ -211,7 +213,7 @@ function NotificationsPage() {
                 ) : notif.type === 'buddy_request' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-indigo-900/60 text-indigo-300">Buddy Request</span>
+                      <StatusBadge tone="indigo">Buddy Request</StatusBadge>
                       <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                         {notif.title}
                       </p>
@@ -223,7 +225,7 @@ function NotificationsPage() {
                 ) : notif.type === 'buddy_accept' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-emerald-900/60 text-emerald-300">Buddy</span>
+                      <StatusBadge tone="emerald">Buddy</StatusBadge>
                       <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                         {notif.title}
                       </p>
@@ -235,7 +237,7 @@ function NotificationsPage() {
                 ) : notif.type === 'buddy_rec' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-amber-900/60 text-amber-300">Recommendation</span>
+                      <StatusBadge tone="amber">Recommendation</StatusBadge>
                     </div>
                     <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                       {notif.title}
@@ -247,7 +249,7 @@ function NotificationsPage() {
                 ) : notif.type === 'achievement' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-amber-900/60 text-amber-300">Achievement</span>
+                      <StatusBadge tone="amber">Achievement</StatusBadge>
                     </div>
                     <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                       {notif.title}

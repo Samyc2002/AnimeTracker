@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import RequireAuth from '@/components/RequireAuth';
+import { Spinner } from '@/components/ui/Spinner';
 import type { BuddyProfile } from '@/lib/types';
 
 interface BuddyEntry {
@@ -127,7 +128,7 @@ function BuddiesPage() {
   if (loading) {
     return (
       <div className="flex justify-center mt-12">
-        <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+        <Spinner />
       </div>
     );
   }

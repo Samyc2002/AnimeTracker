@@ -12,6 +12,7 @@ import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
 import RequireAuth from '@/components/RequireAuth';
+import { StatusBadge, type StatusBadgeTone } from '@/components/ui/StatusBadge';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import type { WatchStatus } from '@/lib/types';
 
@@ -42,12 +43,12 @@ const ALL_AIRING = 'All';
 const AIRING_STATUSES = ['RELEASING', 'FINISHED', 'NOT_YET_RELEASED', 'CANCELLED', 'HIATUS'] as const;
 const PAGE_SIZE = 30;
 
-const airingStatusLabels: Record<string, { label: string; className: string }> = {
-  RELEASING: { label: 'Airing', className: 'bg-emerald-900/60 text-emerald-300' },
-  FINISHED: { label: 'Finished', className: 'bg-blue-900/60 text-blue-300' },
-  NOT_YET_RELEASED: { label: 'Upcoming', className: 'bg-amber-900/60 text-amber-300' },
-  CANCELLED: { label: 'Cancelled', className: 'bg-red-900/60 text-red-300' },
-  HIATUS: { label: 'Hiatus', className: 'bg-gray-700/60 text-gray-300' },
+const airingStatusLabels: Record<string, { label: string; className: string; tone: StatusBadgeTone }> = {
+  RELEASING: { label: 'Airing', className: 'bg-emerald-900/60 text-emerald-300', tone: 'emerald' },
+  FINISHED: { label: 'Finished', className: 'bg-blue-900/60 text-blue-300', tone: 'blue' },
+  NOT_YET_RELEASED: { label: 'Upcoming', className: 'bg-amber-900/60 text-amber-300', tone: 'amber' },
+  CANCELLED: { label: 'Cancelled', className: 'bg-red-900/60 text-red-300', tone: 'red' },
+  HIATUS: { label: 'Hiatus', className: 'bg-gray-700/60 text-gray-300', tone: 'gray' },
 };
 
 type ViewMode = 'list' | 'card';
@@ -439,7 +440,7 @@ function WatchlistPage() {
                       <AddToPlaylist mediaId={entry.media_id} />
                     </div>
                     <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${airingInfo.className}`}>{airingInfo.label}</span>
+                      <StatusBadge tone={airingInfo.tone}>{airingInfo.label}</StatusBadge>
                     </div>
                   </div>
                   <div className="p-2">
