@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const NINEANIME_BASE = 'https://9animetv.to';
+const ANIMEKAI_BASE = 'https://animekai.to';
 const AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0';
 
 export async function GET(req: NextRequest) {
@@ -13,9 +13,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const searchUrl = `${NINEANIME_BASE}/search?keyword=${encodeURIComponent(title)}`;
+    const searchUrl = `${ANIMEKAI_BASE}/browser?keyword=${encodeURIComponent(title)}`;
     const res = await fetch(searchUrl, {
-      headers: { 'User-Agent': AGENT, 'Referer': NINEANIME_BASE },
+      headers: { 'User-Agent': AGENT, 'Referer': ANIMEKAI_BASE },
       cache: 'no-store',
     });
 
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     }
 
     const slug = matches[0][1];
-    return NextResponse.json({ url: `${NINEANIME_BASE}/watch/${slug}` });
+    return NextResponse.json({ url: `${ANIMEKAI_BASE}/watch/${slug}` });
   } catch {
     return NextResponse.json({ error: 'Failed to search' }, { status: 500 });
   }

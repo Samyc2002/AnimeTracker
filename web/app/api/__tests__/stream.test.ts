@@ -28,7 +28,7 @@ describe('GET /api/stream', () => {
     const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.url).toBe('https://9animetv.to/watch/test-slug');
+    expect(body.url).toBe('https://animekai.to/watch/test-slug');
   });
 
   it('returns null URL when no matches in HTML', async () => {
