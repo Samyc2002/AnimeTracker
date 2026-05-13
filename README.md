@@ -80,4 +80,4 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflo
 
 ## License
 
-MIT
+Apache 2.0 -- see [LICENSE](LICENSE)
