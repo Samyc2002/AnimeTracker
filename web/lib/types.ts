@@ -10,7 +10,12 @@ export interface AniListMedia {
     large: string;
     medium: string;
   };
-  status: 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
+  status:
+    | "RELEASING"
+    | "FINISHED"
+    | "NOT_YET_RELEASED"
+    | "CANCELLED"
+    | "HIATUS";
   episodes: number | null;
   isAdult?: boolean;
   nextAiringEpisode: {
@@ -41,7 +46,12 @@ export interface AnimeDetail {
   };
   bannerImage: string | null;
   description: string | null;
-  status: 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
+  status:
+    | "RELEASING"
+    | "FINISHED"
+    | "NOT_YET_RELEASED"
+    | "CANCELLED"
+    | "HIATUS";
   episodes: number | null;
   duration: number | null;
   season: string | null;
@@ -72,7 +82,12 @@ export interface AnimeDetail {
   };
 }
 
-export type WatchStatus = 'Watching' | 'Planned' | 'Completed' | 'Dropped';
+export interface WatchURLs {
+  url9anime: string;
+  urlKickass: string;
+}
+
+export type WatchStatus = "Watching" | "Planned" | "Completed" | "Dropped";
 
 export interface WatchlistEntry {
   id?: number;
@@ -166,16 +181,16 @@ export interface QuizOption {
 
 export interface RecommendationFilters {
   genres: string[];
-  status: 'RELEASING' | 'FINISHED' | null;
+  status: "RELEASING" | "FINISHED" | null;
   minScore: number;
   maxEpisodes: number | null;
-  sort: 'SCORE_DESC' | 'TRENDING_DESC' | 'POPULARITY_DESC';
+  sort: "SCORE_DESC" | "TRENDING_DESC" | "POPULARITY_DESC";
   excludeMediaIds: number[];
 }
 
 // Buddy types
 
-export type BuddyStatus = 'pending' | 'accepted' | 'declined';
+export type BuddyStatus = "pending" | "accepted" | "declined";
 
 export interface BuddyDoc {
   $id: string;

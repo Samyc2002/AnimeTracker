@@ -239,7 +239,7 @@ export default function LandingPage() {
                 href="/signup"
                 className="inline-block px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold text-base transition-colors"
               >
-                Get Started — it&apos;s free
+                Get Started. It&apos;s free
               </Link>
             )}
           </div>
