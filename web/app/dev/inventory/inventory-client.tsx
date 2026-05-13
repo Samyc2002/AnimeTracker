@@ -1012,7 +1012,7 @@ function InventoryContent() {
                   { label: 'Planned', value: '5' },
                   { label: 'Dropped', value: '2' },
                 ].map((s) => (
-                  <div key={s.label} className={`rounded-xl border bg-gradient-to-br p-3 text-center ${theme.gradient.replace('from-', 'from-').split(' ').map((c: string) => c.includes('from-') || c.includes('to-') ? c.replace(/400/g, '500/10') : c).join(' ')} border-${theme.accent}-500/20`}>
+                  <div key={s.label} className={`rounded-xl border bg-gradient-to-br p-3 text-center ${theme.gradient.split(' ').map((c: string) => c.includes('from-') || c.includes('to-') ? c.replace(/400/g, '500/10') : c).join(' ')} border-${theme.accent}-500/20`}>
                     <p className="text-xs text-gray-500">{s.label}</p>
                     <p className="text-lg font-bold text-gray-100">{s.value}</p>
                   </div>
