@@ -1,33 +1,60 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getOnlineCount } from '@/lib/online-tracker';
 
 const statsCache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
-let excludedUserIds: Set<string> | null = null;
+let resolvedEmailSets: { excluded: Set<string>; admin: Set<string> } | null = null;
 
-async function getExcludedUserIds(supabase: ReturnType<typeof getServiceSupabase>): Promise<Set<string>> {
-  if (excludedUserIds) return excludedUserIds;
-
-  const testEmails = (process.env.TEST_ACCOUNTS || '')
+function parseEmailList(envVar: string): string[] {
+  return (process.env[envVar] || '')
     .split(',')
     .map(e => e.trim().toLowerCase())
     .filter(Boolean);
+}
 
-  if (testEmails.length === 0) {
-    excludedUserIds = new Set();
-    return excludedUserIds;
+async function getEmailSets(supabase: ReturnType<typeof getServiceSupabase>) {
+  if (resolvedEmailSets) return resolvedEmailSets;
+
+  const testEmails = parseEmailList('TEST_ACCOUNTS');
+  const adminEmails = parseEmailList('ADMIN_EMAILS');
+  const allEmails = new Set([...testEmails, ...adminEmails]);
+
+  if (allEmails.size === 0) {
+    resolvedEmailSets = { excluded: new Set(), admin: new Set() };
+    return resolvedEmailSets;
   }
 
   const { data } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   const users = data?.users || [];
-  excludedUserIds = new Set(
-    users
-      .filter(u => u.email && testEmails.includes(u.email.toLowerCase()))
-      .map(u => u.id)
+
+  const excluded = new Set(
+    users.filter(u => u.email && testEmails.includes(u.email.toLowerCase())).map(u => u.id)
   );
-  return excludedUserIds;
+  const admin = new Set(
+    users.filter(u => u.email && adminEmails.includes(u.email.toLowerCase())).map(u => u.id)
+  );
+
+  resolvedEmailSets = { excluded, admin };
+  return resolvedEmailSets;
+}
+
+async function getCallerUserId(req: NextRequest): Promise<string | null> {
+  const response = NextResponse.next();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll().map(c => ({ name: c.name, value: c.value })),
+        setAll: (cookies) => { cookies.forEach(c => response.cookies.set(c.name, c.value, c.options)); },
+      },
+    },
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
 }
 
 function excludeTestUsers<T extends { user_id: string }>(rows: T[], excluded: Set<string>): T[] {
@@ -274,20 +301,25 @@ function computeSignupsChart(profiles: ProfileRow[], now: Date) {
   return result;
 }
 
-export async function GET() {
-  const cached = statsCache.get('global');
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return NextResponse.json(cached.data);
-  }
-
+export async function GET(req: NextRequest) {
   try {
     const supabase = getServiceSupabase();
+    const { excluded, admin } = await getEmailSets(supabase);
+
+    const callerId = await getCallerUserId(req);
+    if (!callerId || !admin.has(callerId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const cached = statsCache.get('global');
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      return NextResponse.json(cached.data);
+    }
+
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString();
-
-    const excluded = await getExcludedUserIds(supabase);
 
     const [
       allProfiles,

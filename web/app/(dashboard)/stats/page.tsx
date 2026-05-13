@@ -2,6 +2,7 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import RequireAuth from '@/components/RequireAuth';
@@ -456,14 +457,21 @@ function AdminPage() {
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const themeAccent = theme.accent as 'teal' | 'rose';
+  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch('/api/stats');
+      if (res.status === 403) {
+        setForbidden(true);
+        setLoading(false);
+        return;
+      }
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || `HTTP ${res.status}`);
@@ -484,7 +492,11 @@ function AdminPage() {
     return () => clearInterval(interval);
   }, [fetchStats]);
 
-  if (loading) {
+  useEffect(() => {
+    if (forbidden) router.replace('/watchlist');
+  }, [forbidden, router]);
+
+  if (loading || forbidden) {
     return (
       <div className="flex justify-center mt-24">
         <div className={`w-8 h-8 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
