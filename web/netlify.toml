@@ -13,7 +13,7 @@
   directory = "netlify/functions"
 
 [build]
-  command = "npm ci && npm run build"
+  command = "npm run build"
   publish = ".next"
 
 [build.environment]
