@@ -21,6 +21,7 @@ import FranchiseTabs from "@/components/FranchiseTabs";
 import { Spinner } from "@/components/ui/Spinner";
 import type { AnimeDetail, WatchURLs } from "@/lib/types";
 import { fireClientAchievementEvent } from "@/lib/achievements/fire-event";
+import { getRandomQuote } from "@/lib/loading-quotes";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   RELEASING: { label: "Airing", className: "bg-emerald-900 text-emerald-300" },
@@ -159,9 +160,11 @@ export default function AnimeDetailPage() {
   const theme = getTheme(sfwMode);
   const id = Number(params.id);
   const [resolvedMediaId, setResolvedMediaId] = useState<number>(id);
+  const [loadingQuote] = useState(() => getRandomQuote('general'));
 
   useEffect(() => {
     async function load() {
+      const start = Date.now();
       try {
         const detail = await fetchAnimeDetail(id);
         setAnime(detail);
@@ -200,6 +203,8 @@ export default function AnimeDetailPage() {
         setAnime(null);
         enqueueSnackbar(getErrorMessage(err), { variant: "error" });
       }
+      const elapsed = Date.now() - start;
+      if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
       setLoading(false);
     }
     load();
@@ -402,8 +407,9 @@ export default function AnimeDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center mt-12">
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Spinner />
+        <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
       </div>
     );
   }

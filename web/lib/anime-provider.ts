@@ -13,13 +13,15 @@ import {
     fetchAnilistWeeklyAiring,
     searchAnilist,
     searchAnilistFiltered,
+    searchAnilistPaginated,
 } from "@/lib/providers/anilist";
 import {
     fetchJikanDetail,
     fetchJikanSchedule,
     searchJikan,
+    searchJikanPaginated,
 } from "@/lib/providers/jikan";
-import { fetchKitsuDetail, searchKitsu } from "@/lib/providers/kitsu";
+import { fetchKitsuDetail, searchKitsu, searchKitsuPaginated } from "@/lib/providers/kitsu";
 import {
     getCachedAnime,
     getCachedSearch,
@@ -67,6 +69,28 @@ export async function searchAnime(search: string): Promise<AniListMedia[]> {
     } catch {
         const cached = await getCachedSearch(search);
         if (cached.length > 0) return cached;
+        throw new Error("Search failed across all providers");
+    }
+}
+
+export const SEARCH_PER_PAGE = 15;
+
+export async function searchAnimePaginated(
+    search: string,
+    page: number = 1,
+): Promise<{ results: AniListMedia[]; hasNextPage: boolean }> {
+    try {
+        return await tryProviders(
+            "search-paginated",
+            () => searchAnilistPaginated(search, page, SEARCH_PER_PAGE),
+            () => searchJikanPaginated(search, page, SEARCH_PER_PAGE),
+            () => searchKitsuPaginated(search, page, SEARCH_PER_PAGE),
+        );
+    } catch {
+        if (page === 1) {
+            const cached = await getCachedSearch(search);
+            if (cached.length > 0) return { results: cached, hasNextPage: false };
+        }
         throw new Error("Search failed across all providers");
     }
 }

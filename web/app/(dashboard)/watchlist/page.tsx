@@ -15,6 +15,7 @@ import RequireAuth from '@/components/RequireAuth';
 import { StatusBadge, type StatusBadgeTone } from '@/components/ui/StatusBadge';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import type { WatchStatus } from '@/lib/types';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 function upgradeImageUrl(url: string): string {
   return url.replace(/\/(?:small|medium)\//, '/large/');
@@ -67,6 +68,7 @@ function WatchlistPage() {
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingQuote] = useState(() => getRandomQuote('general'));
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(() => {
     if (typeof window !== 'undefined') {
@@ -100,6 +102,7 @@ function WatchlistPage() {
 
   const loadWatchlist = useCallback(async () => {
     setLoading(true);
+    const start = Date.now();
     try {
       if (!userId) throw new Error('Not authenticated');
 
@@ -173,6 +176,8 @@ function WatchlistPage() {
     } catch {
       // Not authenticated — layout will redirect
     }
+    const elapsed = Date.now() - start;
+    if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
     setLoading(false);
   }, [filter, airingFilter, page, userId]);
 
@@ -240,7 +245,12 @@ function WatchlistPage() {
   }
 
   if (loading) {
-    return <p className="text-gray-500 text-center mt-12">Loading watchlist...</p>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <p className="text-gray-500">Loading watchlist...</p>
+        <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
+      </div>
+    );
   }
 
   const displayEntries = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;

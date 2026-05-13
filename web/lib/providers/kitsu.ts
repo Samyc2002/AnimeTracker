@@ -66,6 +66,25 @@ export async function searchKitsu(query: string): Promise<AniListMedia[]> {
   }
 }
 
+export async function searchKitsuPaginated(
+  query: string,
+  page: number,
+  perPage: number,
+): Promise<{ results: AniListMedia[]; hasNextPage: boolean }> {
+  try {
+    const offset = (page - 1) * perPage;
+    const data = await kitsuFetch<{ data: any[]; links?: { next?: string } }>(
+      `/anime?filter[text]=${encodeURIComponent(query)}&page[limit]=${perPage}&page[offset]=${offset}`
+    );
+    return {
+      results: (data.data ?? []).map(mapKitsuToMedia),
+      hasNextPage: !!data.links?.next,
+    };
+  } catch (err) {
+    throw new Error(`Kitsu search failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 export async function fetchKitsuDetail(kitsuId: string): Promise<AnimeDetail> {
   try {
     const data = await kitsuFetch<{ data: any }>(`/anime/${kitsuId}`);

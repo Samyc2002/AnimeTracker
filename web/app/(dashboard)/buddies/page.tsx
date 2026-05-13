@@ -10,6 +10,7 @@ import { getTheme } from '@/lib/theme';
 import RequireAuth from '@/components/RequireAuth';
 import { Spinner } from '@/components/ui/Spinner';
 import type { BuddyProfile } from '@/lib/types';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 interface BuddyEntry {
   id: string;
@@ -33,8 +34,10 @@ function BuddiesPage() {
   const [pendingReceived, setPendingReceived] = useState<BuddyEntry[]>([]);
   const [pendingSent, setPendingSent] = useState<BuddyEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingQuote] = useState(() => getRandomQuote('general'));
 
   const loadBuddies = useCallback(async (uid: string) => {
+    const start = Date.now();
     try {
       const res = await fetch(`/api/buddies?userId=${uid}`);
       const data = await res.json();
@@ -44,6 +47,8 @@ function BuddiesPage() {
     } catch {
       enqueueSnackbar('Failed to load buddies', { variant: 'error' });
     }
+    const elapsed = Date.now() - start;
+    if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
     setLoading(false);
   }, []);
 
@@ -127,8 +132,9 @@ function BuddiesPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center mt-12">
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Spinner />
+        <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
       </div>
     );
   }

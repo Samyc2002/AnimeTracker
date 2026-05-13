@@ -122,6 +122,25 @@ export async function searchJikan(query: string): Promise<AniListMedia[]> {
   }
 }
 
+export async function searchJikanPaginated(
+  query: string,
+  page: number,
+  perPage: number,
+): Promise<{ results: AniListMedia[]; hasNextPage: boolean }> {
+  try {
+    const data = await jikanFetch<{
+      data: any[];
+      pagination: { has_next_page: boolean };
+    }>(`/anime?q=${encodeURIComponent(query)}&limit=${perPage}&page=${page}`);
+    return {
+      results: (data.data ?? []).map(mapJikanToMedia),
+      hasNextPage: data.pagination?.has_next_page ?? false,
+    };
+  } catch (err) {
+    throw new Error(`Jikan search failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 export async function fetchJikanDetail(malId: number): Promise<AnimeDetail> {
   try {
     const data = await jikanFetch<{ data: any }>(`/anime/${malId}/full`);
