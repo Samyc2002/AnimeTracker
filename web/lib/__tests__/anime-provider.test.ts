@@ -2,6 +2,7 @@ import type { AniListMedia } from '@/lib/types';
 
 vi.mock('@/lib/providers/anilist', () => ({
   searchAnilist: vi.fn(),
+  searchAnilistPaginated: vi.fn(),
   fetchAnilistDetail: vi.fn(),
   fetchAnilistWeeklyAiring: vi.fn(),
   fetchAnilistRecommendations: vi.fn(),
@@ -14,12 +15,14 @@ vi.mock('@/lib/providers/anilist', () => ({
 
 vi.mock('@/lib/providers/jikan', () => ({
   searchJikan: vi.fn(),
+  searchJikanPaginated: vi.fn(),
   fetchJikanDetail: vi.fn(),
   fetchJikanSchedule: vi.fn(),
 }));
 
 vi.mock('@/lib/providers/kitsu', () => ({
   searchKitsu: vi.fn(),
+  searchKitsuPaginated: vi.fn(),
   fetchKitsuDetail: vi.fn(),
 }));
 
@@ -35,10 +38,10 @@ vi.mock('@/lib/providers/airing-cache', () => ({
   saveAiringToCache: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { searchAnime, fetchAnimeDetail, fetchWeeklyAiring, fetchRecommendations, searchAnimeFiltered, getErrorMessage, mediaToWatchlistEntry } from '@/lib/anime-provider';
-import { searchAnilist, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnilistRecommendations, searchAnilistFiltered } from '@/lib/providers/anilist';
-import { searchJikan, fetchJikanDetail } from '@/lib/providers/jikan';
-import { searchKitsu } from '@/lib/providers/kitsu';
+import { searchAnime, searchAnimePaginated, fetchAnimeDetail, fetchWeeklyAiring, fetchRecommendations, searchAnimeFiltered, getErrorMessage, mediaToWatchlistEntry } from '@/lib/anime-provider';
+import { searchAnilist, searchAnilistPaginated, fetchAnilistDetail, fetchAnilistWeeklyAiring, fetchAnilistRecommendations, searchAnilistFiltered } from '@/lib/providers/anilist';
+import { searchJikan, searchJikanPaginated, fetchJikanDetail } from '@/lib/providers/jikan';
+import { searchKitsu, searchKitsuPaginated } from '@/lib/providers/kitsu';
 import { getCachedSearch, getCachedAnime } from '@/lib/providers/cache';
 
 const testMedia: AniListMedia = {
@@ -303,5 +306,48 @@ describe('searchAnimeFiltered', () => {
     });
     expect(result).toHaveLength(1);
     expect(searchAnilistFiltered).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('searchAnimePaginated', () => {
+  const paginatedResult = { results: [testMedia], hasNextPage: true };
+
+  it('returns results and hasNextPage from AniList', async () => {
+    (searchAnilistPaginated as ReturnType<typeof vi.fn>).mockResolvedValueOnce(paginatedResult);
+    const result = await searchAnimePaginated('test', 1);
+    expect(result).toEqual(paginatedResult);
+    expect(searchAnilistPaginated).toHaveBeenCalledWith('test', 1, 15);
+  });
+
+  it('passes page number to provider', async () => {
+    (searchAnilistPaginated as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ results: [testMedia], hasNextPage: false });
+    await searchAnimePaginated('test', 3);
+    expect(searchAnilistPaginated).toHaveBeenCalledWith('test', 3, 15);
+  });
+
+  it('falls back from AniList to Jikan on failure', async () => {
+    (searchAnilistPaginated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (searchJikanPaginated as ReturnType<typeof vi.fn>).mockResolvedValueOnce(paginatedResult);
+    const result = await searchAnimePaginated('test', 1);
+    expect(result).toEqual(paginatedResult);
+    expect(searchJikanPaginated).toHaveBeenCalledWith('test', 1, 15);
+  });
+
+  it('uses cache fallback only for page 1', async () => {
+    const cachedResults = [testMedia];
+    (searchAnilistPaginated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (searchJikanPaginated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (searchKitsuPaginated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (getCachedSearch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(cachedResults);
+    const result = await searchAnimePaginated('test', 1);
+    expect(result).toEqual({ results: cachedResults, hasNextPage: false });
+  });
+
+  it('throws for page 2+ when all providers fail (no cache fallback)', async () => {
+    (searchAnilistPaginated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (searchJikanPaginated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    (searchKitsuPaginated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+    await expect(searchAnimePaginated('test', 2)).rejects.toThrow('Search failed across all providers');
+    expect(getCachedSearch).not.toHaveBeenCalled();
   });
 });

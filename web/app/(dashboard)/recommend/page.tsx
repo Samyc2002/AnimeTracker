@@ -1,7 +1,7 @@
 'use client';
 
 import { useTitle } from '@/lib/useTitle';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
@@ -14,6 +14,7 @@ import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import { Spinner } from '@/components/ui/Spinner';
 import type { TasteProfile, QuizQuestion, AniListMedia } from '@/lib/types';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 type Phase = 'loading' | 'quiz' | 'searching' | 'results';
 
@@ -31,9 +32,11 @@ function RecommendPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [insufficient, setInsufficient] = useState(false);
+  const recQuote = useMemo(() => getRandomQuote('recommend'), [phase]);
 
   useEffect(() => {
     async function loadProfile() {
+      const start = Date.now();
       try {
         if (!userId) throw new Error('Not authenticated');
         const res = await fetch('/api/taste-profile', {
@@ -44,11 +47,15 @@ function RecommendPage() {
         const data = await res.json();
         if (data.insufficient) {
           setInsufficient(true);
+          const elapsed = Date.now() - start;
+          if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
           setPhase('quiz');
           return;
         }
         setProfile(data.profile);
         setQuestions(data.questions);
+        const elapsed = Date.now() - start;
+        if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
         setPhase('quiz');
       } catch {
         enqueueSnackbar('Failed to analyze watchlist', { variant: 'error' });
@@ -60,6 +67,7 @@ function RecommendPage() {
   const fetchRecommendations = useCallback(async () => {
     if (!profile || !userId) return;
     setPhase('searching');
+    const start = Date.now();
     try {
       const filters = buildFiltersFromAnswers(profile, answers);
       const res = await fetch('/api/recommend', {
@@ -72,6 +80,8 @@ function RecommendPage() {
         ? (data.results || []).filter((m: AniListMedia) => !m.isAdult)
         : data.results || [];
       setResults(media);
+      const elapsed = Date.now() - start;
+      if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
       setPhase('results');
     } catch {
       enqueueSnackbar('Failed to get recommendations', { variant: 'error' });
@@ -99,6 +109,7 @@ function RecommendPage() {
       <div className="text-center mt-16">
         <div className="flex justify-center mb-4"><Spinner size="lg" /></div>
         <p className="text-gray-400 text-sm">Analyzing your taste...</p>
+        <p className="text-base text-gray-400 italic mt-1">{recQuote}</p>
       </div>
     );
   }
@@ -184,6 +195,7 @@ function RecommendPage() {
       <div className="text-center mt-16">
         <div className="flex justify-center mb-4"><Spinner size="lg" /></div>
         <p className="text-gray-400 text-sm">Finding your next watch...</p>
+        <p className="text-base text-gray-400 italic mt-1">{recQuote}</p>
       </div>
     );
   }

@@ -1,9 +1,9 @@
 'use client';
 
 import { useTitle } from '@/lib/useTitle';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { searchAnime, fetchRecommendations, getErrorMessage } from '@/lib/anime-provider';
+import { searchAnimePaginated, fetchRecommendations, getErrorMessage } from '@/lib/anime-provider';
 import { enqueueSnackbar } from 'notistack';
 import SearchBar from '@/components/SearchBar';
 import AnimeCard from '@/components/AnimeCard';
@@ -15,6 +15,7 @@ import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
 import { Spinner } from '@/components/ui/Spinner';
 import type { AniListMedia } from '@/lib/types';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 function RecommendationGrid({
   title,
@@ -76,6 +77,11 @@ export default function SearchPage() {
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentQuery, setCurrentQuery] = useState('');
+  const [loadingQuote, setLoadingQuote] = useState('');
+  const [recsQuote] = useState(() => getRandomQuote('recommend'));
   const [trending, setTrending] = useState<AniListMedia[]>([]);
   const [popular, setPopular] = useState<AniListMedia[]>([]);
   const [forYou, setForYou] = useState<AniListMedia[]>([]);
@@ -128,15 +134,41 @@ export default function SearchPage() {
   const handleSearch = useCallback(async (query: string) => {
     setLoading(true);
     setSearched(true);
+    setCurrentQuery(query);
+    setCurrentPage(1);
+    setLoadingQuote(getRandomQuote('search'));
+    const start = Date.now();
     try {
-      const media = await searchAnime(query);
+      const { results: media, hasNextPage: more } = await searchAnimePaginated(query, 1);
       setResults(media);
+      setHasNextPage(more);
     } catch (err) {
       setResults([]);
+      setHasNextPage(false);
       enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
     }
+    const elapsed = Date.now() - start;
+    if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
     setLoading(false);
   }, []);
+
+  const handlePageChange = useCallback(async (page: number) => {
+    setLoading(true);
+    setLoadingQuote(getRandomQuote('search'));
+    const start = Date.now();
+    try {
+      const { results: media, hasNextPage: more } = await searchAnimePaginated(currentQuery, page);
+      setResults(media);
+      setHasNextPage(more);
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      enqueueSnackbar(getErrorMessage(err), { variant: 'error' });
+    }
+    const elapsed = Date.now() - start;
+    if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
+    setLoading(false);
+  }, [currentQuery]);
 
   const showRecommendations = !searched && !loading;
 
@@ -147,43 +179,72 @@ export default function SearchPage() {
         <SearchBar onSearch={handleSearch} />
       </div>
 
-      {loading && <p className="text-gray-500 text-center">Searching...</p>}
+      {loading && (
+        <div className="text-center">
+          <p className="text-gray-500">Searching...</p>
+          <p className="text-base text-gray-400 italic mt-1">{loadingQuote}</p>
+        </div>
+      )}
 
       {!loading && searched && results.length === 0 && (
         <p className="text-gray-500 text-center">No results found.</p>
       )}
 
       {!loading && searched && results.length > 0 && (
-        <div className="space-y-2">
-          {results.filter((m) => !sfwMode || !m.isAdult).map((media) => {
-            const title = media.title.english || media.title.romaji;
-            return (
-              <AnimeCard
-                key={media.id}
-                title={title}
-                coverUrl={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || ''}
-                status={media.status}
-                episodes={media.episodes}
-                isAdult={media.isAdult}
-                onClick={() => router.push(`/anime/${media.id}`)}
-                action={
-                  <div className="flex items-center gap-1">
-                    <div className="opacity-0 group-hover/card:opacity-100 transition-opacity">
-                      <AddToPlaylist mediaId={media.id} />
+        <>
+          <div className="space-y-2">
+            {results.filter((m) => !sfwMode || !m.isAdult).map((media) => {
+              const title = media.title.english || media.title.romaji;
+              return (
+                <AnimeCard
+                  key={media.id}
+                  title={title}
+                  coverUrl={media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || ''}
+                  status={media.status}
+                  episodes={media.episodes}
+                  isAdult={media.isAdult}
+                  onClick={() => router.push(`/anime/${media.id}`)}
+                  action={
+                    <div className="flex items-center gap-1">
+                      <div className="opacity-0 group-hover/card:opacity-100 transition-opacity">
+                        <AddToPlaylist mediaId={media.id} />
+                      </div>
+                      <AddToWatchlist media={media} />
                     </div>
-                    <AddToWatchlist media={media} />
-                  </div>
-                }
-              />
-            );
-          })}
-        </div>
+                  }
+                />
+              );
+            })}
+          </div>
+          {(currentPage > 1 || hasNextPage) && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-3 py-1.5 text-sm bg-[#141925] border border-[#253040] rounded-lg text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Prev
+              </button>
+              <span className="text-sm text-gray-500">
+                Page {currentPage}
+              </span>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!hasNextPage}
+                className="px-3 py-1.5 text-sm bg-[#141925] border border-[#253040] rounded-lg text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {showRecommendations && (
         recsLoading ? (
-          <div className="flex justify-center mt-8">
+          <div className="flex flex-col items-center mt-8">
             <Spinner />
+            <p className="text-base text-gray-400 italic mt-2">{recsQuote}</p>
           </div>
         ) : (
           <>

@@ -13,6 +13,7 @@ import { enqueueSnackbar } from 'notistack';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import { DashboardInput } from '@/components/ui/DashboardInput';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 interface PlaylistDoc {
   id: string;
@@ -44,12 +45,14 @@ function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [loadingQuote] = useState(() => getRandomQuote('general'));
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistDoc | null>(null);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
 
   const loadPlaylists = useCallback(async () => {
+    const start = Date.now();
     try {
       if (!userId) throw new Error('Not authenticated');
       const { data, error } = await supabase
@@ -62,6 +65,8 @@ function PlaylistsPage() {
     } catch {
       // Not authenticated
     }
+    const elapsed = Date.now() - start;
+    if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
     setLoading(false);
   }, [userId]);
 
@@ -109,7 +114,12 @@ function PlaylistsPage() {
   }
 
   if (loading) {
-    return <p className="text-gray-500 text-center mt-12">Loading playlists...</p>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <p className="text-gray-500">Loading playlists...</p>
+        <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
+      </div>
+    );
   }
 
   if (selectedPlaylist) {

@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Spinner } from '@/components/ui/Spinner';
 import { enqueueSnackbar } from 'notistack';
 import type { AiringSchedule } from '@/lib/types';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 function getWeekRange(offset: number = 0) {
   const now = new Date();
@@ -65,18 +66,26 @@ export default function AiringPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [trackedIds, setTrackedIds] = useState<Set<number>>(new Set());
   const [trackingId, setTrackingId] = useState<number | null>(null);
+  const [loadingQuote] = useState(() => getRandomQuote('general'));
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setLoading(true);
+      const start = Date.now();
       const { from, to } = getWeekRange(weekOffset);
+
+      async function minDelay() {
+        const elapsed = Date.now() - start;
+        if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
+      }
 
       const cached = await getCachedAiring(from);
       if (cached && !cached.stale) {
         if (!cancelled) {
           setSchedules(cached.schedules);
+          await minDelay();
           setLoading(false);
         }
         return;
@@ -100,6 +109,7 @@ export default function AiringPage() {
 
       if (!cancelled) {
         setSchedules(allSchedules.length > 0 ? allSchedules : (cached?.schedules || []));
+        await minDelay();
         setLoading(false);
         if (allSchedules.length > 0) {
           saveAiringToCache(from, allSchedules).catch(() => {});
@@ -201,8 +211,9 @@ export default function AiringPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center mt-12">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <Spinner />
+          <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
         </div>
       ) : (
         <div className="-mx-4 sm:-mx-6 lg:-mx-[calc((100vw-64rem)/2+1.5rem)] px-4 sm:px-6 lg:px-8">

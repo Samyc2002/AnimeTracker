@@ -13,6 +13,7 @@ import { enqueueSnackbar } from 'notistack';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ACHIEVEMENTS_UI_VISIBLE, FOUNDING_MEMBER_ENABLED } from '@/lib/feature-flags';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 interface NotificationDoc {
   id: string;
@@ -50,8 +51,10 @@ function NotificationsPage() {
 
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
+  const [loadingQuote] = useState(() => getRandomQuote('general'));
 
   const loadNotifications = useCallback(async () => {
+    const start = Date.now();
     try {
       if (!userId) throw new Error('Not authenticated');
       const { data, error } = await supabase
@@ -65,6 +68,8 @@ function NotificationsPage() {
     } catch {
       // Not authenticated
     }
+    const elapsed = Date.now() - start;
+    if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
     setLoading(false);
   }, [userId]);
 
@@ -116,8 +121,9 @@ function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center mt-12">
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Spinner />
+        <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
       </div>
     );
   }
