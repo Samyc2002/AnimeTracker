@@ -40,6 +40,23 @@ const relationOrder = [
   "OTHER",
 ];
 
+const streamThemes: Record<string, { bg: string; hover: string; text: string; border?: string }> = {
+  "Crunchyroll": { bg: "bg-[#f47521]", hover: "hover:bg-[#e0691d]", text: "text-white" },
+  "Netflix": { bg: "bg-[#e50914]", hover: "hover:bg-[#cc0812]", text: "text-white" },
+  "Hulu": { bg: "bg-[#1ce783]", hover: "hover:bg-[#17cc73]", text: "text-black" },
+  "Amazon Prime Video": { bg: "bg-[#00a8e1]", hover: "hover:bg-[#0095c8]", text: "text-white" },
+  "Bilibili Global": { bg: "bg-[#00a1d6]", hover: "hover:bg-[#0090bf]", text: "text-white" },
+  "Muse Asia": { bg: "bg-[#2d2d8a]", hover: "hover:bg-[#24247a]", text: "text-white" },
+  "Disney Plus": { bg: "bg-[#113ccf]", hover: "hover:bg-[#0e33b5]", text: "text-white" },
+  "Funimation": { bg: "bg-[#5b0bb5]", hover: "hover:bg-[#4e099d]", text: "text-white" },
+  "HIDIVE": { bg: "bg-[#00baef]", hover: "hover:bg-[#00a5d4]", text: "text-white" },
+  "iQIYI": { bg: "bg-[#00be06]", hover: "hover:bg-[#00a505]", text: "text-white" },
+  "9Anime": { bg: "bg-[#c026d3]", hover: "hover:bg-[#a821b8]", text: "text-white" },
+  "Kickass Anime": { bg: "bg-[#16a34a]", hover: "hover:bg-[#138a3f]", text: "text-white" },
+};
+
+const defaultStreamTheme = { bg: "bg-[#141925]", hover: "hover:bg-[#1c2333]", text: "text-gray-300", border: "border border-[#253040]" };
+
 function formatCountdown(seconds: number) {
   const d = Math.floor(seconds / 86400);
   const h = Math.floor((seconds % 86400) / 3600);
@@ -477,39 +494,31 @@ export default function AnimeDetailPage() {
           {watchUrls || streamingLinks.length > 0 ? (
             <>
               <div className="flex flex-wrap gap-2">
-                {streamingLinks.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#141925] border border-[#253040] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg font-medium transition-colors"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="text-gray-500"
+                {streamingLinks.map((link) => {
+                  const st = streamThemes[link.name] || defaultStreamTheme;
+                  return (
+                    <a
+                      key={link.name}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 ${st.bg} ${st.hover} ${st.text} ${st.border || ''} text-sm rounded-lg font-medium transition-colors`}
                     >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    {link.name}
-                  </a>
-                ))}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      {link.name}
+                    </a>
+                  );
+                })}
                 {watchUrls?.url9anime && (
                   <a
                     href={watchUrls.url9anime}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${theme.gradientBold} ${theme.gradientHover} text-white text-sm rounded-lg font-medium transition-all`}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 ${streamThemes["9Anime"].bg} ${streamThemes["9Anime"].hover} ${streamThemes["9Anime"].text} text-sm rounded-lg font-medium transition-colors`}
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                     9Anime
@@ -520,14 +529,9 @@ export default function AnimeDetailPage() {
                     href={watchUrls.urlKickass}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${theme.gradientBold} ${theme.gradientHover} text-white text-sm rounded-lg font-medium transition-all`}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 ${streamThemes["Kickass Anime"].bg} ${streamThemes["Kickass Anime"].hover} ${streamThemes["Kickass Anime"].text} text-sm rounded-lg font-medium transition-colors`}
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                     Kickass Anime
