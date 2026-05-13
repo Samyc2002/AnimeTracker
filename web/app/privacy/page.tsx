@@ -79,8 +79,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-300 mb-2">Third-Party Services</h2>
             <ul className="list-disc list-inside space-y-1">
-              <li><strong>Appwrite Cloud</strong> — Authentication and database. Data stored on Appwrite&apos;s Singapore servers.</li>
-              <li><strong>AniList API</strong> — Anime metadata (titles, images, airing schedules). No user data is sent to AniList unless you connect your account.</li>
+              <li><strong>Appwrite Cloud</strong>: Authentication and database. Data stored on Appwrite&apos;s Singapore servers.</li>
+              <li><strong>AniList API</strong>: Anime metadata (titles, images, airing schedules). No user data is sent to AniList unless you connect your account.</li>
             </ul>
           </section>
 

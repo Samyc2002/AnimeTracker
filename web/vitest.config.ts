@@ -14,10 +14,12 @@ export default defineConfig({
         'lib/providers/anilist.ts',
         'lib/providers/jikan.ts',
         'lib/providers/kitsu.ts',
+        'lib/providers/kitsu-resolve.ts',
         'lib/providers/cache.ts',
         'lib/providers/airing-cache.ts',
         'lib/providers/types.ts',
         'lib/series-resolver.ts',
+        'lib/achievements/evaluators.ts',
         'app/api/**',
       ],
       thresholds: {

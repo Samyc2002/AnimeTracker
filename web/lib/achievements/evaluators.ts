@@ -157,71 +157,69 @@ const evaluators: Record<string, Evaluator> = {
     const threshold = (config.threshold as number) || 1;
 
     try {
-      if (source === 'completed_anime_genres') {
-        const { data: entries } = await supabase
-          .from('watchlist_entries')
-          .select('media_id')
-          .eq('user_id', userId)
-          .eq('watch_status', 'Completed')
-          .limit(5000);
-        if (!entries || entries.length === 0) return { progress: 0, target: threshold };
+      // Step 1: get completed entries with canonical_anilist_id (skip unresolved)
+      const { data: entries } = await supabase
+        .from('watchlist_entries')
+        .select('canonical_anilist_id')
+        .eq('user_id', userId)
+        .eq('watch_status', 'Completed')
+        .not('canonical_anilist_id', 'is', null)
+        .limit(5000);
 
-        const mediaIds = entries.map((e) => e.media_id as number);
-        const { data: cached } = await supabase
-          .from('anime_cache')
+      const total = entries?.length ?? 0;
+      if (total === 0) return { progress: 0, target: threshold };
+
+      const skippedNoCanonical = 0; // already filtered above via .not('canonical_anilist_id', 'is', null)
+      const canonicalIds = (entries || []).map((e) => e.canonical_anilist_id as number);
+
+      if (source === 'completed_anime_genres') {
+        const { data: meta } = await supabase
+          .from('series_metadata')
           .select('genres')
-          .in('anilist_id', mediaIds)
+          .in('anilist_id', canonicalIds)
           .not('genres', 'is', null);
 
+        const skippedNoMetadata = canonicalIds.length - (meta?.length ?? 0);
+        console.log(`evaluator: completed_anime_genres, total: ${total}, skipped_no_canonical: ${skippedNoCanonical}, skipped_no_metadata: ${skippedNoMetadata}, evaluated: ${meta?.length ?? 0}`);
+
         const genres = new Set<string>();
-        for (const row of (cached || [])) {
-          const g = row.genres as string;
-          if (g) g.split(',').map((s: string) => s.trim()).filter(Boolean).forEach((s: string) => genres.add(s));
+        for (const row of (meta || [])) {
+          if (Array.isArray(row.genres)) {
+            (row.genres as string[]).filter(Boolean).forEach((g) => genres.add(g));
+          }
         }
         return { progress: Math.min(genres.size, threshold), target: threshold };
       }
 
       if (source === 'completed_anime_studios') {
-        const { data: entries } = await supabase
-          .from('watchlist_entries')
-          .select('media_id')
-          .eq('user_id', userId)
-          .eq('watch_status', 'Completed')
-          .limit(5000);
-        if (!entries || entries.length === 0) return { progress: 0, target: threshold };
-
-        const mediaIds = entries.map((e) => e.media_id as number);
-        const { data: cached } = await supabase
-          .from('anime_cache')
+        const { data: meta } = await supabase
+          .from('series_metadata')
           .select('studio')
-          .in('anilist_id', mediaIds)
+          .in('anilist_id', canonicalIds)
           .not('studio', 'is', null);
 
+        const skippedNoMetadata = canonicalIds.length - (meta?.length ?? 0);
+        console.log(`evaluator: completed_anime_studios, total: ${total}, skipped_no_canonical: ${skippedNoCanonical}, skipped_no_metadata: ${skippedNoMetadata}, evaluated: ${meta?.length ?? 0}`);
+
         const studios = new Set<string>();
-        for (const row of (cached || [])) {
+        for (const row of (meta || [])) {
           if (row.studio) studios.add(row.studio as string);
         }
         return { progress: Math.min(studios.size, threshold), target: threshold };
       }
 
       if (source === 'completed_anime_decades') {
-        const { data: entries } = await supabase
-          .from('watchlist_entries')
-          .select('media_id')
-          .eq('user_id', userId)
-          .eq('watch_status', 'Completed')
-          .limit(5000);
-        if (!entries || entries.length === 0) return { progress: 0, target: threshold };
-
-        const mediaIds = entries.map((e) => e.media_id as number);
-        const { data: cached } = await supabase
-          .from('anime_cache')
+        const { data: meta } = await supabase
+          .from('series_metadata')
           .select('season_year')
-          .in('anilist_id', mediaIds)
+          .in('anilist_id', canonicalIds)
           .not('season_year', 'is', null);
 
+        const skippedNoMetadata = canonicalIds.length - (meta?.length ?? 0);
+        console.log(`evaluator: completed_anime_decades, total: ${total}, skipped_no_canonical: ${skippedNoCanonical}, skipped_no_metadata: ${skippedNoMetadata}, evaluated: ${meta?.length ?? 0}`);
+
         const decades = new Set<number>();
-        for (const row of (cached || [])) {
+        for (const row of (meta || [])) {
           if (row.season_year) decades.add(Math.floor((row.season_year as number) / 10) * 10);
         }
         return { progress: Math.min(decades.size, threshold), target: threshold };

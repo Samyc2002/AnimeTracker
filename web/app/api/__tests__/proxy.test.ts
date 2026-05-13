@@ -55,9 +55,9 @@ describe('GET /api/proxy', () => {
     await GET(req);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://example.com',
+      'https://example.com/',
       expect.objectContaining({
-        headers: expect.objectContaining({ Referer: 'https://referer.com' }),
+        headers: expect.objectContaining({ Referer: 'https://referer.com/' }),
       })
     );
   });

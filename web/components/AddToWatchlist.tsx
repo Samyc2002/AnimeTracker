@@ -10,6 +10,7 @@ import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { backfillSeriesId } from '@/lib/series-resolver';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
+import { upsertSeriesMetadata } from '@/lib/series-metadata';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
 
@@ -73,6 +74,8 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
             ...entry,
             user_id: userId,
             watch_status: status,
+            import_source: 'manual',
+            canonical_anilist_id: media.id,
           })
           .select()
           .single();
@@ -84,6 +87,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         setTimeout(() => setJustAdded(false), 600);
         enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
         fireClientAchievementEvent(userId, 'watchlist_add');
+        upsertSeriesMetadata(supabase, media).catch(() => {});
         backfillSeriesId(doc.id, media.id, async (id, data) => {
           await supabase.from('watchlist_entries').update(data).eq('id', id);
         }).catch(() => {});

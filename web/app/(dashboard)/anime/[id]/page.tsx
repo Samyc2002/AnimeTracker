@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { fetchAnimeDetail, getErrorMessage } from "@/lib/anime-provider";
@@ -16,6 +16,8 @@ import AddToWatchlist from "@/components/AddToWatchlist";
 import AddPrequels from "@/components/AddPrequels";
 import RecommendToBuddy from "@/components/RecommendToBuddy";
 import EpisodeGrid from "@/components/EpisodeGrid";
+import SynopsisCollapse from "@/components/SynopsisCollapse";
+import FranchiseTabs from "@/components/FranchiseTabs";
 import type { AnimeDetail, WatchURLs } from "@/lib/types";
 import { fireClientAchievementEvent } from "@/lib/achievements/fire-event";
 
@@ -29,16 +31,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   CANCELLED: { label: "Cancelled", className: "bg-red-900 text-red-300" },
   HIATUS: { label: "Hiatus", className: "bg-gray-700 text-gray-300" },
 };
-
-const relationOrder = [
-  "SEQUEL",
-  "PREQUEL",
-  "SIDE_STORY",
-  "PARENT",
-  "SPIN_OFF",
-  "ALTERNATIVE",
-  "OTHER",
-];
 
 const streamThemes: Record<string, { bg: string; hover: string; text: string; border?: string }> = {
   "Crunchyroll": { bg: "bg-[#f47521]", hover: "hover:bg-[#e0691d]", text: "text-white" },
@@ -68,16 +60,8 @@ function formatCountdown(seconds: number) {
   return parts.join(" ");
 }
 
-function formatRelation(type: string) {
-  return type
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
-
 export default function AnimeDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [anime, setAnime] = useState<AnimeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +71,9 @@ export default function AnimeDetailPage() {
   >([]);
   const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>([]);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
+  // null = not cached (compute will run), number = cached root ID
+  // undefined = no franchise (singleton — hide watch order tab)
+  const [franchiseMembershipRootId, setFranchiseMembershipRootId] = useState<number | null | undefined>(undefined);
 
   const { authed, userId } = useAuth();
   const { sfwMode } = useSfw();
@@ -98,10 +85,28 @@ export default function AnimeDetailPage() {
     async function load() {
       try {
         const detail = await fetchAnimeDetail(id);
-        console.log("Anime Details:", detail);
         setAnime(detail);
 
-        // const title = detail.title.romaji || detail.title.english || "";
+        const { data: membership } = await supabase
+          .from('franchise_membership')
+          .select('franchise_root_id')
+          .eq('series_anilist_id', detail.id)
+          .limit(1);
+
+        if (membership && membership.length > 0) {
+          setFranchiseMembershipRootId(membership[0].franchise_root_id as number);
+        } else {
+          const hasFranchiseRelations = detail.relations.edges.some(
+            (e) => e.node.type === 'ANIME' &&
+              ['PREQUEL','SEQUEL','SIDE_STORY','PARENT','ALTERNATIVE','SUMMARY','SPIN_OFF'].includes(e.relationType)
+          );
+          if (hasFranchiseRelations) {
+            setFranchiseMembershipRootId(null);
+          } else {
+            setFranchiseMembershipRootId(undefined);
+          }
+        }
+
         const title = detail.title.english || detail.title.romaji || "";
         getWatchUrl(title).then((urls) => setWatchUrls(urls));
 
@@ -124,21 +129,13 @@ export default function AnimeDetailPage() {
   const loadWatchedEpisodes = useCallback(async () => {
     if (!authed || !userId) return;
     try {
-      let { data: wlData } = await supabase
+      const { data: wlData } = await supabase
         .from("watchlist_entries")
-        .select("id, media_id")
+        .select("id, media_id, canonical_anilist_id")
         .eq("user_id", userId)
-        .eq("media_id", id)
+        .or(`canonical_anilist_id.eq.${id},id_mal.eq.${id},media_id.eq.${id}`)
+        .not("canonical_anilist_id", "is", null)
         .limit(1);
-      if (!wlData || wlData.length === 0) {
-        const { data: malData } = await supabase
-          .from("watchlist_entries")
-          .select("id, media_id")
-          .eq("user_id", userId)
-          .eq("id_mal", id)
-          .limit(1);
-        wlData = malData;
-      }
       setIsInWatchlist(!!(wlData && wlData.length > 0));
       if (!wlData || wlData.length === 0) return;
 
@@ -341,14 +338,6 @@ export default function AnimeDetailPage() {
   const title = anime.title.english || anime.title.romaji;
   const statusInfo = statusLabels[anime.status] || statusLabels.FINISHED;
   const studio = anime.studios.nodes[0]?.name;
-
-  const animeRelations = anime.relations.edges
-    .filter((e) => e.node.type === "ANIME")
-    .sort(
-      (a, b) =>
-        relationOrder.indexOf(a.relationType) -
-        relationOrder.indexOf(b.relationType)
-    );
 
   const backdropImage =
     anime.bannerImage ||
@@ -619,66 +608,15 @@ export default function AnimeDetailPage() {
             <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
               Synopsis
             </h2>
-            <p
-              className="text-sm text-gray-300 leading-relaxed"
-              dangerouslySetInnerHTML={{
-                __html: anime.description.replace(/\n/g, ""),
-              }}
-            />
+            <SynopsisCollapse html={anime.description} collapseKey={id} />
           </div>
         )}
 
-        {animeRelations.length > 0 && (
-          <div className="mt-8 mb-8">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-3">
-              Related Anime
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
-              {animeRelations.map((edge) => {
-                const rel = edge.node;
-                const relTitle = rel.title.english || rel.title.romaji;
-                return (
-                  <div
-                    key={rel.id}
-                    className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors ${
-                      rel.isAdult ? "border border-red-500/40" : ""
-                    }`}
-                    onClick={() => router.push(`/anime/${rel.id}`)}
-                  >
-                    <div className="relative w-full aspect-[3/4]">
-                      <Image
-                        src={
-                          [
-                            rel.coverImage?.extraLarge,
-                            rel.coverImage?.large,
-                            rel.coverImage?.medium,
-                          ].find((u) => u && u.length > 0) || "/placeholder.png"
-                        }
-                        alt={relTitle}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                      <div className="absolute top-1 left-1">
-                        <span className="px-1.5 py-0.5 bg-black/70 rounded text-[10px] text-gray-300 font-medium">
-                          {formatRelation(edge.relationType)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-2">
-                      <p
-                        className="text-xs font-medium text-gray-200 truncate"
-                        title={relTitle}
-                      >
-                        {relTitle}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <FranchiseTabs
+          anime={anime}
+          currentAnilistId={anime.id}
+          initialMembershipRootId={franchiseMembershipRootId}
+        />
       </div>
     </div>
   );

@@ -116,14 +116,13 @@ export default function AiringPage() {
       try {
         const { data: existing } = await supabase
           .from('watchlist_entries')
-          .select('media_id, id_mal')
+          .select('canonical_anilist_id')
           .eq('user_id', userId)
+          .not('canonical_anilist_id', 'is', null)
           .limit(500);
-        const ids = new Set<number>();
-        for (const doc of (existing || [])) {
-          ids.add(doc.media_id);
-          if (doc.id_mal) ids.add(doc.id_mal);
-        }
+        const ids = new Set<number>(
+          (existing || []).map((doc) => doc.canonical_anilist_id as number)
+        );
         setTrackedIds(ids);
       } catch {
         // Not logged in or error
@@ -142,7 +141,7 @@ export default function AiringPage() {
       const entry = mediaToWatchlistEntry(media);
       const { data: doc, error } = await supabase
         .from('watchlist_entries')
-        .insert({ ...entry, user_id: userId })
+        .insert({ ...entry, user_id: userId, import_source: 'manual', canonical_anilist_id: media.id })
         .select()
         .single();
       if (error) throw error;
