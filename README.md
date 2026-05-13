@@ -2,6 +2,8 @@
 
 Track your anime watchlist and get notified when new episodes drop. Available as a Chrome extension and a web app.
 
+![Anime Tracker](store-screenshots/Demo.png)
+
 ## Monorepo Structure
 
 ```
