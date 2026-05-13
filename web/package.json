@@ -41,7 +41,7 @@
     "eslint-config-next": "16.2.4",
     "husky": "^9.1.7",
     "jsdom": "^29.1.0",
-    "node-appwrite": "^24.0.0",
+    "node-appwrite": "^24.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.5"
