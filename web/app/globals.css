@@ -36,6 +36,22 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+@keyframes watchlist-burst {
+  0% {
+    box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(45, 212, 191, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(45, 212, 191, 0);
+  }
+}
+
+@utility animate-watchlist-burst {
+  animation: watchlist-burst 0.6s ease-out;
+}
+
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
