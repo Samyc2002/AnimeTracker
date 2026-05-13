@@ -1,9 +1,66 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getOnlineCount } from '@/lib/online-tracker';
 
 const statsCache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
+
+let resolvedEmailSets: { excluded: Set<string>; admin: Set<string> } | null = null;
+
+function parseEmailList(envVar: string): string[] {
+  return (process.env[envVar] || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+async function getEmailSets(supabase: ReturnType<typeof getServiceSupabase>) {
+  if (resolvedEmailSets) return resolvedEmailSets;
+
+  const testEmails = parseEmailList('TEST_ACCOUNTS');
+  const adminEmails = parseEmailList('ADMIN_EMAILS');
+  const allEmails = new Set([...testEmails, ...adminEmails]);
+
+  if (allEmails.size === 0) {
+    resolvedEmailSets = { excluded: new Set(), admin: new Set() };
+    return resolvedEmailSets;
+  }
+
+  const { data } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const users = data?.users || [];
+
+  const excluded = new Set(
+    users.filter(u => u.email && testEmails.includes(u.email.toLowerCase())).map(u => u.id)
+  );
+  const admin = new Set(
+    users.filter(u => u.email && adminEmails.includes(u.email.toLowerCase())).map(u => u.id)
+  );
+
+  resolvedEmailSets = { excluded, admin };
+  return resolvedEmailSets;
+}
+
+async function getCallerUserId(req: NextRequest): Promise<string | null> {
+  const response = NextResponse.next();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll().map(c => ({ name: c.name, value: c.value })),
+        setAll: (cookies) => { cookies.forEach(c => response.cookies.set(c.name, c.value, c.options)); },
+      },
+    },
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+function excludeTestUsers<T extends { user_id: string }>(rows: T[], excluded: Set<string>): T[] {
+  if (excluded.size === 0) return rows;
+  return rows.filter(r => !excluded.has(r.user_id));
+}
 
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -244,26 +301,27 @@ function computeSignupsChart(profiles: ProfileRow[], now: Date) {
   return result;
 }
 
-export async function GET() {
-  const cached = statsCache.get('global');
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return NextResponse.json(cached.data);
-  }
-
+export async function GET(req: NextRequest) {
   try {
     const supabase = getServiceSupabase();
+    const { excluded, admin } = await getEmailSets(supabase);
+
+    const callerId = await getCallerUserId(req);
+    if (!callerId || !admin.has(callerId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const cached = statsCache.get('global');
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      return NextResponse.json(cached.data);
+    }
+
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
     const [
-      totalUsersResult,
-      totalWatchlistResult,
-      totalWatchedEpResult,
-      recentWatchlistResult,
-      recentWatchedEpResult,
-      recentProfilesResult,
       allProfiles,
       recentWatchlist,
       recentEpisodes,
@@ -274,12 +332,6 @@ export async function GET() {
       franchiseMembership,
       watchOrderRows,
     ] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('watchlist_entries').select('*', { count: 'exact', head: true }),
-      supabase.from('watched_episodes').select('*', { count: 'exact', head: true }),
-      supabase.from('watchlist_entries').select('*', { count: 'exact', head: true }).gt('created_at', sevenDaysAgo),
-      supabase.from('watched_episodes').select('*', { count: 'exact', head: true }).gt('created_at', sevenDaysAgo),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('created_at', thirtyDaysAgo),
       supabase.from('profiles').select('user_id, created_at'),
       supabase.from('watchlist_entries').select('user_id, created_at, watch_status, import_source, canonical_anilist_id').gt('created_at', sixtyDaysAgo),
       supabase.from('watched_episodes').select('user_id, created_at').gt('created_at', sixtyDaysAgo),
@@ -291,36 +343,34 @@ export async function GET() {
       supabase.from('franchise_watch_orders').select('computed_at').gt('computed_at', thirtyDaysAgo).not('computed_at', 'is', null),
     ]);
 
-    const totalUsers = totalUsersResult.count || 0;
-    const totalWatchlistEntries = totalWatchlistResult.count || 0;
-    const totalWatchedEpisodes = totalWatchedEpResult.count || 0;
-    const recentWatchlistEntries = recentWatchlistResult.count || 0;
-    const recentWatchedEpisodes = recentWatchedEpResult.count || 0;
-    const recentProfileCount = recentProfilesResult.count || 0;
     const onlineNow = getOnlineCount();
 
-    const profiles = (allProfiles.data || []) as ProfileRow[];
-    const watchlist = (recentWatchlist.data || []) as unknown as WatchlistRow[];
-    const episodes = (recentEpisodes.data || []) as ActivityRow[];
+    const profiles = excludeTestUsers((allProfiles.data || []) as ProfileRow[], excluded);
+    const watchlist = excludeTestUsers((recentWatchlist.data || []) as unknown as WatchlistRow[], excluded);
+    const episodes = excludeTestUsers((recentEpisodes.data || []) as ActivityRow[], excluded);
+    const allWatchlistData = excludeTestUsers((allWatchlistForAdoption.data || []) as unknown as WatchlistRow[], excluded);
     const watchlistActivity: ActivityRow[] = watchlist.map(w => ({
       user_id: w.user_id,
       created_at: w.created_at,
     }));
 
+    const totalUsers = profiles.length;
+    const totalWatchlistEntries = allWatchlistData.length;
+    const totalWatchedEpisodes = excludeTestUsers(
+      (await supabase.from('watched_episodes').select('user_id')).data as unknown as { user_id: string }[] || [],
+      excluded
+    ).length;
+
+    const recentWatchlistEntries = allWatchlistData.filter(w => w.created_at > sevenDaysAgo).length;
+    const recentWatchedEpisodes = episodes.filter(e => e.created_at > sevenDaysAgo).length;
+    const recentProfileCount = profiles.filter(p => p.created_at > thirtyDaysAgo).length;
+
     // Active users for existing 7d metric
-    const activeUserIds = new Set<string>();
-    const { data: recentDocs } = await supabase
-      .from('watchlist_entries')
-      .select('user_id')
-      .gt('created_at', sevenDaysAgo)
-      .limit(500);
-    (recentDocs || []).forEach((d) => activeUserIds.add((d as unknown as { user_id: string }).user_id));
-    const { data: recentEpDocs } = await supabase
-      .from('watched_episodes')
-      .select('user_id')
-      .gt('created_at', sevenDaysAgo)
-      .limit(500);
-    (recentEpDocs || []).forEach((d) => activeUserIds.add((d as unknown as { user_id: string }).user_id));
+    const allRecentActivity = [
+      ...watchlist.filter(w => w.created_at > sevenDaysAgo),
+      ...episodes.filter(e => e.created_at > sevenDaysAgo),
+    ];
+    const activeUserIds = new Set(allRecentActivity.map(r => r.user_id));
 
     // Engagement
     const engagement = computeEngagement(watchlistActivity, episodes, now);
@@ -329,7 +379,6 @@ export async function GET() {
     const retention_cohorts = computeRetentionCohorts(profiles, watchlistActivity, episodes, now);
 
     // Feature adoption
-    const allWatchlistData = (allWatchlistForAdoption.data || []) as unknown as WatchlistRow[];
     const franchiseIds = new Set((franchiseMembership.data || []).map(
       (r: { series_anilist_id: number }) => r.series_anilist_id
     ));
@@ -356,13 +405,13 @@ export async function GET() {
         .map(w => w.user_id)
     ));
     addMetric('Created a playlist', new Set(
-      ((playlistUsers.data || []) as unknown as { user_id: string }[]).map(r => r.user_id)
+      excludeTestUsers((playlistUsers.data || []) as unknown as { user_id: string }[], excluded).map(r => r.user_id)
     ));
     addMetric('Earned an achievement', new Set(
-      ((unlockedAchievements.data || []) as unknown as { user_id: string }[]).map(r => r.user_id)
+      excludeTestUsers((unlockedAchievements.data || []) as unknown as { user_id: string }[], excluded).map(r => r.user_id)
     ));
     addMetric('Earned Founding Member', new Set(
-      ((foundingMembers.data || []) as unknown as { user_id: string }[]).map(r => r.user_id)
+      excludeTestUsers((foundingMembers.data || []) as unknown as { user_id: string }[], excluded).map(r => r.user_id)
     ));
 
     adoptionMetrics.sort((a, b) => b.pct - a.pct);
