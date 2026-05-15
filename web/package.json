@@ -13,7 +13,7 @@
     "prepare": "cd .. && husky"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.10.2",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@types/ws": "^8.18.1",
     "appwrite": "^24.2.0",
