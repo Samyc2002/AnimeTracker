@@ -32,6 +32,7 @@ interface CacheDoc {
   next_airing_episode: number | null;
   next_airing_at: number | null;
   relations_json: string | null;
+  external_links: { site: string; url: string }[] | null;
   updated_at: string;
 }
 
@@ -116,6 +117,9 @@ function detailToDoc(anime: AnimeDetail): Record<string, unknown> {
     next_airing_episode: anime.nextAiringEpisode?.episode || null,
     next_airing_at: anime.nextAiringEpisode?.airingAt || null,
     relations_json: anime.relations ? JSON.stringify(anime.relations) : null,
+    external_links: anime.externalLinks
+      ? anime.externalLinks.filter(l => l.type === 'STREAMING').map(l => ({ site: l.site, url: l.url }))
+      : null,
     updated_at: new Date().toISOString(),
   };
 }

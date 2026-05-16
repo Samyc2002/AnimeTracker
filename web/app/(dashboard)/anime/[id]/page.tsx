@@ -160,7 +160,8 @@ export default function AnimeDetailPage() {
   const theme = getTheme(sfwMode);
   const id = Number(params.id);
   const [resolvedMediaId, setResolvedMediaId] = useState<number>(id);
-  const [loadingQuote] = useState(() => getRandomQuote('general'));
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
 
   useEffect(() => {
     async function load() {

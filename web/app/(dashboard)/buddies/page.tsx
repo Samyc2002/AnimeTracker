@@ -2,11 +2,11 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
+import Link from 'next/link';
 import RequireAuth from '@/components/RequireAuth';
 import { Spinner } from '@/components/ui/Spinner';
 import type { BuddyProfile } from '@/lib/types';
@@ -23,7 +23,6 @@ interface BuddyEntry {
 
 function BuddiesPage() {
   useTitle('Buddies');
-  const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { userId } = useAuth();
@@ -34,7 +33,8 @@ function BuddiesPage() {
   const [pendingReceived, setPendingReceived] = useState<BuddyEntry[]>([]);
   const [pendingSent, setPendingSent] = useState<BuddyEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingQuote] = useState(() => getRandomQuote('general'));
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
 
   const loadBuddies = useCallback(async (uid: string) => {
     const start = Date.now();
@@ -258,9 +258,9 @@ function BuddiesPage() {
           <div className="space-y-2">
             {buddies.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between bg-[#141925] rounded-lg p-3 border border-[#253040] group">
-                <div
+                <Link
+                  href={`/u/${entry.username}`}
                   className="flex items-center gap-3 cursor-pointer"
-                  onClick={() => router.push(`/u/${entry.username}`)}
                 >
                   <div className={`w-8 h-8 rounded-full ${theme.activeTab} flex items-center justify-center text-white text-sm font-bold`}>
                     {(entry.username || '?')[0].toUpperCase()}
@@ -269,7 +269,7 @@ function BuddiesPage() {
                     <p className="text-sm font-medium text-gray-200">{entry.displayName || entry.username}</p>
                     <p className="text-xs text-gray-500">@{entry.username}</p>
                   </div>
-                </div>
+                </Link>
                 <button
                   onClick={() => removeBuddy(entry.id)}
                   className="text-xs text-gray-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"

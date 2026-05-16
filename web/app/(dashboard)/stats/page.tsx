@@ -462,7 +462,8 @@ function AdminPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingQuote] = useState(() => getRandomQuote('general'));
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [forbidden, setForbidden] = useState(false);

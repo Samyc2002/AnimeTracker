@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchAnimeDetail } from '@/lib/anime-provider';
@@ -18,7 +18,6 @@ interface PlaylistData {
 
 export default function PublicPlaylistPage() {
   const params = useParams();
-  const router = useRouter();
   const slug = params.slug as string;
 
   const [playlist, setPlaylist] = useState<PlaylistData | null>(null);
@@ -106,10 +105,10 @@ export default function PublicPlaylistPage() {
             {animeList.map((anime) => {
               const title = anime.title.english || anime.title.romaji;
               return (
-                <div
+                <Link
                   key={anime.id}
+                  href={`/anime/${anime.id}`}
                   className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors ${anime.isAdult ? 'border border-red-500/40' : ''}`}
-                  onClick={() => router.push(`/anime/${anime.id}`)}
                 >
                   <div className="relative w-full aspect-[3/4]">
                     <Image
@@ -133,7 +132,7 @@ export default function PublicPlaylistPage() {
                       <p className="text-[10px] text-gray-500">{anime.episodes} eps</p>
                     )}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

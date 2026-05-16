@@ -45,7 +45,8 @@ function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<PlaylistDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [loadingQuote] = useState(() => getRandomQuote('general'));
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistDoc | null>(null);

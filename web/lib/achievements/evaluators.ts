@@ -231,12 +231,12 @@ const evaluators: Record<string, Evaluator> = {
     return { progress: 0, target: threshold };
   },
 
-  account_age_days: async (userId, config, supabase) => {
+  account_age_days: async (_userId, config, supabase) => {
     const days = (config.days as number) || 365;
     try {
-      const { data } = await supabase.auth.admin.getUserById(userId);
-      if (!data?.user?.created_at) return { progress: 0, target: days };
-      const ageDays = Math.floor((Date.now() - new Date(data.user.created_at).getTime()) / 86400000);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.created_at) return { progress: 0, target: days };
+      const ageDays = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000);
       return { progress: Math.min(ageDays, days), target: days };
     } catch {
       return { progress: 0, target: days };

@@ -2,7 +2,6 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { enqueueSnackbar } from 'notistack';
 import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
@@ -10,6 +9,7 @@ import { getTheme } from '@/lib/theme';
 import { buildFiltersFromAnswers } from '@/lib/taste-profile';
 import AddToWatchlist from '@/components/AddToWatchlist';
 import AddToPlaylist from '@/components/AddToPlaylist';
+import Link from 'next/link';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import { Spinner } from '@/components/ui/Spinner';
@@ -20,7 +20,6 @@ type Phase = 'loading' | 'quiz' | 'searching' | 'results';
 
 function RecommendPage() {
   useTitle('Recommendations');
-  const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { userId } = useAuth();
@@ -32,7 +31,8 @@ function RecommendPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [insufficient, setInsufficient] = useState(false);
-  const recQuote = useMemo(() => getRandomQuote('recommend'), [phase]);
+  const [recQuote, setRecQuote] = useState('');
+  useEffect(() => { setRecQuote(getRandomQuote('recommend')); }, [phase]);
 
   useEffect(() => {
     async function loadProfile() {
@@ -121,12 +121,12 @@ function RecommendPage() {
         <p className="text-gray-500 text-sm mb-4">
           Complete at least 3 anime so we can learn your taste.
         </p>
-        <button
-          onClick={() => router.push('/search')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${theme.activeTab} text-white`}
+        <Link
+          href="/search"
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${theme.activeTab} text-white inline-block`}
         >
           Browse Anime
-        </button>
+        </Link>
       </div>
     );
   }
@@ -227,10 +227,10 @@ function RecommendPage() {
           {results.map((media) => {
             const title = media.title.english || media.title.romaji;
             return (
-              <div
+              <Link
                 key={media.id}
+                href={`/anime/${media.id}`}
                 className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group"
-                onClick={() => router.push(`/anime/${media.id}`)}
               >
                 <div className="relative w-full aspect-[3/4]">
                   <Image
@@ -240,7 +240,7 @@ function RecommendPage() {
                     className="object-cover"
                     unoptimized
                   />
-                  <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                  <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
                     <AddToPlaylist mediaId={media.id} />
                     <AddToWatchlist media={media} />
                   </div>
@@ -249,7 +249,7 @@ function RecommendPage() {
                   <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
                   {media.episodes && <p className="text-[10px] text-gray-500 mt-0.5">{media.episodes} eps</p>}
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
