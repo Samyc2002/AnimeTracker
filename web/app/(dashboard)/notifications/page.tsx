@@ -2,8 +2,8 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import { useAuth } from '@/lib/auth-context';
@@ -43,7 +43,6 @@ function upgradeImageUrl(url: string): string {
 
 function NotificationsPage() {
   useTitle('Notifications');
-  const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { userId } = useAuth();
@@ -51,7 +50,8 @@ function NotificationsPage() {
 
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
-  const [loadingQuote] = useState(() => getRandomQuote('general'));
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
 
   const loadNotifications = useCallback(async () => {
     const start = Date.now();
@@ -176,25 +176,18 @@ function NotificationsPage() {
             if (ACHIEVEMENTS_UI_VISIBLE) return true;
             if (FOUNDING_MEMBER_ENABLED && n.title.includes('Founding Member')) return true;
             return false;
-          }).map((notif) => (
-            <div
-              key={notif.id}
-              className={`flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors ${
-                !notif.is_read ? `border-l-2 border-${theme.accent}-500` : ''
-              }`}
-              onClick={() => {
-                markAsRead(notif);
-                if (notif.type === 'buddy_request' || notif.type === 'buddy_accept') {
-                  router.push('/buddies');
-                } else if (notif.type === 'achievement') {
-                  router.push('/u/me');
-                } else if (notif.episode && notif.episode > 0 && notif.media_id) {
-                  router.push(`/anime/${notif.media_id}?mark_episode=${notif.episode}`);
-                } else if (notif.media_id) {
-                  router.push(`/anime/${notif.media_id}`);
-                }
-              }}
-            >
+          }).map((notif) => {
+            const notifHref =
+              notif.type === 'buddy_request' || notif.type === 'buddy_accept' ? '/buddies'
+              : notif.type === 'achievement' ? '/u/me'
+              : notif.episode && notif.episode > 0 && notif.media_id ? `/anime/${notif.media_id}?mark_episode=${notif.episode}`
+              : notif.media_id ? `/anime/${notif.media_id}`
+              : null;
+            const cls = `flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors ${
+              !notif.is_read ? `border-l-2 border-${theme.accent}-500` : ''
+            }`;
+            const content = (
+              <>
               <Image
                 src={notif.type === 'achievement' ? notif.cover_url : (upgradeImageUrl(notif.cover_url) || '/placeholder.png')}
                 alt=""
@@ -280,8 +273,12 @@ function NotificationsPage() {
                   <span className={`w-2 h-2 ${theme.pulse} rounded-full`} />
                 </div>
               )}
-            </div>
-          ))}
+            </>
+            );
+            return notifHref
+              ? <Link key={notif.id} href={notifHref} className={cls} onClick={() => markAsRead(notif)}>{content}</Link>
+              : <div key={notif.id} className={cls} onClick={() => markAsRead(notif)}>{content}</div>;
+          })}
         </div>
       )}
     </div>

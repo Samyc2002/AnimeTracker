@@ -135,6 +135,7 @@ query AnimeDetail($id: Int) {
     averageScore
     studios(isMain: true) { nodes { name } }
     nextAiringEpisode { airingAt episode timeUntilAiring }
+    externalLinks { site url type }
     relations {
       edges {
         relationType

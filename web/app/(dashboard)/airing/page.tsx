@@ -2,11 +2,11 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { fetchWeeklyAiring, getCachedAiring, saveAiringToCache, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { backfillSeriesId } from '@/lib/series-resolver';
 import Image from 'next/image';
+import Link from 'next/link';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
@@ -57,7 +57,6 @@ const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6]; // Mon=0 through Sun=6 (offsets from
 
 export default function AiringPage() {
   useTitle('Airing Schedule');
-  const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { authed, userId } = useAuth();
@@ -66,7 +65,8 @@ export default function AiringPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [trackedIds, setTrackedIds] = useState<Set<number>>(new Set());
   const [trackingId, setTrackingId] = useState<number | null>(null);
-  const [loadingQuote] = useState(() => getRandomQuote('general'));
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,7 +143,7 @@ export default function AiringPage() {
   }, [userId]);
 
   async function handleTrack(e: React.MouseEvent, s: AiringSchedule) {
-    e.stopPropagation();
+    e.preventDefault();
     const media = s.media;
     if (!media || trackingId === s.mediaId || !userId) return;
 
@@ -273,10 +273,10 @@ export default function AiringPage() {
                       const isTracked = trackedIds.has(s.mediaId);
 
                       return (
-                        <div
+                        <Link
                           key={`${s.mediaId}-${s.episode}`}
+                          href={`/anime/${s.mediaId}`}
                           className={`bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group cursor-pointer ${media.isAdult ? 'border border-red-500/40' : ''}`}
-                          onClick={() => router.push(`/anime/${s.mediaId}`)}
                         >
                           <div className="relative w-full aspect-[3/4]">
                             <Image
@@ -292,7 +292,7 @@ export default function AiringPage() {
                               </span>
                             </div>
                             {authed && (
-                              <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
                                 <AddToPlaylist mediaId={s.mediaId} />
                               </div>
                             )}
@@ -318,7 +318,7 @@ export default function AiringPage() {
                               {formatTime(s.airingAt)}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>

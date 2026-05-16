@@ -37,8 +37,8 @@ describe('GET /api/stream', () => {
     expect(body.urlKickass).toBe('https://kickassanime.com.es//naruto');
   });
 
-  it('returns error when 9anime search returns no matches', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
+  it('returns 502 when both searches return no matches', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => '<html><body>No results</body></html>',
     });
@@ -47,14 +47,13 @@ describe('GET /api/stream', () => {
       new URL('http://localhost/api/stream?title=NonexistentAnime')
     );
     const res = await GET(req);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(502);
     const body = await res.json();
-    expect(body.url).toBeNull();
-    expect(body.error).toBe('No results found');
+    expect(body.error).toBe('No streaming links found');
   });
 
-  it('returns 502 when upstream fetch is not ok', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 503 });
+  it('returns 502 when both upstream fetches are not ok', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 });
 
     const req = new NextRequest(
       new URL('http://localhost/api/stream?title=Fail')
@@ -62,18 +61,36 @@ describe('GET /api/stream', () => {
     const res = await GET(req);
     expect(res.status).toBe(502);
     const body = await res.json();
-    expect(body.error).toBe('Search failed');
+    expect(body.error).toBe('No streaming links found');
   });
 
-  it('returns 500 when fetch throws an exception', async () => {
+  it('returns 502 when both fetches throw', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     const req = new NextRequest(
       new URL('http://localhost/api/stream?title=Error')
     );
     const res = await GET(req);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(502);
     const body = await res.json();
-    expect(body.error).toBe('Failed to search');
+    expect(body.error).toBe('No streaming links found');
+  });
+
+  it('returns partial result when only 9anime succeeds', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => '<a href="/anime/naruto-shippuden/" itemprop="url">Naruto</a><a href="/anime/naruto/" itemprop="url">Naruto</a>',
+      })
+      .mockResolvedValueOnce({ ok: false, status: 503 });
+
+    const req = new NextRequest(
+      new URL('http://localhost/api/stream?title=Naruto')
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.url9anime).toBe('https://9anime.org.lv/naruto');
+    expect(body.urlKickass).toBeNull();
   });
 });

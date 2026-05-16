@@ -2,8 +2,9 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 import AnimeCard from '@/components/AnimeCard';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import Image from 'next/image';
@@ -16,6 +17,7 @@ import { StatusBadge, type StatusBadgeTone } from '@/components/ui/StatusBadge';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import type { WatchStatus } from '@/lib/types';
 import { getRandomQuote } from '@/lib/loading-quotes';
+import StreamingBanner from '@/components/StreamingBanner';
 
 function upgradeImageUrl(url: string): string {
   return url.replace(/\/(?:small|medium)\//, '/large/');
@@ -60,7 +62,6 @@ export default function WatchlistPageGuarded() {
 
 function WatchlistPage() {
   useTitle('Watchlist');
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
@@ -68,7 +69,8 @@ function WatchlistPage() {
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loadingQuote] = useState(() => getRandomQuote('general'));
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(() => {
     if (typeof window !== 'undefined') {
@@ -365,6 +367,8 @@ function WatchlistPage() {
         })}
       </div>
 
+      <StreamingBanner userId={userId} />
+
       {displayEntries.length === 0 ? (
         <p className="text-gray-500 text-center mt-8">
           {totalEntries === 0 ? 'No anime tracked yet.' : `No anime matching these filters`}
@@ -387,7 +391,7 @@ function WatchlistPage() {
                     totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') ? (entry.total_episodes || undefined) : undefined}
                     airedEpisodes={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && entry.next_airing_episode ? entry.next_airing_episode - 1 : undefined}
                     isAdult={entry.is_adult || entry.manual_nsfw}
-                    onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
+                    href={`/anime/${entry.id_mal || entry.media_id}`}
                     action={
                       <div className="flex items-center gap-1">
                         <div className="opacity-0 group-hover/row:opacity-100 transition-opacity">
@@ -410,12 +414,17 @@ function WatchlistPage() {
                 className="flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors border border-[#253040]/50"
                 onClick={() => openFolder(folder)}
               >
-                <div className="relative w-14 h-20 flex-shrink-0">
-                  {folder.entries.slice(0, 3).reverse().map((e, i) => (
-                    <div key={e.id} className="absolute rounded overflow-hidden" style={{ top: i * 3, left: i * 3, width: 48, height: 68, zIndex: 3 - i }}>
-                      <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover" sizes="48px" unoptimized />
-                    </div>
-                  ))}
+                <div className="grid grid-cols-2 gap-[2px] w-14 flex-shrink-0 aspect-[3/4] rounded overflow-hidden bg-[#0b0e14]">
+                  {Array.from({ length: 4 }).map((_, i) => {
+                    const e = folder.entries[i];
+                    return e ? (
+                      <div key={e.id} className="relative w-full h-full">
+                        <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover" sizes="28px" unoptimized />
+                      </div>
+                    ) : (
+                      <div key={`empty-${i}`} className="bg-[#1c2333]" />
+                    );
+                  })}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                   <p className="text-sm font-semibold text-gray-200 truncate">{folder.seriesName}</p>
@@ -438,15 +447,15 @@ function WatchlistPage() {
               const title = entry.title_english || entry.title_romaji || 'Unknown';
               const airingInfo = airingStatusLabels[entry.status] || airingStatusLabels.FINISHED;
               return (
-                <div
+                <Link
                   key={entry.id}
+                  href={`/anime/${entry.id_mal || entry.media_id}`}
                   className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors group/card relative ${entry.is_adult || entry.manual_nsfw ? 'border border-red-500/40' : ''}`}
-                  onClick={() => router.push(`/anime/${entry.id_mal || entry.media_id}`)}
                   onContextMenu={(e) => handleContextMenu(e, entry)}
                 >
                   <div className="relative w-full aspect-[3/4]">
                     <Image src={upgradeImageUrl(entry.cover_url) || '/placeholder.png'} alt={title} fill className="object-cover" unoptimized />
-                    <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
                       <AddToPlaylist mediaId={entry.media_id} />
                     </div>
                     <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
@@ -489,7 +498,7 @@ function WatchlistPage() {
                         : 'Not started yet'}
                     </div>
                   )}
-                </div>
+                </Link>
               );
             }
 
@@ -501,11 +510,18 @@ function WatchlistPage() {
                 onClick={() => openFolder(folder)}
               >
                 <div className="relative w-full aspect-[3/4]">
-                  {folder.entries.slice(0, 3).reverse().map((e, i) => (
-                    <div key={e.id} className="absolute inset-0" style={{ top: i * 4, left: i * 4, right: -(i * 4), bottom: -(i * 4), zIndex: 3 - i, opacity: 1 - i * 0.15 }}>
-                      <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover rounded-lg" unoptimized />
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-2 gap-[2px] w-full h-full rounded-lg overflow-hidden bg-[#0b0e14]">
+                    {Array.from({ length: 4 }).map((_, i) => {
+                      const e = folder.entries[i];
+                      return e ? (
+                        <div key={e.id} className="relative w-full h-full">
+                          <Image src={upgradeImageUrl(e.cover_url) || '/placeholder.png'} alt="" fill className="object-cover" unoptimized />
+                        </div>
+                      ) : (
+                        <div key={`empty-${i}`} className="bg-[#1c2333]" />
+                      );
+                    })}
+                  </div>
                   <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-2 z-10">
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-[#253040] text-gray-300">
                       {folder.entries.length} entries
@@ -588,7 +604,8 @@ function WatchlistPage() {
                         totalForProgress={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') ? (entry.total_episodes || undefined) : undefined}
                         airedEpisodes={(entry.watch_status === 'Watching' || entry.watch_status === 'Dropped') && entry.next_airing_episode ? entry.next_airing_episode - 1 : undefined}
                         isAdult={entry.is_adult || entry.manual_nsfw}
-                        onClick={() => { setSelectedFolder(null); router.push(`/anime/${entry.id_mal || entry.media_id}`); }}
+                        href={`/anime/${entry.id_mal || entry.media_id}`}
+                        onClick={() => setSelectedFolder(null)}
                         action={
                           <div className="flex items-center gap-1">
                             <div className="opacity-0 group-hover/row:opacity-100 transition-opacity">

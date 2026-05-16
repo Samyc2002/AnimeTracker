@@ -82,6 +82,7 @@ export interface AnimeDetail {
     episode: number;
     timeUntilAiring: number;
   } | null;
+  externalLinks?: { site: string; url: string; type: string }[];
   relations: {
     edges: {
       relationType: string;

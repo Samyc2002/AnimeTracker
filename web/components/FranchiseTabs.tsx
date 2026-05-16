@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { enqueueSnackbar } from 'notistack';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
@@ -95,7 +94,6 @@ function WatchOrderTab({
   authed,
   userId,
 }: WatchOrderTabProps) {
-  const router = useRouter();
   const [adding, setAdding] = useState<number | null>(null);
 
   async function handleAdd(anilistId: number) {
@@ -160,72 +158,54 @@ function WatchOrderTab({
                 </div>
 
                 {/* Entry card */}
-                <div
-                  className={`flex-1 flex gap-2.5 rounded-lg p-2 transition-opacity cursor-pointer max-w-[520px] ${
+                {(() => {
+                  const cardCls = `flex-1 flex gap-2.5 rounded-lg p-2 transition-opacity max-w-[520px] ${
                     isCurrent
                       ? `border-2 border-${theme.accent}-500 bg-[#141925]`
-                      : 'border border-[#253040] bg-[#141925] opacity-75 hover:opacity-100'
-                  }`}
-                  onClick={() => !isCurrent && router.push(`/anime/${entry.anilist_id}`)}
-                >
-                  {/* Poster */}
-                  <div className="w-9 h-[52px] flex-shrink-0 rounded overflow-hidden bg-[#0b0e14]">
-                    {cover ? (
-                      <Image
-                        src={cover}
-                        alt=""
-                        width={36}
-                        height={52}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-full h-full" />
-                    )}
-                  </div>
-
-                  {/* Text */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                    <div className="flex items-start gap-1.5 flex-wrap">
-                      <p className={`text-xs font-medium leading-snug ${isCurrent ? 'text-gray-100' : 'text-gray-300'}`}>
-                        {title}
-                      </p>
-                      {badge && (
-                        <span className="px-1 py-0.5 rounded text-[9px] bg-[#253040] text-gray-400 font-medium flex-shrink-0">
-                          {badge}
-                        </span>
+                      : 'border border-[#253040] bg-[#141925] opacity-75 hover:opacity-100 cursor-pointer'
+                  }`;
+                  const cardContent = (
+                    <>
+                      <div className="w-9 h-[52px] flex-shrink-0 rounded overflow-hidden bg-[#0b0e14]">
+                        {cover ? (
+                          <Image src={cover} alt="" width={36} height={52} className="w-full h-full object-cover" unoptimized />
+                        ) : (
+                          <div className="w-full h-full" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                        <div className="flex items-start gap-1.5 flex-wrap">
+                          <p className={`text-xs font-medium leading-snug ${isCurrent ? 'text-gray-100' : 'text-gray-300'}`}>{title}</p>
+                          {badge && <span className="px-1 py-0.5 rounded text-[9px] bg-[#253040] text-gray-400 font-medium flex-shrink-0">{badge}</span>}
+                        </div>
+                        {yr && <p className="text-[10px] text-gray-500">{yr}</p>}
+                        <div className="mt-1 h-[18px] flex items-center">
+                          {!statusesLoaded ? (
+                            <div className="h-3 w-12 rounded bg-[#253040] animate-pulse" />
+                          ) : status ? (
+                            <StatusBadge tone={STATUS_TONES[status.watch_status] ?? 'gray'}>{status.watch_status}</StatusBadge>
+                          ) : authed && !isCurrent ? (
+                            <button
+                              onClick={(e) => { e.preventDefault(); handleAdd(entry.anilist_id); }}
+                              disabled={adding === entry.anilist_id}
+                              className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+                            >
+                              {adding === entry.anilist_id ? '…' : '+ Add'}
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                      {fmt && (
+                        <div className="flex items-center self-center flex-shrink-0 ml-auto pl-2">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#253040] text-gray-400 font-medium uppercase tracking-wide">{fmt}</span>
+                        </div>
                       )}
-                    </div>
-                    {yr && (
-                      <p className="text-[10px] text-gray-500">{yr}</p>
-                    )}
-                    {/* Watchlist status or Add button — fixed height to prevent layout shift */}
-                    <div className="mt-1 h-[18px] flex items-center">
-                      {!statusesLoaded ? (
-                        <div className="h-3 w-12 rounded bg-[#253040] animate-pulse" />
-                      ) : status ? (
-                        <StatusBadge tone={STATUS_TONES[status.watch_status] ?? 'gray'}>{status.watch_status}</StatusBadge>
-                      ) : authed && !isCurrent ? (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleAdd(entry.anilist_id); }}
-                          disabled={adding === entry.anilist_id}
-                          className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
-                        >
-                          {adding === entry.anilist_id ? '…' : '+ Add'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Format badge — right-anchored, only if format is known */}
-                  {fmt && (
-                    <div className="flex items-center self-center flex-shrink-0 ml-auto pl-2">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#253040] text-gray-400 font-medium uppercase tracking-wide">
-                        {fmt}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                    </>
+                  );
+                  return isCurrent
+                    ? <div className={cardCls}>{cardContent}</div>
+                    : <Link href={`/anime/${entry.anilist_id}`} className={cardCls}>{cardContent}</Link>;
+                })()}
               </div>
             );
           })}
@@ -251,7 +231,6 @@ function WatchOrderTab({
 
 interface RelatedAnimeTabProps {
   relations: AnimeDetail['relations']['edges'];
-  theme: ReturnType<typeof getTheme>;
 }
 
 function formatRelation(type: string) {
@@ -260,8 +239,7 @@ function formatRelation(type: string) {
 
 const relationOrder = ['SEQUEL', 'PREQUEL', 'SIDE_STORY', 'PARENT', 'SPIN_OFF', 'ALTERNATIVE', 'OTHER'];
 
-function RelatedAnimeTab({ relations, theme }: RelatedAnimeTabProps) {
-  const router = useRouter();
+function RelatedAnimeTab({ relations }: RelatedAnimeTabProps) {
   const sorted = [...relations]
     .filter((e) => e.node.type === 'ANIME')
     .sort((a, b) => relationOrder.indexOf(a.relationType) - relationOrder.indexOf(b.relationType));
@@ -276,10 +254,10 @@ function RelatedAnimeTab({ relations, theme }: RelatedAnimeTabProps) {
         const rel = edge.node;
         const relTitle = rel.title.english || rel.title.romaji;
         return (
-          <div
+          <Link
             key={rel.id}
+            href={`/anime/${rel.id}`}
             className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors ${rel.isAdult ? 'border border-red-500/40' : ''}`}
-            onClick={() => router.push(`/anime/${rel.id}`)}
           >
             <div className="relative w-full aspect-[3/4]">
               <Image
@@ -300,7 +278,7 @@ function RelatedAnimeTab({ relations, theme }: RelatedAnimeTabProps) {
                 {relTitle}
               </p>
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>
@@ -339,7 +317,7 @@ export default function FranchiseTabs({
     return (
       <div className="mt-8 mb-8">
         <h2 className="text-sm font-semibold text-gray-400 uppercase mb-3">Related Anime</h2>
-        <RelatedAnimeTab relations={anime.relations.edges} theme={theme} />
+        <RelatedAnimeTab relations={anime.relations.edges} />
       </div>
     );
   }
@@ -661,7 +639,7 @@ function FranchiseTabsInner({
     return (
       <div className="mt-8 mb-8">
         <h2 className="text-sm font-semibold text-gray-400 uppercase mb-3">Related Anime</h2>
-        <RelatedAnimeTab relations={anime.relations.edges} theme={theme} />
+        <RelatedAnimeTab relations={anime.relations.edges} />
       </div>
     );
   }
@@ -795,7 +773,7 @@ function FranchiseTabsInner({
       )}
 
       {activeTab === 'related' && (
-        <RelatedAnimeTab relations={anime.relations.edges} theme={theme} />
+        <RelatedAnimeTab relations={anime.relations.edges} />
       )}
     </div>
   );
