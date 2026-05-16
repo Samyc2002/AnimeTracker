@@ -88,6 +88,8 @@ function InventoryContent() {
           ['#c17', 'Stats Viz'],
           ['#c18', 'Episode Grid'],
           ['#c19', 'Anime Grid Card'],
+          ['#c20', 'Overlays'],
+          ['#c21', 'Composite'],
         ].map(([href, label]) => (
           <a key={href} href={href} className="text-gray-500 hover:text-gray-200 whitespace-nowrap transition-colors">
             {label}
@@ -535,6 +537,70 @@ function InventoryContent() {
             </div>
           </SubSection>
 
+          <SubSection title="C2f. Folder card 2x2 mosaic" note="watchlist/page.tsx:417,513 — series grouping, list + card view">
+            <div className="flex gap-6 items-start max-w-xl">
+              {/* List view folder */}
+              <div>
+                <p className="text-[10px] text-gray-600 mb-2">List view</p>
+                <div className="flex items-center gap-3 bg-[#141925] rounded-lg p-3 border border-[#253040]/50 hover:bg-[#1c2333] transition-colors cursor-pointer w-64">
+                  <div className="grid grid-cols-2 gap-[2px] w-14 flex-shrink-0 aspect-[3/4] rounded overflow-hidden bg-[#0b0e14]">
+                    <div className="bg-[#253040]" />
+                    <div className="bg-[#253040]" />
+                    <div className="bg-[#253040]" />
+                    <div className="bg-[#1c2333]" />
+                  </div>
+                  <div className="flex flex-col justify-center gap-1 flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-200 truncate">Attack on Titan</p>
+                    <p className="text-xs text-gray-500">3 entries</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500 flex-shrink-0"><polyline points="9 18 15 12 9 6" /></svg>
+                </div>
+              </div>
+
+              {/* Card view folder */}
+              <div>
+                <p className="text-[10px] text-gray-600 mb-2">Card view</p>
+                <div className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors border border-[#253040]/50 w-36">
+                  <div className="relative aspect-[3/4]">
+                    <div className="absolute inset-0 grid grid-cols-2 gap-[2px] bg-[#0b0e14]">
+                      <div className="bg-[#253040]" />
+                      <div className="bg-[#253040]" />
+                      <div className="bg-[#253040]" />
+                      <div className="bg-[#1c2333]" />
+                    </div>
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-2 flex items-end">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-[#253040] text-gray-300">3 entries</span>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    <p className="text-xs font-medium text-gray-200 truncate">Attack on Titan</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card view folder (all filled) */}
+              <div>
+                <p className="text-[10px] text-gray-600 mb-2">Card (all filled)</p>
+                <div className="bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors border border-[#253040]/50 w-36">
+                  <div className="relative aspect-[3/4]">
+                    <div className="absolute inset-0 grid grid-cols-2 gap-[2px] bg-[#0b0e14]">
+                      <div className="bg-[#253040]" />
+                      <div className="bg-[#253040]" />
+                      <div className="bg-[#253040]" />
+                      <div className="bg-[#253040]" />
+                    </div>
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-2 flex items-end">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-[#253040] text-gray-300">4 entries</span>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    <p className="text-xs font-medium text-gray-200 truncate">Naruto</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SubSection>
+
         </Section>
 
         {/* ── C3: Dropdowns ── */}
@@ -590,6 +656,110 @@ function InventoryContent() {
                 <button className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-[#1c2333] transition-colors">Remove</button>
               </div>
             </div>
+          </SubSection>
+
+          <SubSection title="C3e. Sort dropdown (provider-aware)" note="components/search/SortDropdown.tsx — amber indicator for unsupported sorts">
+            <Row>
+              <Label>Default</Label>
+              <button className="px-2 py-1 text-xs bg-[#141925] border border-[#253040] rounded-lg text-gray-400 flex items-center gap-1">
+                Sort: Popularity <span className="text-[10px] text-gray-600">(default)</span> <span className="text-gray-600">&#9662;</span>
+              </button>
+            </Row>
+            <Row>
+              <Label>Not applied</Label>
+              <button className="px-2 py-1 text-xs bg-[#141925] border border-[#253040] rounded-lg text-gray-400 flex items-center gap-1.5">
+                Sort: Score <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> <span className="text-gray-600">&#9662;</span>
+              </button>
+            </Row>
+            <Row>
+              <Label>Open</Label>
+              <div className="relative inline-block">
+                <button className="px-2 py-1 text-xs bg-[#141925] border border-[#253040] rounded-lg text-gray-400 flex items-center gap-1">
+                  Sort: Popularity <span className="text-gray-600">&#9662;</span>
+                </button>
+                <div className="absolute top-8 left-0 w-52 bg-[#141925] border border-[#253040] rounded-lg py-1 shadow-xl z-10">
+                  <button className="w-full text-left px-3 py-1.5 text-xs text-gray-300 bg-[#1c2333] flex justify-between items-center">Popularity &#10003;</button>
+                  <button className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#1c2333]">Score</button>
+                  <button className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#1c2333] flex justify-between items-center">Trending <span className="text-amber-500 text-[10px]">not applied</span></button>
+                  <button className="w-full text-left px-3 py-1.5 text-xs text-gray-500 opacity-40 cursor-not-allowed">Relevance</button>
+                </div>
+              </div>
+            </Row>
+          </SubSection>
+
+          <SubSection title="C3f. Genre multi-select (provider-aware)" note="components/search/GenreSelect.tsx — chips + disabled items on Jikan">
+            <Row>
+              <Label>With chips</Label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Action <span className="opacity-60 cursor-pointer">&times;</span></span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Comedy <span className="opacity-60 cursor-pointer">&times;</span></span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border border-gray-600 bg-transparent text-gray-500 opacity-40 line-through">Mahou Shoujo <span className="cursor-pointer">&times;</span></span>
+                </div>
+                <button className="text-xs text-gray-400 border border-[#253040] rounded-lg px-3 py-1 bg-[#0b0e14]">Add more...</button>
+              </div>
+            </Row>
+            <Row>
+              <Label>Empty</Label>
+              <button className="text-xs text-gray-400 border border-[#253040] rounded-lg px-3 py-1 bg-[#0b0e14]">Select genres...</button>
+            </Row>
+          </SubSection>
+
+          <SubSection title="C3g. Tag multi-select (searchable)" note="components/search/TagSelect.tsx — search + category label + SFW filtering">
+            <Row>
+              <Label>With chips</Label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Isekai <span className="opacity-60 cursor-pointer">&times;</span></span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Time Skip <span className="opacity-60 cursor-pointer">&times;</span></span>
+                </div>
+                <button className="text-xs text-gray-400 border border-[#253040] rounded-lg px-3 py-1 bg-[#0b0e14]">Add more...</button>
+              </div>
+            </Row>
+            <Row>
+              <Label>Open dropdown</Label>
+              <div className="relative inline-block">
+                <div className="w-56 bg-[#141925] border border-[#253040] rounded-lg shadow-xl">
+                  <div className="p-2 border-b border-[#253040]">
+                    <input type="text" placeholder="Search tags..." className="w-full text-xs bg-[#0b0e14] border border-[#253040] rounded px-2 py-1 text-gray-300" readOnly />
+                  </div>
+                  <div className="py-1 max-h-32 overflow-y-auto">
+                    <button className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#1c2333] flex justify-between">Isekai <span className="text-gray-500">Setting</span></button>
+                    <button className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#1c2333] flex justify-between">Time Skip <span className="text-gray-500">Theme</span></button>
+                    <button className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#1c2333] flex justify-between">Revenge <span className="text-gray-500">Theme</span></button>
+                  </div>
+                </div>
+              </div>
+            </Row>
+          </SubSection>
+
+          <SubSection title="C3h. Studio multi-select (debounced search)" note="components/search/StudioSelect.tsx — API search + cached results">
+            <Row>
+              <Label>With chip</Label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>MAPPA <span className="opacity-60 cursor-pointer">&times;</span></span>
+                </div>
+                <button className="text-xs text-gray-400 border border-[#253040] rounded-lg px-3 py-1 bg-[#0b0e14]">Add more...</button>
+              </div>
+            </Row>
+            <Row>
+              <Label>Search states</Label>
+              <div className="flex gap-4">
+                <div className="w-52 bg-[#141925] border border-[#253040] rounded-lg shadow-xl">
+                  <div className="p-2 border-b border-[#253040]">
+                    <input type="text" placeholder="Search studios..." className="w-full text-xs bg-[#0b0e14] border border-[#253040] rounded px-2 py-1 text-gray-300" readOnly />
+                  </div>
+                  <p className="px-3 py-2 text-xs text-gray-500">Type at least 2 characters</p>
+                </div>
+                <div className="w-52 bg-[#141925] border border-[#253040] rounded-lg shadow-xl">
+                  <div className="p-2 border-b border-[#253040]">
+                    <input type="text" defaultValue="MA" className="w-full text-xs bg-[#0b0e14] border border-[#253040] rounded px-2 py-1 text-gray-300" readOnly />
+                  </div>
+                  <p className="px-3 py-2 text-xs text-gray-400">Searching...</p>
+                </div>
+              </div>
+            </Row>
           </SubSection>
 
         </Section>
@@ -692,6 +862,35 @@ function InventoryContent() {
             </Row>
           </SubSection>
 
+          <SubSection title="C6e. SearchBar filter badge (active count)" note="SearchBar.tsx:91 — theme-colored count overlay on filter icon">
+            <Row>
+              <Label>No filters</Label>
+              <div className="relative p-1.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-500">
+                  <line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
+                </svg>
+              </div>
+            </Row>
+            <Row>
+              <Label>SFW (teal)</Label>
+              <div className="relative p-1.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-teal-400">
+                  <line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
+                </svg>
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-teal-500 rounded-full flex items-center justify-center text-[9px] font-bold text-white">3</span>
+              </div>
+            </Row>
+            <Row>
+              <Label>NSFW (rose)</Label>
+              <div className="relative p-1.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-rose-400">
+                  <line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
+                </svg>
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center text-[9px] font-bold text-white">5</span>
+              </div>
+            </Row>
+          </SubSection>
+
         </Section>
 
         {/* ── C7: Navigation ── */}
@@ -739,6 +938,24 @@ function InventoryContent() {
               <div className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-gray-300 hover:bg-[#1c2333] cursor-pointer">
                 <span className="w-5 text-center text-gray-500">⚙</span>
                 Settings
+              </div>
+            </div>
+          </SubSection>
+
+          <SubSection title="C7d. Header strip (search results toolbar)" note="components/search/HeaderStrip.tsx — provider label + sort + view toggle">
+            <div className="flex items-center gap-3 max-w-xl">
+              <span className="text-xs text-gray-500">Results from</span>
+              <span className={`text-xs font-medium ${theme.btnText}`}>AniList</span>
+              <button className="ml-auto px-2 py-1 text-xs bg-[#141925] border border-[#253040] rounded-lg text-gray-400 flex items-center gap-1">
+                Sort: Popularity <span className="text-gray-600">&#9662;</span>
+              </button>
+              <div className="flex gap-1">
+                <button className={`p-1.5 rounded transition-colors ${theme.activeTab} text-white`}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
+                </button>
+                <button className="p-1.5 rounded transition-colors text-gray-500 hover:text-gray-300">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
+                </button>
               </div>
             </div>
           </SubSection>
@@ -791,6 +1008,29 @@ function InventoryContent() {
                 <span className="text-xs text-gray-300">Kitsu</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
               </div>
+            </div>
+          </SubSection>
+
+          <SubSection title="C9c. Streaming banner (dismissable)" note="components/StreamingBanner.tsx — lazy-loaded info banner">
+            <div className="bg-[#141925] border border-[#253040] rounded-lg px-4 py-3 flex items-start gap-3 max-w-xl">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-500 mt-0.5 flex-shrink-0">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <p className="flex-1 text-sm text-gray-300">
+                <span>3 watching, 2 planned on </span>
+                <span className="text-gray-100 font-medium">Crunchyroll</span>
+                <span className="text-gray-600"> &middot; </span>
+                <span>1 watching on </span>
+                <span className="text-gray-100 font-medium">Funimation</span>
+              </p>
+              <button className="text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0 mt-0.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
           </SubSection>
 
@@ -1274,6 +1514,113 @@ function InventoryContent() {
                     <p className="text-xs font-medium text-gray-200 truncate">Title here</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </SubSection>
+
+        </Section>
+
+        {/* ── C20: Overlay / Wrapper Utilities ── */}
+        <Section id="c20" title="C20. Overlay / Wrapper Utilities">
+
+          <SubSection title="C20a. DisabledFilter overlay" note="components/search/DisabledFilter.tsx — opacity wrapper + tooltip">
+            <Row>
+              <Label>Enabled</Label>
+              <div className="flex gap-2">
+                <button className={`px-3 py-1 text-xs rounded-lg border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>TV</button>
+                <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">Movie</button>
+              </div>
+            </Row>
+            <Row>
+              <Label>Disabled</Label>
+              <div className="relative">
+                <div className="opacity-40 pointer-events-none select-none flex gap-2">
+                  <button className={`px-3 py-1 text-xs rounded-lg border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>TV</button>
+                  <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">Movie</button>
+                </div>
+                <div className="absolute inset-0 cursor-not-allowed" />
+                <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#1e2736] border border-[#253040] rounded-lg px-3 py-1.5 text-xs text-gray-300 whitespace-nowrap">
+                  Not supported by Jikan
+                  <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-[#1e2736] border-b border-r border-[#253040] rotate-45" />
+                </div>
+              </div>
+            </Row>
+          </SubSection>
+
+        </Section>
+
+        {/* ── C21: Composite Panels ── */}
+        <Section id="c21" title="C21. Composite Panels">
+
+          <SubSection title="C21a. Filter panel skeleton" note="components/search/FilterPanel.tsx — 5-section filter panel">
+            <div className="bg-[#141925] border border-[#253040] rounded-lg p-4 max-w-xl space-y-4">
+              {/* Basic */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Basic</p>
+                <div className="flex gap-2">
+                  <button className={`px-3 py-1 text-xs rounded-lg border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>TV</button>
+                  <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">Movie</button>
+                  <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">OVA</button>
+                  <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">Special</button>
+                </div>
+              </div>
+
+              <div className="border-t border-[#253040]/50" />
+
+              {/* Content */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Content</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Action <span className="text-gray-500 cursor-pointer">&times;</span></span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Comedy <span className="text-gray-500 cursor-pointer">&times;</span></span>
+                </div>
+                <button className="text-xs text-gray-400 border border-[#253040] rounded-lg px-3 py-1 bg-[#0b0e14]">Select genres...</button>
+              </div>
+
+              <div className="border-t border-[#253040]/50" />
+
+              {/* Score & Stats */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Score &amp; Stats</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-500">Score</span>
+                  <input type="number" placeholder="From" className="w-20 px-2 py-1 text-xs bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-300" readOnly />
+                  <span className="text-gray-600">&ndash;</span>
+                  <input type="number" placeholder="To" className="w-20 px-2 py-1 text-xs bg-[#0b0e14] border border-[#253040] rounded-lg text-gray-300" readOnly />
+                </div>
+              </div>
+
+              <div className="border-t border-[#253040]/50" />
+
+              {/* Production */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Production</p>
+                <div className="flex gap-2">
+                  <button className={`px-3 py-1 text-xs rounded-lg border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Manga</button>
+                  <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">Original</button>
+                  <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">Light Novel</button>
+                </div>
+              </div>
+
+              <div className="border-t border-[#253040]/50" />
+
+              {/* My Watchlist */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">My Watchlist</p>
+                <div className="flex gap-2">
+                  <button className={`px-3 py-1 text-xs rounded-lg border ${theme.btnBg} ${theme.btnBorder} ${theme.btnText}`}>Watching</button>
+                  <button className="px-3 py-1 text-xs rounded-lg border border-[#253040] bg-[#0b0e14] text-gray-400">Completed</button>
+                </div>
+              </div>
+
+              <div className="border-t border-[#253040]/50" />
+
+              {/* Action bar */}
+              <div className="flex items-center gap-3 pt-1">
+                <button className={`px-4 py-1.5 text-xs rounded-lg text-white ${theme.btn}`}>Apply Filters</button>
+                <button className="px-4 py-1.5 text-xs rounded-lg text-gray-500 hover:text-gray-300">Clear All</button>
+                <span className="text-[10px] text-gray-600 ml-auto">disabled when no changes</span>
+                <button className="px-4 py-1.5 text-xs rounded-lg text-gray-600 bg-[#141925] border border-[#253040] cursor-not-allowed opacity-50">Apply Filters</button>
               </div>
             </div>
           </SubSection>
