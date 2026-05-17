@@ -155,13 +155,16 @@ function WatchlistPage() {
       const wlDocs = (docs || []) as WatchlistDoc[];
       const allIds: number[] = [];
       const malToMedia = new Map<number, number>();
+      console.log("wlDocs", wlDocs);
       for (const d of wlDocs) {
-        allIds.push(d.media_id);
         if (d.id_mal) {
           allIds.push(d.id_mal);
           malToMedia.set(d.id_mal, d.media_id);
+        } else {
+          allIds.push(d.media_id);
         }
       }
+      console.log("allIds", allIds);
       if (allIds.length > 0) {
         const { data: progressData } = await supabase.rpc('get_episode_progress', {
           p_user_id: userId,

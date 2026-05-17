@@ -45,7 +45,8 @@ export default function NavBar() {
           .from('notifications')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('is_read', false);
+          .eq('is_read', false)
+          .eq('type', 'episode');
         setUnreadCount(count ?? 0);
       } catch {
         // Not critical
