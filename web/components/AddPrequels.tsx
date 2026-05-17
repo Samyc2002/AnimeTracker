@@ -72,15 +72,14 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
         }
         const { data: existing } = await supabase
           .from('watchlist_entries')
-          .select('media_id, id_mal')
+          .select('canonical_anilist_id')
           .eq('user_id', userId)
+          .not('canonical_anilist_id', 'is', null)
           .limit(500);
-        const existingIds = new Set<number>();
-        for (const doc of existing || []) {
-          existingIds.add(doc.media_id);
-          if (doc.id_mal) existingIds.add(doc.id_mal);
-        }
-        setAllAdded(prequels.every((p) => existingIds.has(p.id) || (p.idMal && existingIds.has(p.idMal))));
+        const existingIds = new Set<number>(
+          (existing || []).map((doc) => doc.canonical_anilist_id as number)
+        );
+        setAllAdded(prequels.every((p) => existingIds.has(p.id)));
       } catch {
         // Can't check — leave enabled
       }
@@ -146,18 +145,17 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
 
       const { data: existing } = await supabase
         .from('watchlist_entries')
-        .select('media_id, id_mal')
+        .select('canonical_anilist_id')
         .eq('user_id', userId)
+        .not('canonical_anilist_id', 'is', null)
         .limit(500);
-      const existingIds = new Set<number>();
-      for (const doc of existing || []) {
-        existingIds.add(doc.media_id);
-        if (doc.id_mal) existingIds.add(doc.id_mal);
-      }
+      const existingIds = new Set<number>(
+        (existing || []).map((doc) => doc.canonical_anilist_id as number)
+      );
 
       let added = 0;
       for (const prequel of prequels) {
-        if (existingIds.has(prequel.id) || (prequel.idMal && existingIds.has(prequel.idMal))) continue;
+        if (existingIds.has(prequel.id)) continue;
         const entry = mediaToWatchlistEntry({
           id: prequel.id,
           idMal: prequel.idMal,
@@ -173,6 +171,8 @@ export default function AddPrequels({ anime }: { anime: AnimeDetail }) {
             ...entry,
             user_id: userId,
             watch_status: status,
+            import_source: 'manual',
+            canonical_anilist_id: prequel.id,
           })
           .select()
           .single();

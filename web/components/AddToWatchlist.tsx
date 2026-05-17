@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
@@ -10,6 +10,7 @@ import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { backfillSeriesId } from '@/lib/series-resolver';
 import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
+import { upsertSeriesMetadata } from '@/lib/series-metadata';
 import type { AniListMedia } from '@/lib/types';
 import type { WatchStatus } from '@/lib/types';
 
@@ -40,12 +41,28 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
   const [updating, setUpdating] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+
+  const updateDropPos = useCallback(() => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const dropWidth = 160;
+    let left = rect.right - dropWidth;
+    if (left < 8) left = 8;
+    if (left + dropWidth > window.innerWidth - 8) left = window.innerWidth - dropWidth - 8;
+    setDropPos({ top: rect.bottom + 4, left });
+  }, []);
 
   useEffect(() => {
+    if (!showDropdown) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setShowDropdown(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target) || dropRef.current?.contains(target)) return;
+      setShowDropdown(false);
     }
-    if (showDropdown) document.addEventListener('mousedown', handleClick);
+    document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showDropdown]);
 
@@ -73,6 +90,8 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
             ...entry,
             user_id: userId,
             watch_status: status,
+            import_source: 'manual',
+            canonical_anilist_id: media.id,
           })
           .select()
           .single();
@@ -84,6 +103,7 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         setTimeout(() => setJustAdded(false), 600);
         enqueueSnackbar(`Added as ${status}`, { variant: 'success' });
         fireClientAchievementEvent(userId, 'watchlist_add');
+        upsertSeriesMetadata(supabase, media).catch(() => {});
         backfillSeriesId(doc.id, media.id, async (id, data) => {
           await supabase.from('watchlist_entries').update(data).eq('id', id);
         }).catch(() => {});
@@ -135,7 +155,8 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
     return (
       <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
         <button
-          onClick={() => setShowDropdown(!showDropdown)}
+          ref={btnRef}
+          onClick={() => { updateDropPos(); setShowDropdown(!showDropdown); }}
           disabled={updating}
           className={`px-3 py-1.5 ${theme.btn} text-white text-sm rounded-lg font-medium disabled:opacity-50 transition-colors`}
         >
@@ -144,8 +165,10 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
         <AnimatePresence>
           {showDropdown && (
             <motion.div
+              ref={dropRef}
               {...dropdownMotion}
-              className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+              className="fixed z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+              style={{ top: dropPos.top, left: dropPos.left }}
             >
               {STATUSES.map((s) => (
                 <button
@@ -166,11 +189,12 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
   return (
     <div ref={ref} className={`relative ${justAdded ? 'animate-watchlist-burst' : ''}`} onClick={(e) => e.stopPropagation()}>
       <motion.button
+        ref={btnRef}
         key={String(added)}
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-        onClick={() => setShowDropdown(!showDropdown)}
+        onClick={() => { updateDropPos(); setShowDropdown(!showDropdown); }}
         disabled={updating}
         className={`px-3 py-1.5 bg-[#141925] border border-[#253040] text-sm rounded-lg font-medium transition-colors hover:bg-[#1c2333] ${statusColors[currentStatus]}`}
       >
@@ -179,8 +203,10 @@ export default function AddToWatchlist({ media }: { media: AniListMedia }) {
       <AnimatePresence>
         {showDropdown && (
           <motion.div
+            ref={dropRef}
             {...dropdownMotion}
-            className="absolute right-0 top-full mt-1 z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+            className="fixed z-[100] w-40 bg-[#141925] border border-[#253040] rounded-lg shadow-xl overflow-hidden"
+            style={{ top: dropPos.top, left: dropPos.left }}
           >
             {STATUSES.map((s) => (
               <button

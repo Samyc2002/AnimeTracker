@@ -78,7 +78,7 @@ export default function EpisodeGrid({
               <div
                 key={ep}
                 className="h-9 rounded text-sm font-semibold bg-[#111827] text-gray-700 flex items-center justify-center cursor-not-allowed border border-[#1e2736] border-dashed"
-                title={`Episode ${ep} -- not yet aired`}
+                title={`Episode ${ep}: not yet aired`}
               >
                 {ep}
               </div>

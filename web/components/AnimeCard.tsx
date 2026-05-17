@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 
@@ -14,6 +15,7 @@ interface AnimeCardProps {
   totalForProgress?: number;
   airedEpisodes?: number;
   action?: React.ReactNode;
+  href?: string;
   onClick?: () => void;
   isAdult?: boolean;
 }
@@ -36,6 +38,7 @@ export default function AnimeCard({
   totalForProgress,
   airedEpisodes,
   action,
+  href,
   onClick,
   isAdult,
 }: AnimeCardProps) {
@@ -43,11 +46,11 @@ export default function AnimeCard({
   const theme = getTheme(sfwMode);
   const statusInfo = statusLabels[status] || statusLabels.FINISHED;
 
-  return (
-    <div
-      className={`group/card flex gap-3 bg-[#141925] rounded-lg p-3 relative ${onClick ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`}
-      onClick={onClick}
-    >
+  const interactive = !!(href || onClick);
+  const cls = `group/card flex gap-3 bg-[#141925] rounded-lg p-3 relative ${interactive ? 'cursor-pointer hover:bg-[#1c2333]' : ''} ${isAdult ? 'border border-red-500/40' : ''} transition-colors`;
+
+  const content = (
+    <>
       <Image
         src={coverUrl || '/placeholder.png'}
         alt=""
@@ -90,6 +93,12 @@ export default function AnimeCard({
             : 'Not started yet'}
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (href) {
+    return <Link href={href} onClick={onClick} className={cls}>{content}</Link>;
+  }
+
+  return <div onClick={onClick} className={cls}>{content}</div>;
 }

@@ -1,5 +1,9 @@
+// Legacy cache layer. series_metadata is the authoritative source for genres, studio, etc.
+// This file only handles detail-page caching for AniList rate limit management.
+// Do not add new metadata fields here.
 import { supabase } from '@/lib/supabase';
 import type { AniListMedia, AnimeDetail } from '@/lib/types';
+import { upsertSeriesMetadata } from '@/lib/series-metadata';
 
 const STALE_MS = 24 * 60 * 60 * 1000;
 
@@ -28,6 +32,7 @@ interface CacheDoc {
   next_airing_episode: number | null;
   next_airing_at: number | null;
   relations_json: string | null;
+  external_links: { site: string; url: string }[] | null;
   updated_at: string;
 }
 
@@ -38,7 +43,7 @@ function docToDetail(doc: CacheDoc): AnimeDetail {
   } catch { /* ignore */ }
 
   return {
-    id: doc.anilist_id || doc.mal_id || 0,
+    id: doc.anilist_id ?? (() => { throw new Error(`[AnimeCache] docToDetail: anilist_id is null for cache row (mal_id=${doc.mal_id}). Jikan-sourced rows must not reach docToDetail.`); })(),
     idMal: doc.mal_id,
     title: {
       romaji: doc.title_romaji,
@@ -112,6 +117,9 @@ function detailToDoc(anime: AnimeDetail): Record<string, unknown> {
     next_airing_episode: anime.nextAiringEpisode?.episode || null,
     next_airing_at: anime.nextAiringEpisode?.airingAt || null,
     relations_json: anime.relations ? JSON.stringify(anime.relations) : null,
+    external_links: anime.externalLinks
+      ? anime.externalLinks.filter(l => l.type === 'STREAMING').map(l => ({ site: l.site, url: l.url }))
+      : null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -142,7 +150,12 @@ export async function getCachedAnime(opts: {
     if (!data || data.length === 0) return null;
 
     const doc = data[0] as unknown as CacheDoc;
-    return { detail: docToDetail(doc), stale: isStale(doc), complete: doc.relations_json !== null };
+    // Reject Jikan-sourced rows (anilist_id = null) when caller asked for an AniList ID.
+    // Those rows have MAL IDs in relations_json — returning them poisons the traversal
+    // by making it operate in MAL-ID space instead of AniList-ID space.
+    // Reject rows where anilist_id = mal_id — written by the Jikan path, not trustworthy as AniList-sourced
+    if (opts.anilistId && (!doc.anilist_id || doc.anilist_id === doc.mal_id)) return null;
+    return { detail: docToDetail(doc), stale: isStale(doc), complete: doc.relations_json !== null && doc.anilist_id !== null };
   } catch (err) {
     console.error('[AnimeCache] Read failed:', err instanceof Error ? err.message : err);
     return null;
@@ -164,6 +177,9 @@ export async function getCachedSearch(query: string): Promise<AniListMedia[]> {
 
 export async function saveAnimeToCache(anime: AnimeDetail): Promise<void> {
   try {
+    // Also upsert into series_metadata — the authoritative metadata store
+    if (anime.id) upsertSeriesMetadata(supabase, anime).catch(() => {});
+
     const data = detailToDoc(anime);
 
     let existingQuery = null;

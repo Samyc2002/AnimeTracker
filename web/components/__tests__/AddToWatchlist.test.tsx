@@ -31,6 +31,10 @@ vi.mock('@/lib/series-resolver', () => ({
   backfillSeriesId: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('@/lib/series-metadata', () => ({
+  upsertSeriesMetadata: vi.fn().mockResolvedValue(undefined),
+}));
+
 const testMedia: AniListMedia = {
   id: 1,
   idMal: null,

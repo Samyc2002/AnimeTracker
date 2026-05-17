@@ -2,17 +2,19 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { fetchWeeklyAiring, getCachedAiring, saveAiringToCache, mediaToWatchlistEntry, getErrorMessage } from '@/lib/anime-provider';
 import { backfillSeriesId } from '@/lib/series-resolver';
 import Image from 'next/image';
+import Link from 'next/link';
 import AddToPlaylist from '@/components/AddToPlaylist';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth-context';
+import { Spinner } from '@/components/ui/Spinner';
 import { enqueueSnackbar } from 'notistack';
 import type { AiringSchedule } from '@/lib/types';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 function getWeekRange(offset: number = 0) {
   const now = new Date();
@@ -55,7 +57,6 @@ const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6]; // Mon=0 through Sun=6 (offsets from
 
 export default function AiringPage() {
   useTitle('Airing Schedule');
-  const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { authed, userId } = useAuth();
@@ -64,18 +65,27 @@ export default function AiringPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [trackedIds, setTrackedIds] = useState<Set<number>>(new Set());
   const [trackingId, setTrackingId] = useState<number | null>(null);
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setLoading(true);
+      const start = Date.now();
       const { from, to } = getWeekRange(weekOffset);
+
+      async function minDelay() {
+        const elapsed = Date.now() - start;
+        if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
+      }
 
       const cached = await getCachedAiring(from);
       if (cached && !cached.stale) {
         if (!cancelled) {
           setSchedules(cached.schedules);
+          await minDelay();
           setLoading(false);
         }
         return;
@@ -99,6 +109,7 @@ export default function AiringPage() {
 
       if (!cancelled) {
         setSchedules(allSchedules.length > 0 ? allSchedules : (cached?.schedules || []));
+        await minDelay();
         setLoading(false);
         if (allSchedules.length > 0) {
           saveAiringToCache(from, allSchedules).catch(() => {});
@@ -116,14 +127,13 @@ export default function AiringPage() {
       try {
         const { data: existing } = await supabase
           .from('watchlist_entries')
-          .select('media_id, id_mal')
+          .select('canonical_anilist_id')
           .eq('user_id', userId)
+          .not('canonical_anilist_id', 'is', null)
           .limit(500);
-        const ids = new Set<number>();
-        for (const doc of (existing || [])) {
-          ids.add(doc.media_id);
-          if (doc.id_mal) ids.add(doc.id_mal);
-        }
+        const ids = new Set<number>(
+          (existing || []).map((doc) => doc.canonical_anilist_id as number)
+        );
         setTrackedIds(ids);
       } catch {
         // Not logged in or error
@@ -133,7 +143,7 @@ export default function AiringPage() {
   }, [userId]);
 
   async function handleTrack(e: React.MouseEvent, s: AiringSchedule) {
-    e.stopPropagation();
+    e.preventDefault();
     const media = s.media;
     if (!media || trackingId === s.mediaId || !userId) return;
 
@@ -142,7 +152,7 @@ export default function AiringPage() {
       const entry = mediaToWatchlistEntry(media);
       const { data: doc, error } = await supabase
         .from('watchlist_entries')
-        .insert({ ...entry, user_id: userId })
+        .insert({ ...entry, user_id: userId, import_source: 'manual', canonical_anilist_id: media.id })
         .select()
         .single();
       if (error) throw error;
@@ -201,8 +211,9 @@ export default function AiringPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center mt-12">
-          <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <Spinner />
+          <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
         </div>
       ) : (
         <div className="-mx-4 sm:-mx-6 lg:-mx-[calc((100vw-64rem)/2+1.5rem)] px-4 sm:px-6 lg:px-8">
@@ -262,10 +273,10 @@ export default function AiringPage() {
                       const isTracked = trackedIds.has(s.mediaId);
 
                       return (
-                        <div
+                        <Link
                           key={`${s.mediaId}-${s.episode}`}
+                          href={`/anime/${s.mediaId}`}
                           className={`bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group cursor-pointer ${media.isAdult ? 'border border-red-500/40' : ''}`}
-                          onClick={() => router.push(`/anime/${s.mediaId}`)}
                         >
                           <div className="relative w-full aspect-[3/4]">
                             <Image
@@ -281,7 +292,7 @@ export default function AiringPage() {
                               </span>
                             </div>
                             {authed && (
-                              <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
                                 <AddToPlaylist mediaId={s.mediaId} />
                               </div>
                             )}
@@ -307,7 +318,7 @@ export default function AiringPage() {
                               {formatTime(s.airingAt)}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>

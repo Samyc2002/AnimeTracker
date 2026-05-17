@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { fetchAnimeDetail, getErrorMessage } from "@/lib/anime-provider";
@@ -16,8 +16,12 @@ import AddToWatchlist from "@/components/AddToWatchlist";
 import AddPrequels from "@/components/AddPrequels";
 import RecommendToBuddy from "@/components/RecommendToBuddy";
 import EpisodeGrid from "@/components/EpisodeGrid";
+import SynopsisCollapse from "@/components/SynopsisCollapse";
+import FranchiseTabs from "@/components/FranchiseTabs";
+import { Spinner } from "@/components/ui/Spinner";
 import type { AnimeDetail, WatchURLs } from "@/lib/types";
 import { fireClientAchievementEvent } from "@/lib/achievements/fire-event";
+import { getRandomQuote } from "@/lib/loading-quotes";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   RELEASING: { label: "Airing", className: "bg-emerald-900 text-emerald-300" },
@@ -30,15 +34,100 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   HIATUS: { label: "Hiatus", className: "bg-gray-700 text-gray-300" },
 };
 
-const relationOrder = [
-  "SEQUEL",
-  "PREQUEL",
-  "SIDE_STORY",
-  "PARENT",
-  "SPIN_OFF",
-  "ALTERNATIVE",
-  "OTHER",
-];
+interface StreamTheme {
+  brand: string;
+  brandLight: string;
+  brandDark: string;
+  textTint: string;
+  hoverText: string;
+}
+
+const streamThemes: Record<string, StreamTheme> = {
+  "Crunchyroll": { brand: '#f47521', brandLight: '#f89b5a', brandDark: '#c45e1a', textTint: '#f4a76b', hoverText: '#fff' },
+  "Netflix": { brand: '#e50914', brandLight: '#ff3b44', brandDark: '#b50710', textTint: '#f06b72', hoverText: '#fff' },
+  "Hulu": { brand: '#1ce783', brandLight: '#4aeea0', brandDark: '#14b566', textTint: '#6ee8a8', hoverText: '#000' },
+  "Amazon Prime Video": { brand: '#00a8e1', brandLight: '#33bfef', brandDark: '#0086b4', textTint: '#5cc4e8', hoverText: '#fff' },
+  "Bilibili Global": { brand: '#00a1d6', brandLight: '#33b7e2', brandDark: '#0081ab', textTint: '#5cbfde', hoverText: '#fff' },
+  "Muse Asia": { brand: '#4a4adf', brandLight: '#6e6eeb', brandDark: '#3636b8', textTint: '#8e8eef', hoverText: '#fff' },
+  "Disney Plus": { brand: '#113ccf', brandLight: '#3d5fdb', brandDark: '#0d2fa5', textTint: '#6b87e0', hoverText: '#fff' },
+  "Funimation": { brand: '#5b0bb5', brandLight: '#7a2dd0', brandDark: '#480891', textTint: '#9a5fd4', hoverText: '#fff' },
+  "HIDIVE": { brand: '#00baef', brandLight: '#33caf3', brandDark: '#0095bf', textTint: '#5cd0f0', hoverText: '#fff' },
+  "iQIYI": { brand: '#00be06', brandLight: '#33ce39', brandDark: '#009805', textTint: '#5cd460', hoverText: '#fff' },
+  "9Anime": { brand: '#c026d3', brandLight: '#d04de0', brandDark: '#991ea8', textTint: '#d674e0', hoverText: '#fff' },
+  "Kickass Anime": { brand: '#16a34a', brandLight: '#3dba6a', brandDark: '#11823b', textTint: '#5ec47e', hoverText: '#fff' },
+};
+
+function streamStyle(theme: StreamTheme) {
+  return {
+    backgroundColor: `color-mix(in srgb, ${theme.brand} 15%, transparent)`,
+    borderColor: `color-mix(in srgb, ${theme.brand} 30%, transparent)`,
+    color: theme.textTint,
+  };
+}
+
+function streamHoverStyle(theme: StreamTheme) {
+  return {
+    backgroundImage: `linear-gradient(to bottom, ${theme.brandLight}, ${theme.brandDark})`,
+    borderColor: theme.brandLight,
+    color: theme.hoverText,
+  };
+}
+
+function streamDisabledStyle(theme: StreamTheme) {
+  return {
+    backgroundColor: '#141925',
+    borderColor: `color-mix(in srgb, ${theme.brand} 40%, transparent)`,
+    color: `color-mix(in srgb, ${theme.brand} 50%, #6b7280)`,
+  };
+}
+
+const playIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const defaultStreamTheme: StreamTheme = {
+  brand: '#253040', brandLight: '#354050', brandDark: '#1c2333',
+  textTint: '#9ca3af', hoverText: '#e5e7eb',
+};
+
+function StreamButton({ name, href, disabled }: { name: string; href?: string; disabled?: boolean }) {
+  const theme = streamThemes[name] || defaultStreamTheme;
+  const [hovered, setHovered] = useState(false);
+
+  const style = disabled
+    ? streamDisabledStyle(theme)
+    : hovered
+      ? streamHoverStyle(theme)
+      : streamStyle(theme);
+
+  const cls = 'inline-flex items-center gap-1.5 px-4 py-2 border text-sm rounded-lg font-medium transition-all duration-200';
+
+  if (disabled) {
+    return (
+      <span className={`${cls} cursor-not-allowed opacity-60`} style={style} title={`${name} not available for this title`}>
+        {playIcon}
+        {name}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cls}
+      style={style}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {playIcon}
+      {name}
+    </a>
+  );
+}
 
 function formatCountdown(seconds: number) {
   const d = Math.floor(seconds / 86400);
@@ -51,16 +140,8 @@ function formatCountdown(seconds: number) {
   return parts.join(" ");
 }
 
-function formatRelation(type: string) {
-  return type
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
-
 export default function AnimeDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [anime, setAnime] = useState<AnimeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,21 +151,45 @@ export default function AnimeDetailPage() {
   >([]);
   const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>([]);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
+  // null = not cached (compute will run), number = cached root ID
+  // undefined = no franchise (singleton — hide watch order tab)
+  const [franchiseMembershipRootId, setFranchiseMembershipRootId] = useState<number | null | undefined>(undefined);
 
   const { authed, userId } = useAuth();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const id = Number(params.id);
   const [resolvedMediaId, setResolvedMediaId] = useState<number>(id);
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
 
   useEffect(() => {
     async function load() {
+      const start = Date.now();
       try {
         const detail = await fetchAnimeDetail(id);
-        console.log("Anime Details:", detail);
         setAnime(detail);
 
-        // const title = detail.title.romaji || detail.title.english || "";
+        const { data: membership } = await supabase
+          .from('franchise_membership')
+          .select('franchise_root_id')
+          .eq('series_anilist_id', detail.id)
+          .limit(1);
+
+        if (membership && membership.length > 0) {
+          setFranchiseMembershipRootId(membership[0].franchise_root_id as number);
+        } else {
+          const hasFranchiseRelations = detail.relations.edges.some(
+            (e) => e.node.type === 'ANIME' &&
+              ['PREQUEL','SEQUEL','SIDE_STORY','PARENT','ALTERNATIVE','SUMMARY','SPIN_OFF'].includes(e.relationType)
+          );
+          if (hasFranchiseRelations) {
+            setFranchiseMembershipRootId(null);
+          } else {
+            setFranchiseMembershipRootId(undefined);
+          }
+        }
+
         const title = detail.title.english || detail.title.romaji || "";
         getWatchUrl(title).then((urls) => setWatchUrls(urls));
 
@@ -99,6 +204,8 @@ export default function AnimeDetailPage() {
         setAnime(null);
         enqueueSnackbar(getErrorMessage(err), { variant: "error" });
       }
+      const elapsed = Date.now() - start;
+      if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
       setLoading(false);
     }
     load();
@@ -107,21 +214,13 @@ export default function AnimeDetailPage() {
   const loadWatchedEpisodes = useCallback(async () => {
     if (!authed || !userId) return;
     try {
-      let { data: wlData } = await supabase
+      const { data: wlData } = await supabase
         .from("watchlist_entries")
-        .select("id, media_id")
+        .select("id, media_id, canonical_anilist_id")
         .eq("user_id", userId)
-        .eq("media_id", id)
+        .or(`canonical_anilist_id.eq.${id},id_mal.eq.${id},media_id.eq.${id}`)
+        .not("canonical_anilist_id", "is", null)
         .limit(1);
-      if (!wlData || wlData.length === 0) {
-        const { data: malData } = await supabase
-          .from("watchlist_entries")
-          .select("id, media_id")
-          .eq("user_id", userId)
-          .eq("id_mal", id)
-          .limit(1);
-        wlData = malData;
-      }
       setIsInWatchlist(!!(wlData && wlData.length > 0));
       if (!wlData || wlData.length === 0) return;
 
@@ -309,10 +408,9 @@ export default function AnimeDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center mt-12">
-        <div
-          className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`}
-        />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Spinner />
+        <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
       </div>
     );
   }
@@ -324,14 +422,6 @@ export default function AnimeDetailPage() {
   const title = anime.title.english || anime.title.romaji;
   const statusInfo = statusLabels[anime.status] || statusLabels.FINISHED;
   const studio = anime.studios.nodes[0]?.name;
-
-  const animeRelations = anime.relations.edges
-    .filter((e) => e.node.type === "ANIME")
-    .sort(
-      (a, b) =>
-        relationOrder.indexOf(a.relationType) -
-        relationOrder.indexOf(b.relationType)
-    );
 
   const backdropImage =
     anime.bannerImage ||
@@ -474,78 +564,18 @@ export default function AnimeDetailPage() {
           <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
             Watch
           </h2>
-          {watchUrls || streamingLinks.length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {streamingLinks.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#141925] border border-[#253040] hover:bg-[#1c2333] text-gray-300 text-sm rounded-lg font-medium transition-colors"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="text-gray-500"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    {link.name}
-                  </a>
-                ))}
-                {watchUrls?.url9anime && (
-                  <a
-                    href={watchUrls.url9anime}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${theme.gradientBold} ${theme.gradientHover} text-white text-sm rounded-lg font-medium transition-all`}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    9Anime
-                  </a>
-                )}
-                {watchUrls?.urlKickass && (
-                  <a
-                    href={watchUrls.urlKickass}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${theme.gradientBold} ${theme.gradientHover} text-white text-sm rounded-lg font-medium transition-all`}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    Kickass Anime
-                  </a>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                * Streaming links are sourced from third-party databases and may
-                be outdated or region-restricted. If a link doesn&apos;t work,
-                please search for the title on the platform directly.
-              </p>
-            </>
-          ) : (
-            <p className="text-xs text-gray-400">
-              * We couldn&apos;t find streaming links for this title. Please
-              search for it on your preferred streaming platform.
-            </p>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {streamingLinks.map((link) => (
+              <StreamButton key={link.name} name={link.name} href={link.url} />
+            ))}
+            <StreamButton name="9Anime" href={watchUrls?.url9anime} disabled={!watchUrls?.url9anime} />
+            <StreamButton name="Kickass Anime" href={watchUrls?.urlKickass} disabled={!watchUrls?.urlKickass} />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            * Streaming links are sourced from third-party databases and may
+            be outdated or region-restricted. If a link doesn&apos;t work,
+            please search for the title on the platform directly.
+          </p>
         </div>
 
         {authed &&
@@ -615,66 +645,15 @@ export default function AnimeDetailPage() {
             <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
               Synopsis
             </h2>
-            <p
-              className="text-sm text-gray-300 leading-relaxed"
-              dangerouslySetInnerHTML={{
-                __html: anime.description.replace(/\n/g, ""),
-              }}
-            />
+            <SynopsisCollapse html={anime.description} collapseKey={id} />
           </div>
         )}
 
-        {animeRelations.length > 0 && (
-          <div className="mt-8 mb-8">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase mb-3">
-              Related Anime
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
-              {animeRelations.map((edge) => {
-                const rel = edge.node;
-                const relTitle = rel.title.english || rel.title.romaji;
-                return (
-                  <div
-                    key={rel.id}
-                    className={`bg-[#141925] rounded-lg overflow-hidden cursor-pointer hover:bg-[#1c2333] transition-colors ${
-                      rel.isAdult ? "border border-red-500/40" : ""
-                    }`}
-                    onClick={() => router.push(`/anime/${rel.id}`)}
-                  >
-                    <div className="relative w-full aspect-[3/4]">
-                      <Image
-                        src={
-                          [
-                            rel.coverImage?.extraLarge,
-                            rel.coverImage?.large,
-                            rel.coverImage?.medium,
-                          ].find((u) => u && u.length > 0) || "/placeholder.png"
-                        }
-                        alt={relTitle}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                      <div className="absolute top-1 left-1">
-                        <span className="px-1.5 py-0.5 bg-black/70 rounded text-[10px] text-gray-300 font-medium">
-                          {formatRelation(edge.relationType)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-2">
-                      <p
-                        className="text-xs font-medium text-gray-200 truncate"
-                        title={relTitle}
-                      >
-                        {relTitle}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <FranchiseTabs
+          anime={anime}
+          currentAnilistId={anime.id}
+          initialMembershipRootId={franchiseMembershipRootId}
+        />
       </div>
     </div>
   );

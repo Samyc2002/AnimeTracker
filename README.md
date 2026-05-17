@@ -2,57 +2,82 @@
 
 Track your anime watchlist and get notified when new episodes drop. Available as a Chrome extension and a web app.
 
+![Anime Tracker](store-screenshots/Demo.png)
+
+## Features
+
+### Web App ([animetracker.lol](https://animetracker.lol))
+
+- Watchlist with episode-level tracking (list and card views)
+- Anime search with multi-provider fallback (AniList, Jikan, Kitsu)
+- Weekly airing schedule (Mon-Sun grid)
+- Smart recommendation engine with taste profiling
+- Franchise watch order (BFS traversal)
+- Buddy system with friend recommendations
+- Shareable playlists and public profiles
+- AniList OAuth and Kitsu watchlist import
+- Notification feed (episodes, sequels, buddy requests, achievements)
+- SFW/NSFW toggle
+
+### Chrome Extension ([Web Store](https://chromewebstore.google.com/detail/anime-tracker/biidimfpepakgljgokmoiljgakehbhod))
+
+- Search and add anime to your watchlist
+- Episode tracking with click-to-toggle grid
+- Background polling with native OS notifications
+- Notification feed as default view
+
+## Quick Start
+
+### Web App
+
+```bash
+cd web
+cp .env.local.example .env.local  # fill in Supabase keys
+npm install
+npm run dev
+```
+
+### Chrome Extension
+
+1. Copy `ext/lib/config.example.js` to `ext/lib/config.js` and fill in values
+2. Open `chrome://extensions`, enable Developer Mode
+3. Click "Load unpacked" and select the `ext/` folder
+
+See [docs/getting-started.md](docs/getting-started.md) for the full setup guide.
+
 ## Monorepo Structure
 
 ```
 anime-tracker/
-├── ext/          # Chrome Extension (Manifest V3, vanilla JS)
-├── web/          # Web App (Next.js, Supabase)
-├── ARCHITECTURE.md
-└── CLAUDE.md
+  ext/          # Chrome Extension (Manifest V3, vanilla JS)
+  web/          # Web App (Next.js, TypeScript, Tailwind, Supabase)
+  functions/    # Netlify scheduled/background functions
+  docs/         # Contributor documentation
+  scripts/      # Admin scripts (gitignored)
 ```
 
-## Chrome Extension (`ext/`)
+## Documentation
 
-A browser extension that polls AniList for new episodes and sends native OS notifications.
+| Guide | Description |
+|-------|-------------|
+| [Getting Started](docs/getting-started.md) | Setup instructions for both web app and extension |
+| [Architecture](docs/architecture.md) | System overview, data flow, deployment |
+| [Web App](docs/web-app.md) | Routes, components, lib modules, styling |
+| [Extension](docs/extension.md) | Manifest V3, service worker, storage |
+| [Database](docs/database.md) | Supabase schema, RLS policies, RPCs |
+| [Providers](docs/providers.md) | Multi-provider fallback, caching, pagination |
 
-### Install
-1. Open `chrome://extensions/`
-2. Enable **Developer mode**
-3. Click **Load unpacked** and select the `ext/` folder
+## Contributing
 
-### Features
-- Search & add anime to your watchlist
-- Episode tracking with click-to-toggle grid
-- Background polling with native notifications
-- Notification feed as default view
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, code style, and PR process.
 
-## Web App (`web/`)
+## Tech Stack
 
-A full-stack web app with user accounts, watchlist management, and an airing schedule view.
-
-### Setup
-1. Create a Supabase project at https://supabase.com
-2. Run `web/supabase-schema.sql` in the Supabase SQL Editor
-3. Copy `web/.env.local.example` to `web/.env.local` and fill in your Supabase keys
-4. Install and run:
-   ```bash
-   cd web
-   npm install
-   npm run dev
-   ```
-
-### Features
-- User auth (email/password via Supabase)
-- Watchlist with episode tracking
-- AniList search and add
-- Weekly airing schedule
-- Settings (title language preference)
-
-## AniList API
-
-Both the extension and web app use the [AniList GraphQL API](https://graphql.anilist.co). No authentication required — all queries are public. Rate limit: 90 requests/minute.
+- **Web**: Next.js, TypeScript, Tailwind CSS v4, Supabase
+- **Extension**: Vanilla JS, Manifest V3, ES modules
+- **Data**: AniList GraphQL API (primary), Jikan/MAL and Kitsu (fallbacks)
+- **Hosting**: Netlify (web + functions), Chrome Web Store (extension)
 
 ## License
 
-MIT
+Apache 2.0 -- see [LICENSE](LICENSE)

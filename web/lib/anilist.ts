@@ -2,7 +2,7 @@ import type { AniListMedia, AiringSchedule, AnimeDetail } from './types';
 
 export function getErrorMessage(err: unknown): string {
   if (!(err instanceof Error)) return 'Something went wrong';
-  if (err.message.includes('Rate limited')) return 'Too many requests — please wait a moment and try again';
+  if (err.message.includes('Rate limited')) return 'Too many requests. Please wait a moment and try again.';
   return err.message;
 }
 
@@ -135,6 +135,7 @@ query AnimeDetail($id: Int) {
     averageScore
     studios(isMain: true) { nodes { name } }
     nextAiringEpisode { airingAt episode timeUntilAiring }
+    externalLinks { site url type }
     relations {
       edges {
         relationType

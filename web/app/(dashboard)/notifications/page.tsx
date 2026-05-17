@@ -2,15 +2,18 @@
 
 import { useTitle } from '@/lib/useTitle';
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 import Image from 'next/image';
 import RequireAuth from '@/components/RequireAuth';
 import { useAuth } from '@/lib/auth-context';
 import { useSfw } from '@/lib/sfw-context';
 import { getTheme } from '@/lib/theme';
 import { enqueueSnackbar } from 'notistack';
+import { Spinner } from '@/components/ui/Spinner';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ACHIEVEMENTS_UI_VISIBLE, FOUNDING_MEMBER_ENABLED } from '@/lib/feature-flags';
+import { getRandomQuote } from '@/lib/loading-quotes';
 
 interface NotificationDoc {
   id: string;
@@ -40,7 +43,6 @@ function upgradeImageUrl(url: string): string {
 
 function NotificationsPage() {
   useTitle('Notifications');
-  const router = useRouter();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { userId } = useAuth();
@@ -48,8 +50,11 @@ function NotificationsPage() {
 
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
+  const [loadingQuote, setLoadingQuote] = useState('');
+  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
 
   const loadNotifications = useCallback(async () => {
+    const start = Date.now();
     try {
       if (!userId) throw new Error('Not authenticated');
       const { data, error } = await supabase
@@ -63,6 +68,8 @@ function NotificationsPage() {
     } catch {
       // Not authenticated
     }
+    const elapsed = Date.now() - start;
+    if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
     setLoading(false);
   }, [userId]);
 
@@ -114,8 +121,9 @@ function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center mt-12">
-        <div className={`w-6 h-6 border-2 border-[#253040] ${theme.spinnerBorder} rounded-full animate-spin`} />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Spinner />
+        <p className="text-base text-gray-400 italic mt-2">{loadingQuote}</p>
       </div>
     );
   }
@@ -168,25 +176,18 @@ function NotificationsPage() {
             if (ACHIEVEMENTS_UI_VISIBLE) return true;
             if (FOUNDING_MEMBER_ENABLED && n.title.includes('Founding Member')) return true;
             return false;
-          }).map((notif) => (
-            <div
-              key={notif.id}
-              className={`flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors ${
-                !notif.is_read ? `border-l-2 border-${theme.accent}-500` : ''
-              }`}
-              onClick={() => {
-                markAsRead(notif);
-                if (notif.type === 'buddy_request' || notif.type === 'buddy_accept') {
-                  router.push('/buddies');
-                } else if (notif.type === 'achievement') {
-                  router.push('/u/me');
-                } else if (notif.episode && notif.episode > 0 && notif.media_id) {
-                  router.push(`/anime/${notif.media_id}?mark_episode=${notif.episode}`);
-                } else if (notif.media_id) {
-                  router.push(`/anime/${notif.media_id}`);
-                }
-              }}
-            >
+          }).map((notif) => {
+            const notifHref =
+              notif.type === 'buddy_request' || notif.type === 'buddy_accept' ? '/buddies'
+              : notif.type === 'achievement' ? '/u/me'
+              : notif.episode && notif.episode > 0 && notif.media_id ? `/anime/${notif.media_id}?mark_episode=${notif.episode}`
+              : notif.media_id ? `/anime/${notif.media_id}`
+              : null;
+            const cls = `flex gap-3 bg-[#141925] rounded-lg p-3 cursor-pointer hover:bg-[#1c2333] transition-colors ${
+              !notif.is_read ? `border-l-2 border-${theme.accent}-500` : ''
+            }`;
+            const content = (
+              <>
               <Image
                 src={notif.type === 'achievement' ? notif.cover_url : (upgradeImageUrl(notif.cover_url) || '/placeholder.png')}
                 alt=""
@@ -199,7 +200,7 @@ function NotificationsPage() {
                 {notif.type === 'sequel' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-purple-900/60 text-purple-300">Sequel</span>
+                      <StatusBadge tone="purple">Sequel</StatusBadge>
                       <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                         {notif.title}
                       </p>
@@ -211,7 +212,7 @@ function NotificationsPage() {
                 ) : notif.type === 'buddy_request' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-indigo-900/60 text-indigo-300">Buddy Request</span>
+                      <StatusBadge tone="indigo">Buddy Request</StatusBadge>
                       <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                         {notif.title}
                       </p>
@@ -223,7 +224,7 @@ function NotificationsPage() {
                 ) : notif.type === 'buddy_accept' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-emerald-900/60 text-emerald-300">Buddy</span>
+                      <StatusBadge tone="emerald">Buddy</StatusBadge>
                       <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                         {notif.title}
                       </p>
@@ -235,7 +236,7 @@ function NotificationsPage() {
                 ) : notif.type === 'buddy_rec' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-amber-900/60 text-amber-300">Recommendation</span>
+                      <StatusBadge tone="amber">Recommendation</StatusBadge>
                     </div>
                     <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                       {notif.title}
@@ -247,7 +248,7 @@ function NotificationsPage() {
                 ) : notif.type === 'achievement' ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase bg-amber-900/60 text-amber-300">Achievement</span>
+                      <StatusBadge tone="amber">Achievement</StatusBadge>
                     </div>
                     <p className={`text-sm font-semibold truncate ${notif.is_read ? 'text-gray-400' : 'text-gray-200'}`}>
                       {notif.title}
@@ -272,8 +273,12 @@ function NotificationsPage() {
                   <span className={`w-2 h-2 ${theme.pulse} rounded-full`} />
                 </div>
               )}
-            </div>
-          ))}
+            </>
+            );
+            return notifHref
+              ? <Link key={notif.id} href={notifHref} className={cls} onClick={() => markAsRead(notif)}>{content}</Link>
+              : <div key={notif.id} className={cls} onClick={() => markAsRead(notif)}>{content}</div>;
+          })}
         </div>
       )}
     </div>
