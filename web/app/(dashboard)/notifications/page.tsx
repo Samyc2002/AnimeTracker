@@ -61,6 +61,7 @@ function NotificationsPage() {
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
+        .eq('type', 'episode')
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
