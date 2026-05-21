@@ -22,45 +22,34 @@ async function getProfile(username: string): Promise<(PublicProfile & { is_publi
     const userId = profile.user_id as string;
     const hideNsfw = !!(profile.hide_nsfw_public as boolean | undefined);
 
-    const [allEntriesRes, watchedEpRes] = await Promise.all([
-      supabase
+    // Aggregated counts — exact, no entry cap
+    const countQueries = WATCH_STATUSES.map((ws) => {
+      let q = supabase
         .from('watchlist_entries')
-        .select()
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .limit(500),
-      supabase
-        .from('watched_episodes')
-        .select('media_id')
-        .eq('user_id', userId)
-        .limit(5000),
+        .eq('watch_status', ws);
+      if (hideNsfw) q = q.eq('is_adult', false).eq('manual_nsfw', false);
+      return q;
+    });
+
+    const epCountQuery = supabase
+      .from('watched_episodes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    const [countResults, epCountResult] = await Promise.all([
+      Promise.all(countQueries),
+      epCountQuery,
     ]);
 
-    const allEntriesDocs = allEntriesRes.data || [];
-    const watchedEpDocs = watchedEpRes.data || [];
-
-    const epCountMap: Record<number, number> = {};
-    for (const doc of watchedEpDocs) {
-      const mediaId = doc.media_id as number;
-      epCountMap[mediaId] = (epCountMap[mediaId] || 0) + 1;
+    const statusCounts: Record<string, number> = {};
+    let totalAnime = 0;
+    for (let i = 0; i < WATCH_STATUSES.length; i++) {
+      const c = countResults[i].count ?? 0;
+      statusCounts[WATCH_STATUSES[i].toLowerCase()] = c;
+      totalAnime += c;
     }
-
-    const allEntries = allEntriesDocs.map((doc) => ({
-      media_id: doc.media_id as number,
-      title_romaji: doc.title_romaji as string,
-      title_english: doc.title_english as string,
-      cover_url: doc.cover_url as string,
-      status: doc.status as string,
-      total_episodes: doc.total_episodes as number | null,
-      watch_status: (doc.watch_status as WatchStatus) || 'Watching',
-      episodes_watched: epCountMap[doc.media_id as number] || 0,
-      is_nsfw: !!(doc.is_adult || doc.manual_nsfw),
-    }));
-
-    const watchlist = hideNsfw ? allEntries.filter((e) => !e.is_nsfw) : allEntries;
-
-    const statusCounts = Object.fromEntries(
-      WATCH_STATUSES.map((s) => [s.toLowerCase(), watchlist.filter((e) => e.watch_status === s).length])
-    ) as Record<string, number>;
 
     return {
       username: profile.username as string,
@@ -74,14 +63,14 @@ async function getProfile(username: string): Promise<(PublicProfile & { is_publi
       is_public: !!(profile.is_public),
       owner_user_id: userId,
       stats: {
-        total_anime: watchlist.length,
-        episodes_watched: watchedEpDocs.length,
-        watching: statusCounts.watching,
-        completed: statusCounts.completed,
-        planned: statusCounts.planned,
-        dropped: statusCounts.dropped,
+        total_anime: totalAnime,
+        episodes_watched: epCountResult.count ?? 0,
+        watching: statusCounts.watching ?? 0,
+        completed: statusCounts.completed ?? 0,
+        planned: statusCounts.planned ?? 0,
+        dropped: statusCounts.dropped ?? 0,
       },
-      watchlist,
+      watchlist: [],
     };
   } catch {
     return null;
@@ -112,7 +101,6 @@ export async function generateMetadata(
       description: `${totalAnime} anime tracked. ${topStat}.`,
       type: 'profile',
       url: `https://www.animetracker.lol/u/${profile.username}`,
-      // TODO: dynamic OG image once next/og setup is complete
     },
     twitter: {
       card: 'summary_large_image',

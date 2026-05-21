@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       .from('watchlist_entries')
       .select()
       .eq('user_id', userId)
+      .in('watch_status', ['Watching', 'Planned'])
       .limit(500);
 
     if (watchlistError) throw watchlistError;
