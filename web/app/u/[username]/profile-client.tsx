@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { VirtuosoGrid } from 'react-virtuoso';
 import { useTitle } from '@/lib/useTitle';
 import { supabase } from '@/lib/supabase';
 import { useAuth, AuthContext } from '@/lib/auth-context';
@@ -20,8 +21,9 @@ import BadgeSlots from '@/components/BadgeSlots';
 import AchievementSection from '@/components/AchievementSection';
 import { enqueueSnackbar } from 'notistack';
 import { StatusBadge, type StatusBadgeTone } from '@/components/ui/StatusBadge';
+import WatchlistFilterPanel from '@/components/WatchlistFilterPanel';
 import type { AniListMedia } from '@/lib/types';
-import type { PublicProfile, PublicProfileEntry, WatchStatus } from '@/lib/types';
+import type { PublicProfile, WatchStatus } from '@/lib/types';
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Completed', 'Planned', 'Dropped'];
 const ALL_TABS = ['All', ...WATCH_STATUSES] as const;
@@ -48,7 +50,52 @@ function StatCard({ label, value, gradient }: { label: string; value: number | s
   );
 }
 
-function entryToMedia(entry: PublicProfileEntry): AniListMedia {
+interface ProfileEntry {
+  media_id: number;
+  canonical_anilist_id: number | null;
+  title_romaji: string | null;
+  title_english: string | null;
+  cover_url: string;
+  status: string;
+  total_episodes: number | null;
+  watch_status: WatchStatus;
+  is_nsfw: boolean;
+}
+
+interface CacheEntry {
+  entries: ProfileEntry[];
+  totalLoaded: number;
+  hasMore: boolean;
+}
+
+type TabKey = WatchStatus | 'All';
+
+function cacheKey(tab: TabKey, airingFilters: string[], genreFilters: string[]): string {
+  const parts: string[] = [tab];
+  if (airingFilters.length > 0) parts.push('a:' + [...airingFilters].sort().join(','));
+  if (genreFilters.length > 0) parts.push('g:' + [...genreFilters].sort().join(','));
+  return parts.join('|');
+}
+
+function buildQueryString(
+  tab: TabKey,
+  airingFilters: string[],
+  genreFilters: string[],
+  offset: number,
+  limit: number,
+): string {
+  const params = new URLSearchParams();
+  if (tab !== 'All') params.set('status', tab);
+  for (const a of airingFilters) params.append('airing_statuses', a);
+  for (const g of genreFilters) params.append('genres', g);
+  params.set('offset', String(offset));
+  params.set('limit', String(limit));
+  return params.toString();
+}
+
+const PAGE_SIZE = 50;
+
+function entryToMedia(entry: ProfileEntry): AniListMedia {
   return {
     id: entry.media_id,
     idMal: null,
@@ -62,47 +109,6 @@ function entryToMedia(entry: PublicProfileEntry): AniListMedia {
 }
 
 const ADD_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
-
-function AnimeGrid({ entries, onContextMenu }: { entries: PublicProfileEntry[]; onContextMenu?: (e: React.MouseEvent, entry: PublicProfileEntry) => void }) {
-  if (entries.length === 0) {
-    return <p className="text-gray-500 text-center py-8">No anime in this category.</p>;
-  }
-
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-      {entries.map((entry) => {
-        const title = entry.title_english || entry.title_romaji || 'Unknown';
-        return (
-          <Link
-            key={entry.media_id}
-            href={`/anime/${entry.media_id}`}
-            onContextMenu={onContextMenu ? (e) => onContextMenu(e, entry) : undefined}
-            className={`bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group ${entry.is_nsfw ? 'border border-red-500/40' : ''}`}
-          >
-            <div className="relative w-full aspect-[3/4]">
-              <Image
-                src={upgradeImageUrl(entry.cover_url)}
-                alt={title}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                <StatusBadge tone={statusTones[entry.watch_status]}>{entry.watch_status}</StatusBadge>
-              </div>
-            </div>
-            <div className="p-2">
-              <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
-              {entry.total_episodes && (
-                <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>
-              )}
-            </div>
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
 
 function GuestNav({ sfwMode, onToggleSfw }: { sfwMode: boolean; onToggleSfw: () => void }) {
   return (
@@ -138,22 +144,201 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
   const theme = getTheme(sfwMode);
   const { userId } = useAuth();
   useTitle(`Profile | ${profile.display_name || profile.username}`);
-  const [activeTab, setActiveTab] = useState<WatchStatus | 'All'>(() => {
+
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
     if (typeof window !== 'undefined') {
       const param = new URLSearchParams(window.location.search).get('status');
-      if (param && (ALL_TABS as readonly string[]).includes(param)) return param as WatchStatus;
+      if (param && (ALL_TABS as readonly string[]).includes(param)) return param as TabKey;
     }
     return 'All';
   });
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: PublicProfileEntry } | null>(null);
+
+  // Filter state
+  const [airingFilters, setAiringFilters] = useState<string[]>([]);
+  const [genreFilters, setGenreFilters] = useState<string[]>([]);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+
+  // Debounced filter state — the values actually used for API calls
+  const [debouncedAiring, setDebouncedAiring] = useState<string[]>([]);
+  const [debouncedGenres, setDebouncedGenres] = useState<string[]>([]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedAiring(airingFilters), 250);
+    return () => clearTimeout(t);
+  }, [airingFilters]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedGenres(genreFilters), 250);
+    return () => clearTimeout(t);
+  }, [genreFilters]);
+
+  // Entries + loading state
+  const [entries, setEntries] = useState<ProfileEntry[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [stale, setStale] = useState(false);
+
+  // Counts from API — true totals per bucket
+  const [counts, setCounts] = useState<Record<string, number>>(() => ({
+    All: profile.stats.total_anime,
+    Watching: profile.stats.watching,
+    Completed: profile.stats.completed,
+    Planned: profile.stats.planned,
+    Dropped: profile.stats.dropped,
+  }));
+
+  // Cache keyed by serialized (tab + filter state)
+  const cache = useRef<Record<string, CacheEntry>>({});
+
+  // Context menu
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: ProfileEntry } | null>(null);
   const [adding, setAdding] = useState(false);
 
-  function handleContextMenu(e: React.MouseEvent, entry: PublicProfileEntry) {
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const debouncedAiringRef = useRef(debouncedAiring);
+  debouncedAiringRef.current = debouncedAiring;
+  const debouncedGenresRef = useRef(debouncedGenres);
+  debouncedGenresRef.current = debouncedGenres;
+
+  const fetchPage = useCallback(async (
+    tab: TabKey,
+    airing: string[],
+    genres: string[],
+    offset: number,
+    opts?: { append?: boolean },
+  ) => {
+    const qs = buildQueryString(tab, airing, genres, offset, PAGE_SIZE);
+    const res = await fetch(`/api/profiles/${profile.username}/watchlist?${qs}`);
+    if (!res.ok) throw new Error('Failed to fetch');
+    const data = await res.json();
+
+    const key = cacheKey(tab, airing, genres);
+    const existing = cache.current[key];
+
+    if (opts?.append && existing) {
+      const merged = [...existing.entries, ...data.entries];
+      cache.current[key] = {
+        entries: merged,
+        totalLoaded: merged.length,
+        hasMore: data.hasMore,
+      };
+    } else {
+      cache.current[key] = {
+        entries: data.entries,
+        totalLoaded: data.entries.length,
+        hasMore: data.hasMore,
+      };
+    }
+
+    return { cached: cache.current[key]!, counts: data.counts as Record<string, number> };
+  }, [profile.username]);
+
+  const loadBucket = useCallback(async () => {
+    const tab = activeTabRef.current;
+    const airing = debouncedAiringRef.current;
+    const genres = debouncedGenresRef.current;
+    const key = cacheKey(tab, airing, genres);
+    const cached = cache.current[key];
+
+    if (cached) {
+      setEntries(cached.entries);
+      setHasMore(cached.hasMore);
+      setLoading(false);
+      setStale(false);
+      return;
+    }
+
+    // Stale-while-revalidate: show previous entries faded while loading
+    if (entries.length > 0) {
+      setStale(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const { cached: result, counts: newCounts } = await fetchPage(tab, airing, genres, 0);
+      setEntries(result.entries);
+      setHasMore(result.hasMore);
+      setCounts(newCounts);
+    } catch {
+      setEntries([]);
+      setHasMore(false);
+    }
+    setLoading(false);
+    setStale(false);
+  }, [entries.length, fetchPage]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    const tab = activeTabRef.current;
+    const airing = debouncedAiringRef.current;
+    const genres = debouncedGenresRef.current;
+    const key = cacheKey(tab, airing, genres);
+    const existing = cache.current[key];
+    if (!existing) return;
+
+    setLoadingMore(true);
+    try {
+      const { cached: result } = await fetchPage(tab, airing, genres, existing.totalLoaded, { append: true });
+      setEntries(result.entries);
+      setHasMore(result.hasMore);
+    } catch {
+      // Keep existing entries on error
+    }
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, fetchPage]);
+
+  // Effect A: mount + visibility — clear all caches, refetch
+  useEffect(() => {
+    cache.current = {};
+    loadBucket();
+
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        const key = cacheKey(activeTabRef.current, debouncedAiringRef.current, debouncedGenresRef.current);
+        delete cache.current[key];
+        loadBucket();
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.username]);
+
+  // Effect B: tab or debounced filter change — load from cache or fetch
+  useEffect(() => {
+    loadBucket();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, debouncedAiring, debouncedGenres]);
+
+  // SFW filter (client-side on already-fetched entries)
+  const displayEntries = useMemo(() => {
+    return sfwMode ? entries.filter((e) => !e.is_nsfw) : entries;
+  }, [entries, sfwMode]);
+
+  const activeFilterCount = airingFilters.length + genreFilters.length;
+
+  function updateTab(tab: TabKey) {
+    setActiveTab(tab);
+    setAiringFilters([]);
+    setGenreFilters([]);
+    setDebouncedAiring([]);
+    setDebouncedGenres([]);
+    const p = new URLSearchParams(window.location.search);
+    if (tab === 'All') p.delete('status');
+    else p.set('status', tab);
+    const qs = p.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${qs ? '?' + qs : ''}`);
+  }
+
+  function handleContextMenu(e: React.MouseEvent, entry: ProfileEntry) {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, entry });
   }
 
-  async function handleAddToWatchlist(entry: PublicProfileEntry, status: WatchStatus) {
+  async function handleAddToWatchlist(entry: ProfileEntry, status: WatchStatus) {
     if (adding || !userId) return;
     setAdding(true);
     setContextMenu(null);
@@ -188,36 +373,13 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
     setAdding(false);
   }
 
-  function updateTab(tab: WatchStatus | 'All') {
-    setActiveTab(tab);
-    const p = new URLSearchParams(window.location.search);
-    if (tab === 'All') p.delete('status');
-    else p.set('status', tab);
-    const qs = p.toString();
-    window.history.replaceState({}, '', `${window.location.pathname}${qs ? '?' + qs : ''}`);
-  }
-
   const displayName = profile.display_name || profile.username;
   const joinedDate = new Date(profile.joined_at).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
   });
 
-  const sfwWatchlist = sfwMode
-    ? profile.watchlist.filter((e) => !e.is_nsfw)
-    : profile.watchlist;
-
-  const filteredWatchlist =
-    activeTab === 'All'
-      ? sfwWatchlist
-      : sfwWatchlist.filter((e) => e.watch_status === activeTab);
-
-  const tabCounts: Record<string, number> = {
-    All: sfwWatchlist.length,
-    ...Object.fromEntries(
-      WATCH_STATUSES.map((s) => [s, sfwWatchlist.filter((e) => e.watch_status === s).length])
-    ),
-  };
+  const badgeColor = sfwMode ? 'bg-teal-500' : 'bg-rose-500';
 
   return (
     <div className="min-h-screen bg-[#0b0e14] flex flex-col">
@@ -267,14 +429,14 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
-          <StatCard label="Total Anime" value={sfwWatchlist.length} gradient={theme.gradient} />
-          <StatCard label="Watching" value={tabCounts['Watching'] || 0} gradient={theme.gradient} />
-          <StatCard label="Completed" value={tabCounts['Completed'] || 0} gradient={theme.gradient} />
-          <StatCard label="Planned" value={tabCounts['Planned'] || 0} gradient={theme.gradient} />
-          <StatCard label="Dropped" value={tabCounts['Dropped'] || 0} gradient={theme.gradient} />
+          <StatCard label="Total Anime" value={counts.All ?? profile.stats.total_anime} gradient={theme.gradient} />
+          <StatCard label="Watching" value={counts.Watching ?? profile.stats.watching} gradient={theme.gradient} />
+          <StatCard label="Completed" value={counts.Completed ?? profile.stats.completed} gradient={theme.gradient} />
+          <StatCard label="Planned" value={counts.Planned ?? profile.stats.planned} gradient={theme.gradient} />
+          <StatCard label="Dropped" value={counts.Dropped ?? profile.stats.dropped} gradient={theme.gradient} />
         </div>
 
-        <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="flex gap-2 mb-4 flex-wrap items-center">
           {ALL_TABS.map((tab) => (
             <button
               key={tab}
@@ -285,12 +447,98 @@ function ProfileView({ profile, sfwMode, authed, onToggleSfw }: { profile: Publi
                   : 'bg-[#141925] text-gray-400 hover:text-gray-200'
               }`}
             >
-              {tab} <span className="text-xs opacity-60">({tabCounts[tab] || 0})</span>
+              {tab} <span className="text-xs opacity-60">({counts[tab] ?? 0})</span>
             </button>
           ))}
+          <div className="ml-auto">
+            <button
+              onClick={() => setFilterPanelOpen((v) => !v)}
+              className={`relative p-1.5 rounded transition-colors ${
+                filterPanelOpen ? theme.btnText : 'text-gray-500 hover:text-gray-300'
+              }`}
+              title="Filters"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="3" y1="4" x2="15" y2="4" />
+                <line x1="5" y1="9" x2="13" y2="9" />
+                <line x1="7" y1="14" x2="11" y2="14" />
+              </svg>
+              {activeFilterCount > 0 && (
+                <span className={`absolute -top-1.5 -right-1.5 w-4 h-4 ${badgeColor} text-white text-[9px] font-bold rounded-full flex items-center justify-center`}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
-        <AnimeGrid entries={filteredWatchlist} onContextMenu={authed ? handleContextMenu : undefined} />
+        {filterPanelOpen && (
+          <WatchlistFilterPanel
+            airingStatuses={airingFilters}
+            genres={genreFilters}
+            onAiringChange={setAiringFilters}
+            onGenreChange={setGenreFilters}
+            onClear={() => { setAiringFilters([]); setGenreFilters([]); }}
+          />
+        )}
+
+        {loading ? (
+          <div className="flex flex-col items-center py-12">
+            <div className="w-8 h-8 border-2 border-[#253040] border-t-gray-400 rounded-full animate-spin" />
+            <p className="text-gray-500 text-sm mt-3">Loading...</p>
+          </div>
+        ) : displayEntries.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">No anime in this category.</p>
+        ) : (
+          <div className={`relative ${stale ? 'opacity-50 pointer-events-none' : ''} transition-opacity`}>
+            {stale && (
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-6 h-6 border-2 border-[#253040] border-t-gray-400 rounded-full animate-spin" />
+              </div>
+            )}
+            <VirtuosoGrid
+              useWindowScroll
+              data={displayEntries}
+              endReached={loadMore}
+              overscan={200}
+              listClassName="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
+              itemContent={(_index, entry) => {
+                const title = entry.title_english || entry.title_romaji || 'Unknown';
+                return (
+                  <Link
+                    href={`/anime/${entry.media_id}`}
+                    onContextMenu={authed ? (e) => handleContextMenu(e, entry) : undefined}
+                    className={`bg-[#141925] rounded-lg overflow-hidden hover:bg-[#1c2333] transition-colors group ${entry.is_nsfw ? 'border border-red-500/40' : ''}`}
+                  >
+                    <div className="relative w-full aspect-[3/4]">
+                      <Image
+                        src={upgradeImageUrl(entry.cover_url)}
+                        alt={title}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                        <StatusBadge tone={statusTones[entry.watch_status]}>{entry.watch_status}</StatusBadge>
+                      </div>
+                    </div>
+                    <div className="p-2">
+                      <p className="text-xs font-medium text-gray-200 truncate" title={title}>{title}</p>
+                      {entry.total_episodes && (
+                        <p className="text-[10px] text-gray-500 mt-0.5">{entry.total_episodes} eps</p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              }}
+            />
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <div className="w-6 h-6 border-2 border-[#253040] border-t-gray-400 rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       <Footer />

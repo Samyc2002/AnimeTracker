@@ -27,35 +27,32 @@ export async function GET(req: NextRequest) {
 
     const profile = profiles[0];
 
-    const [entriesRes, epRes] = await Promise.all([
-      supabase.from('watchlist_entries').select().eq('user_id', userId).limit(500),
-      supabase.from('watched_episodes').select('media_id').eq('user_id', userId).limit(5000),
+    // Aggregated counts — exact, no entry cap
+    const countQueries = WATCH_STATUSES.map((ws) =>
+      supabase
+        .from('watchlist_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('watch_status', ws)
+    );
+
+    const epCountQuery = supabase
+      .from('watched_episodes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    const [countResults, epCountResult] = await Promise.all([
+      Promise.all(countQueries),
+      epCountQuery,
     ]);
 
-    const entries = entriesRes.data || [];
-    const epDocs = epRes.data || [];
-
-    const epCountMap: Record<number, number> = {};
-    for (const doc of epDocs) {
-      const mediaId = doc.media_id as number;
-      epCountMap[mediaId] = (epCountMap[mediaId] || 0) + 1;
+    const statusCounts: Record<string, number> = {};
+    let totalAnime = 0;
+    for (let i = 0; i < WATCH_STATUSES.length; i++) {
+      const c = countResults[i].count ?? 0;
+      statusCounts[WATCH_STATUSES[i].toLowerCase()] = c;
+      totalAnime += c;
     }
-
-    const watchlist = entries.map((doc) => ({
-      media_id: doc.media_id as number,
-      title_romaji: doc.title_romaji as string,
-      title_english: doc.title_english as string,
-      cover_url: doc.cover_url as string,
-      status: doc.status as string,
-      total_episodes: doc.total_episodes as number | null,
-      watch_status: (doc.watch_status as WatchStatus) || 'Watching',
-      episodes_watched: epCountMap[doc.media_id as number] || 0,
-      is_nsfw: !!(doc.is_adult || doc.manual_nsfw),
-    }));
-
-    const statusCounts = Object.fromEntries(
-      WATCH_STATUSES.map((s) => [s.toLowerCase(), watchlist.filter((e) => e.watch_status === s).length])
-    ) as Record<string, number>;
 
     return NextResponse.json({
       username: (profile.username as string) || 'me',
@@ -67,14 +64,14 @@ export async function GET(req: NextRequest) {
       social_instagram: (profile.social_instagram as string) || null,
       social_reddit: (profile.social_reddit as string) || null,
       stats: {
-        total_anime: watchlist.length,
-        episodes_watched: epDocs.length,
-        watching: statusCounts.watching,
-        completed: statusCounts.completed,
-        planned: statusCounts.planned,
-        dropped: statusCounts.dropped,
+        total_anime: totalAnime,
+        episodes_watched: epCountResult.count ?? 0,
+        watching: statusCounts.watching ?? 0,
+        completed: statusCounts.completed ?? 0,
+        planned: statusCounts.planned ?? 0,
+        dropped: statusCounts.dropped ?? 0,
       },
-      watchlist,
+      watchlist: [],
     });
   } catch (err) {
     return NextResponse.json(

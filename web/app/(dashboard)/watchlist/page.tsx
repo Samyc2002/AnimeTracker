@@ -1,8 +1,7 @@
 'use client';
 
 import { useTitle } from '@/lib/useTitle';
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import AnimeCard from '@/components/AnimeCard';
@@ -18,6 +17,7 @@ import { fireClientAchievementEvent } from '@/lib/achievements/fire-event';
 import type { WatchStatus } from '@/lib/types';
 import { getRandomQuote } from '@/lib/loading-quotes';
 import StreamingBanner from '@/components/StreamingBanner';
+import WatchlistFilterPanel from '@/components/WatchlistFilterPanel';
 
 function upgradeImageUrl(url: string): string {
   return url.replace(/\/(?:small|medium)\//, '/large/');
@@ -38,11 +38,11 @@ interface WatchlistDoc {
   is_adult?: boolean;
   manual_nsfw?: boolean;
   series_id?: number | null;
+  canonical_anilist_id?: number | null;
 }
 
 const WATCH_STATUSES: WatchStatus[] = ['Watching', 'Planned', 'Completed', 'Dropped'];
 const ALL_FILTER = 'All';
-const ALL_AIRING = 'All';
 const AIRING_STATUSES = ['RELEASING', 'FINISHED', 'NOT_YET_RELEASED', 'CANCELLED', 'HIATUS'] as const;
 const PAGE_SIZE = 30;
 
@@ -55,6 +55,7 @@ const airingStatusLabels: Record<string, { label: string; className: string; ton
 };
 
 type ViewMode = 'list' | 'card';
+type BucketKey = WatchStatus | typeof ALL_FILTER;
 
 export default function WatchlistPageGuarded() {
   return <RequireAuth><WatchlistPage /></RequireAuth>;
@@ -62,20 +63,18 @@ export default function WatchlistPageGuarded() {
 
 function WatchlistPage() {
   useTitle('Watchlist');
-  const searchParams = useSearchParams();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const { userId } = useAuth();
   const [entries, setEntries] = useState<WatchlistDoc[]>([]);
-  const [totalEntries, setTotalEntries] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingQuote, setLoadingQuote] = useState('');
   useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [filter, setFilter] = useState<WatchStatus | typeof ALL_FILTER>(() => {
+  const [filter, setFilter] = useState<BucketKey>(() => {
     if (typeof window !== 'undefined') {
       const param = new URLSearchParams(window.location.search).get('status');
-      if (param && [...WATCH_STATUSES, ALL_FILTER].includes(param)) return param as WatchStatus;
+      if (param && [...WATCH_STATUSES, ALL_FILTER].includes(param)) return param as BucketKey;
     }
     return 'Watching';
   });
@@ -92,70 +91,96 @@ function WatchlistPage() {
     }
     return 'list';
   });
-  const [airingFilter, setAiringFilter] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return new URLSearchParams(window.location.search).get('airing') || ALL_AIRING;
-    }
-    return ALL_AIRING;
-  });
   const [selectedFolder, setSelectedFolder] = useState<{ seriesId: number; seriesName: string; entries: WatchlistDoc[] } | null>(null);
   const [episodeProgress, setEpisodeProgress] = useState<Record<number, number>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: WatchlistDoc } | null>(null);
 
-  const loadWatchlist = useCallback(async () => {
+  // Filter state
+  const [airingFilters, setAiringFilters] = useState<string[]>([]);
+  const [genreFilters, setGenreFilters] = useState<string[]>([]);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+
+  // Bucket cache: null = not fetched yet
+  const bucketCache = useRef<Record<BucketKey, WatchlistDoc[] | null>>({
+    All: null, Watching: null, Planned: null, Completed: null, Dropped: null,
+  });
+
+  // genreMap is content-data only (immutable per anilist_id) and never needs
+  // invalidation. If series_metadata ever gains user-editable fields, revisit.
+  const genreMap = useRef<Record<number, string[]>>({});
+
+  const filterRef = useRef(filter);
+  filterRef.current = filter;
+
+  const loadBucket = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     const start = Date.now();
+    const bucket = filterRef.current;
+
     try {
-      if (!userId) throw new Error('Not authenticated');
+      let docs = bucketCache.current[bucket];
 
-      let query = supabase
-        .from('watchlist_entries')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (docs === null) {
+        let query = supabase
+          .from('watchlist_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(5000);
 
-      if (filter !== ALL_FILTER) {
-        query = query.eq('watch_status', filter);
+        if (bucket !== ALL_FILTER) {
+          query = query.eq('watch_status', bucket);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        docs = (data || []) as WatchlistDoc[];
+
+        if (docs.length === 5000) {
+          console.warn('[Watchlist] Fetched exactly 5000 entries for bucket "%s" — results may be truncated', bucket);
+        }
+
+        bucketCache.current[bucket] = docs;
+
+        // Fetch missing genres from series_metadata
+        const missingIds = docs
+          .map((e) => e.canonical_anilist_id)
+          .filter((id): id is number => id != null && !(id in genreMap.current));
+        const uniqueIds = [...new Set(missingIds)];
+        if (uniqueIds.length > 0) {
+          const { data: metaRows } = await supabase
+            .from('series_metadata')
+            .select('anilist_id, genres')
+            .in('anilist_id', uniqueIds);
+          for (const row of metaRows || []) {
+            if (row.genres) genreMap.current[row.anilist_id as number] = row.genres as string[];
+          }
+        }
       }
 
-      if (airingFilter !== ALL_AIRING) {
-        query = query.eq('status', airingFilter);
-      }
+      setEntries(docs);
 
-      const { data: docs, error } = await query;
-      if (error) throw error;
-
-      setEntries((docs || []) as WatchlistDoc[]);
-
-      // Get total count for current filter
-      let countQuery = supabase
-        .from('watchlist_entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-      if (filter !== ALL_FILTER) countQuery = countQuery.eq('watch_status', filter);
-      if (airingFilter !== ALL_AIRING) countQuery = countQuery.eq('status', airingFilter);
-      const { count: totalCount } = await countQuery;
-      setTotalEntries(totalCount || 0);
-
-      // Single query for all counts instead of 5 separate ones
+      // Counts — single query for all watch_status values
       const { data: allStatusDocs } = await supabase
         .from('watchlist_entries')
         .select('watch_status')
         .eq('user_id', userId)
         .limit(5000);
 
+      if (allStatusDocs && allStatusDocs.length === 5000) {
+        console.warn('[Watchlist] Counts query returned exactly 5000 rows — totals may be inaccurate');
+      }
       const newCounts: Record<string, number> = { [ALL_FILTER]: (allStatusDocs || []).length };
       for (const s of WATCH_STATUSES) {
         newCounts[s] = (allStatusDocs || []).filter((d) => d.watch_status === s).length;
       }
       setCounts(newCounts);
 
-      // Fetch episode progress in a single RPC call
-      const wlDocs = (docs || []) as WatchlistDoc[];
+      // Episode progress for current entries
       const allIds: number[] = [];
       const malToMedia = new Map<number, number>();
-      for (const d of wlDocs) {
+      for (const d of docs) {
         allIds.push(d.media_id);
         if (d.id_mal) {
           allIds.push(d.id_mal);
@@ -168,7 +193,7 @@ function WatchlistPage() {
           p_media_ids: allIds,
         });
         const epMap: Record<number, number> = {};
-        for (const row of (progressData || [])) {
+        for (const row of progressData || []) {
           const mid = row.media_id as number;
           const canonical = malToMedia.get(mid) ?? mid;
           epMap[canonical] = (epMap[canonical] || 0) + (row.count as number);
@@ -178,32 +203,65 @@ function WatchlistPage() {
     } catch {
       // Not authenticated — layout will redirect
     }
+
     const elapsed = Date.now() - start;
     if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
     setLoading(false);
-  }, [filter, airingFilter, page, userId]);
+  }, [userId]);
 
+  // Effect A: mount + visibility — clears ALL caches, refetches active bucket
   useEffect(() => {
-    loadWatchlist();
-  }, [loadWatchlist]);
+    for (const key of Object.keys(bucketCache.current)) {
+      bucketCache.current[key as BucketKey] = null;
+    }
+    loadBucket();
 
-  function updateFilter(newFilter: WatchStatus | typeof ALL_FILTER) {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        bucketCache.current[filterRef.current] = null;
+        loadBucket();
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [userId, loadBucket]);
+
+  // Effect B: bucket switch — calls loadBucket, which checks cache
+  useEffect(() => {
+    loadBucket();
+  }, [filter, loadBucket]);
+
+  // Post-filter: airing status + genres, client-side
+  const filteredEntries = useMemo(() => {
+    let result = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;
+    if (airingFilters.length > 0) {
+      result = result.filter((e) => airingFilters.includes(e.status));
+    }
+    if (genreFilters.length > 0) {
+      result = result.filter((e) => {
+        if (e.canonical_anilist_id == null) return false;
+        const genres = genreMap.current[e.canonical_anilist_id];
+        if (!genres) return false;
+        return genreFilters.some((g) => genres.includes(g));
+      });
+    }
+    return result;
+  }, [entries, airingFilters, genreFilters, sfwMode]);
+
+  // Client-side pagination on filtered entries
+  const totalPages = Math.ceil(filteredEntries.length / PAGE_SIZE);
+  const paginatedEntries = filteredEntries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const activeFilterCount = airingFilters.length + genreFilters.length;
+
+  function updateFilter(newFilter: BucketKey) {
     setFilter(newFilter);
     setPage(0);
+    setAiringFilters([]);
+    setGenreFilters([]);
     const params = new URLSearchParams(window.location.search);
     if (newFilter === ALL_FILTER) params.delete('status');
     else params.set('status', newFilter);
-    params.delete('page');
-    const qs = params.toString();
-    window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
-  }
-
-  function updateAiringFilter(newAiring: string) {
-    setAiringFilter(newAiring);
-    setPage(0);
-    const params = new URLSearchParams(window.location.search);
-    if (newAiring === ALL_AIRING) params.delete('airing');
-    else params.set('airing', newAiring);
     params.delete('page');
     const qs = params.toString();
     window.history.replaceState({}, '', `/watchlist${qs ? '?' + qs : ''}`);
@@ -222,23 +280,31 @@ function WatchlistPage() {
   async function removeFromWatchlist(entry: WatchlistDoc) {
     await supabase.from('watchlist_entries').delete().eq('id', entry.id);
     enqueueSnackbar('Removed from watchlist', { variant: 'success' });
-    loadWatchlist();
+    bucketCache.current[filter] = null;
+    bucketCache.current[ALL_FILTER] = null;
+    loadBucket();
   }
 
   async function updateWatchStatus(entry: WatchlistDoc, newStatus: WatchStatus) {
     await supabase.from('watchlist_entries').update({ watch_status: newStatus }).eq('id', entry.id);
     enqueueSnackbar(`Status changed to ${newStatus}`, { variant: 'success' });
     if (userId) fireClientAchievementEvent(userId, 'status_change');
+    const oldStatus = (entry.watch_status || 'Watching') as BucketKey;
+    bucketCache.current[oldStatus] = null;
+    bucketCache.current[newStatus] = null;
+    bucketCache.current[ALL_FILTER] = null;
     setSelectedFolder(null);
-    loadWatchlist();
+    loadBucket();
   }
 
   async function toggleManualNsfw(entry: WatchlistDoc) {
     const next = !entry.manual_nsfw;
     await supabase.from('watchlist_entries').update({ manual_nsfw: next }).eq('id', entry.id);
     enqueueSnackbar(next ? 'Marked as NSFW' : 'Unmarked NSFW', { variant: 'success' });
+    bucketCache.current[filter] = null;
+    bucketCache.current[ALL_FILTER] = null;
     setSelectedFolder(null);
-    loadWatchlist();
+    loadBucket();
   }
 
   function handleContextMenu(e: React.MouseEvent, entry: WatchlistDoc) {
@@ -255,9 +321,6 @@ function WatchlistPage() {
     );
   }
 
-  const displayEntries = sfwMode ? entries.filter((e) => !e.is_adult && !e.manual_nsfw) : entries;
-  const totalPages = Math.ceil(totalEntries / PAGE_SIZE);
-
   // Group entries by series_id into folders
   type FolderOrEntry = { type: 'entry'; entry: WatchlistDoc } | { type: 'folder'; seriesId: number; seriesName: string; entries: WatchlistDoc[] };
 
@@ -265,7 +328,7 @@ function WatchlistPage() {
     const seriesMap = new Map<number, WatchlistDoc[]>();
     const standalone: WatchlistDoc[] = [];
 
-    for (const entry of displayEntries) {
+    for (const entry of paginatedEntries) {
       const sid = entry.series_id;
       if (sid != null) {
         if (!seriesMap.has(sid)) seriesMap.set(sid, []);
@@ -278,7 +341,7 @@ function WatchlistPage() {
     const result: FolderOrEntry[] = [];
     const processed = new Set<string>();
 
-    for (const entry of displayEntries) {
+    for (const entry of paginatedEntries) {
       if (processed.has(entry.id)) continue;
       const sid = entry.series_id;
       if (sid != null && seriesMap.has(sid)) {
@@ -305,29 +368,53 @@ function WatchlistPage() {
     setSelectedFolder(folder);
   }
 
+  const badgeColor = sfwMode ? 'bg-teal-500' : 'bg-rose-500';
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-gray-200">Watchlist</h1>
-        <div className="flex gap-1 bg-[#141925] rounded-lg p-0.5 border border-[#253040]">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => { setViewMode('list'); localStorage.setItem('watchlist_view', 'list'); }}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? `${theme.activeTab} text-white` : 'text-gray-500 hover:text-gray-300'}`}
-            title="List view"
+            onClick={() => setFilterPanelOpen((v) => !v)}
+            className={`relative p-1.5 rounded transition-colors ${
+              filterPanelOpen
+                ? theme.btnText
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+            title="Filters"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="3" y1="4" x2="15" y2="4" />
+              <line x1="5" y1="9" x2="13" y2="9" />
+              <line x1="7" y1="14" x2="11" y2="14" />
             </svg>
+            {activeFilterCount > 0 && (
+              <span className={`absolute -top-1.5 -right-1.5 w-4 h-4 ${badgeColor} text-white text-[9px] font-bold rounded-full flex items-center justify-center`}>
+                {activeFilterCount}
+              </span>
+            )}
           </button>
-          <button
-            onClick={() => { setViewMode('card'); localStorage.setItem('watchlist_view', 'card'); }}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'card' ? `${theme.activeTab} text-white` : 'text-gray-500 hover:text-gray-300'}`}
-            title="Card view"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
-            </svg>
-          </button>
+          <div className="flex gap-1 bg-[#141925] rounded-lg p-0.5 border border-[#253040]">
+            <button
+              onClick={() => { setViewMode('list'); localStorage.setItem('watchlist_view', 'list'); }}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? `${theme.activeTab} text-white` : 'text-gray-500 hover:text-gray-300'}`}
+              title="List view"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <button
+              onClick={() => { setViewMode('card'); localStorage.setItem('watchlist_view', 'card'); }}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'card' ? `${theme.activeTab} text-white` : 'text-gray-500 hover:text-gray-300'}`}
+              title="Card view"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -335,7 +422,7 @@ function WatchlistPage() {
         {[ALL_FILTER, ...WATCH_STATUSES].map((s) => (
           <button
             key={s}
-            onClick={() => updateFilter(s as WatchStatus | typeof ALL_FILTER)}
+            onClick={() => updateFilter(s as BucketKey)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
               filter === s
                 ? `${theme.activeTab} text-white`
@@ -347,31 +434,21 @@ function WatchlistPage() {
         ))}
       </div>
 
-      <div className="flex gap-1.5 mb-4 overflow-x-auto thin-scrollbar">
-        <span className="text-xs text-gray-600 self-center mr-1 whitespace-nowrap">Airing:</span>
-        {[ALL_AIRING, ...AIRING_STATUSES].map((s) => {
-          const label = s === ALL_AIRING ? 'All' : (airingStatusLabels[s]?.label || s);
-          return (
-            <button
-              key={s}
-              onClick={() => updateAiringFilter(s)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${
-                airingFilter === s
-                  ? 'bg-[#253040] text-gray-200'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      {filterPanelOpen && (
+        <WatchlistFilterPanel
+          airingStatuses={airingFilters}
+          genres={genreFilters}
+          onAiringChange={(next) => { setAiringFilters(next); setPage(0); }}
+          onGenreChange={(next) => { setGenreFilters(next); setPage(0); }}
+          onClear={() => { setAiringFilters([]); setGenreFilters([]); setPage(0); }}
+        />
+      )}
 
       <StreamingBanner userId={userId} />
 
-      {displayEntries.length === 0 ? (
+      {paginatedEntries.length === 0 ? (
         <p className="text-gray-500 text-center mt-8">
-          {totalEntries === 0 ? 'No anime tracked yet.' : `No anime matching these filters`}
+          {entries.length === 0 ? 'No anime tracked yet.' : 'No anime matching these filters'}
         </p>
       ) : viewMode === 'list' ? (
         <div className="space-y-2">
