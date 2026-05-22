@@ -163,6 +163,8 @@ function WatchlistPage() {
 
   const filterRef = useRef(filter);
   filterRef.current = filter;
+  const lastFetchedAt = useRef(0);
+  const STALE_THRESHOLD = 5 * 60 * 1000;
 
   const loadBucket = useCallback(async () => {
     if (!userId) return;
@@ -277,6 +279,7 @@ function WatchlistPage() {
 
     const elapsed = Date.now() - start;
     if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
+    lastFetchedAt.current = Date.now();
     setLoading(false);
   }, [userId]);
 
@@ -288,7 +291,7 @@ function WatchlistPage() {
     loadBucket();
 
     function handleVisibility() {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && Date.now() - lastFetchedAt.current > STALE_THRESHOLD) {
         bucketCache.current[filterRef.current] = null;
         loadBucket();
       }

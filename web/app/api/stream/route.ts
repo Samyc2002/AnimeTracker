@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const _9ANIME_BASE = "https://9anime.org.lv";
-const KICKASS_BASE = "https://kickassanime.com.es/";
+const KICKASS_BASE = "https://kickassanime.com.es";
 
 const AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0";

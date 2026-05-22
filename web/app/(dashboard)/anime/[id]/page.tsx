@@ -43,18 +43,90 @@ interface StreamTheme {
 }
 
 const streamThemes: Record<string, StreamTheme> = {
-  "Crunchyroll": { brand: '#f47521', brandLight: '#f89b5a', brandDark: '#c45e1a', textTint: '#f4a76b', hoverText: '#fff' },
-  "Netflix": { brand: '#e50914', brandLight: '#ff3b44', brandDark: '#b50710', textTint: '#f06b72', hoverText: '#fff' },
-  "Hulu": { brand: '#1ce783', brandLight: '#4aeea0', brandDark: '#14b566', textTint: '#6ee8a8', hoverText: '#000' },
-  "Amazon Prime Video": { brand: '#00a8e1', brandLight: '#33bfef', brandDark: '#0086b4', textTint: '#5cc4e8', hoverText: '#fff' },
-  "Bilibili Global": { brand: '#00a1d6', brandLight: '#33b7e2', brandDark: '#0081ab', textTint: '#5cbfde', hoverText: '#fff' },
-  "Muse Asia": { brand: '#4a4adf', brandLight: '#6e6eeb', brandDark: '#3636b8', textTint: '#8e8eef', hoverText: '#fff' },
-  "Disney Plus": { brand: '#113ccf', brandLight: '#3d5fdb', brandDark: '#0d2fa5', textTint: '#6b87e0', hoverText: '#fff' },
-  "Funimation": { brand: '#5b0bb5', brandLight: '#7a2dd0', brandDark: '#480891', textTint: '#9a5fd4', hoverText: '#fff' },
-  "HIDIVE": { brand: '#00baef', brandLight: '#33caf3', brandDark: '#0095bf', textTint: '#5cd0f0', hoverText: '#fff' },
-  "iQIYI": { brand: '#00be06', brandLight: '#33ce39', brandDark: '#009805', textTint: '#5cd460', hoverText: '#fff' },
-  "9Anime": { brand: '#c026d3', brandLight: '#d04de0', brandDark: '#991ea8', textTint: '#d674e0', hoverText: '#fff' },
-  "Kickass Anime": { brand: '#16a34a', brandLight: '#3dba6a', brandDark: '#11823b', textTint: '#5ec47e', hoverText: '#fff' },
+  Crunchyroll: {
+    brand: "#f47521",
+    brandLight: "#f89b5a",
+    brandDark: "#c45e1a",
+    textTint: "#f4a76b",
+    hoverText: "#fff",
+  },
+  Netflix: {
+    brand: "#e50914",
+    brandLight: "#ff3b44",
+    brandDark: "#b50710",
+    textTint: "#f06b72",
+    hoverText: "#fff",
+  },
+  Hulu: {
+    brand: "#1ce783",
+    brandLight: "#4aeea0",
+    brandDark: "#14b566",
+    textTint: "#6ee8a8",
+    hoverText: "#000",
+  },
+  "Amazon Prime Video": {
+    brand: "#00a8e1",
+    brandLight: "#33bfef",
+    brandDark: "#0086b4",
+    textTint: "#5cc4e8",
+    hoverText: "#fff",
+  },
+  "Bilibili Global": {
+    brand: "#00a1d6",
+    brandLight: "#33b7e2",
+    brandDark: "#0081ab",
+    textTint: "#5cbfde",
+    hoverText: "#fff",
+  },
+  "Muse Asia": {
+    brand: "#4a4adf",
+    brandLight: "#6e6eeb",
+    brandDark: "#3636b8",
+    textTint: "#8e8eef",
+    hoverText: "#fff",
+  },
+  "Disney Plus": {
+    brand: "#113ccf",
+    brandLight: "#3d5fdb",
+    brandDark: "#0d2fa5",
+    textTint: "#6b87e0",
+    hoverText: "#fff",
+  },
+  Funimation: {
+    brand: "#5b0bb5",
+    brandLight: "#7a2dd0",
+    brandDark: "#480891",
+    textTint: "#9a5fd4",
+    hoverText: "#fff",
+  },
+  HIDIVE: {
+    brand: "#00baef",
+    brandLight: "#33caf3",
+    brandDark: "#0095bf",
+    textTint: "#5cd0f0",
+    hoverText: "#fff",
+  },
+  iQIYI: {
+    brand: "#00be06",
+    brandLight: "#33ce39",
+    brandDark: "#009805",
+    textTint: "#5cd460",
+    hoverText: "#fff",
+  },
+  "9Anime": {
+    brand: "#c026d3",
+    brandLight: "#d04de0",
+    brandDark: "#991ea8",
+    textTint: "#d674e0",
+    hoverText: "#fff",
+  },
+  Anikoto: {
+    brand: "#4fb6e0",
+    brandLight: "#72c7e8",
+    brandDark: "#3a9dc9",
+    textTint: "#a8ddf2",
+    hoverText: "#0b1622",
+  },
 };
 
 function streamStyle(theme: StreamTheme) {
@@ -75,7 +147,7 @@ function streamHoverStyle(theme: StreamTheme) {
 
 function streamDisabledStyle(theme: StreamTheme) {
   return {
-    backgroundColor: '#141925',
+    backgroundColor: "#141925",
     borderColor: `color-mix(in srgb, ${theme.brand} 40%, transparent)`,
     color: `color-mix(in srgb, ${theme.brand} 50%, #6b7280)`,
   };
@@ -88,11 +160,22 @@ const playIcon = (
 );
 
 const defaultStreamTheme: StreamTheme = {
-  brand: '#253040', brandLight: '#354050', brandDark: '#1c2333',
-  textTint: '#9ca3af', hoverText: '#e5e7eb',
+  brand: "#253040",
+  brandLight: "#354050",
+  brandDark: "#1c2333",
+  textTint: "#9ca3af",
+  hoverText: "#e5e7eb",
 };
 
-function StreamButton({ name, href, disabled }: { name: string; href?: string; disabled?: boolean }) {
+function StreamButton({
+  name,
+  href,
+  disabled,
+}: {
+  name: string;
+  href?: string;
+  disabled?: boolean;
+}) {
   const theme = streamThemes[name] || defaultStreamTheme;
   const [hovered, setHovered] = useState(false);
 
@@ -102,11 +185,16 @@ function StreamButton({ name, href, disabled }: { name: string; href?: string; d
       ? streamHoverStyle(theme)
       : streamStyle(theme);
 
-  const cls = 'inline-flex items-center gap-1.5 px-4 py-2 border text-sm rounded-lg font-medium transition-all duration-200';
+  const cls =
+    "inline-flex items-center gap-1.5 px-4 py-2 border text-sm rounded-lg font-medium transition-all duration-200";
 
   if (disabled) {
     return (
-      <span className={`${cls} cursor-not-allowed opacity-60`} style={style} title={`${name} not available for this title`}>
+      <span
+        className={`${cls} cursor-not-allowed opacity-60`}
+        style={style}
+        title={`${name} not available for this title`}
+      >
         {playIcon}
         {name}
       </span>
@@ -153,15 +241,19 @@ export default function AnimeDetailPage() {
   const [isInWatchlist, setIsInWatchlist] = useState(false);
   // null = not cached (compute will run), number = cached root ID
   // undefined = no franchise (singleton — hide watch order tab)
-  const [franchiseMembershipRootId, setFranchiseMembershipRootId] = useState<number | null | undefined>(undefined);
+  const [franchiseMembershipRootId, setFranchiseMembershipRootId] = useState<
+    number | null | undefined
+  >(undefined);
 
   const { authed, userId } = useAuth();
   const { sfwMode } = useSfw();
   const theme = getTheme(sfwMode);
   const id = Number(params.id);
   const [resolvedMediaId, setResolvedMediaId] = useState<number>(id);
-  const [loadingQuote, setLoadingQuote] = useState('');
-  useEffect(() => { setLoadingQuote(getRandomQuote('general')); }, []);
+  const [loadingQuote, setLoadingQuote] = useState("");
+  useEffect(() => {
+    setLoadingQuote(getRandomQuote("general"));
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -171,17 +263,28 @@ export default function AnimeDetailPage() {
         setAnime(detail);
 
         const { data: membership } = await supabase
-          .from('franchise_membership')
-          .select('franchise_root_id')
-          .eq('series_anilist_id', detail.id)
+          .from("franchise_membership")
+          .select("franchise_root_id")
+          .eq("series_anilist_id", detail.id)
           .limit(1);
 
         if (membership && membership.length > 0) {
-          setFranchiseMembershipRootId(membership[0].franchise_root_id as number);
+          setFranchiseMembershipRootId(
+            membership[0].franchise_root_id as number,
+          );
         } else {
           const hasFranchiseRelations = detail.relations.edges.some(
-            (e) => e.node.type === 'ANIME' &&
-              ['PREQUEL','SEQUEL','SIDE_STORY','PARENT','ALTERNATIVE','SUMMARY','SPIN_OFF'].includes(e.relationType)
+            (e) =>
+              e.node.type === "ANIME" &&
+              [
+                "PREQUEL",
+                "SEQUEL",
+                "SIDE_STORY",
+                "PARENT",
+                "ALTERNATIVE",
+                "SUMMARY",
+                "SPIN_OFF",
+              ].includes(e.relationType),
           );
           if (hasFranchiseRelations) {
             setFranchiseMembershipRootId(null);
@@ -205,7 +308,8 @@ export default function AnimeDetailPage() {
         enqueueSnackbar(getErrorMessage(err), { variant: "error" });
       }
       const elapsed = Date.now() - start;
-      if (elapsed < 1000) await new Promise((r) => setTimeout(r, 1000 - elapsed));
+      if (elapsed < 1000)
+        await new Promise((r) => setTimeout(r, 1000 - elapsed));
       setLoading(false);
     }
     load();
@@ -235,7 +339,7 @@ export default function AnimeDetailPage() {
       setWatchedEpisodes(
         (epData || [])
           .map((d) => d.episode_number as number)
-          .sort((a, b) => a - b)
+          .sort((a, b) => a - b),
       );
     } catch {
       // Non-critical
@@ -263,7 +367,7 @@ export default function AnimeDetailPage() {
           .eq("media_id", resolvedMediaId)
           .limit(5000);
         const watched = new Set(
-          (existingEps || []).map((d) => d.episode_number as number)
+          (existingEps || []).map((d) => d.episode_number as number),
         );
         const toMark: number[] = [];
         for (let i = 1; i <= epNum; i++) {
@@ -275,7 +379,7 @@ export default function AnimeDetailPage() {
               user_id: userId,
               media_id: resolvedMediaId,
               episode_number: e,
-            }))
+            })),
           );
           setWatchedEpisodes((prev) => {
             const set = new Set([...prev, ...toMark]);
@@ -297,7 +401,7 @@ export default function AnimeDetailPage() {
     if (!authed || !userId) return;
     try {
       const allWatchedUpTo = Array.from({ length: ep }, (_, i) => i + 1).every(
-        (e) => watchedEpisodes.includes(e)
+        (e) => watchedEpisodes.includes(e),
       );
       if (allWatchedUpTo && watchedEpisodes.includes(ep)) {
         const { data: docs } = await supabase
@@ -322,7 +426,7 @@ export default function AnimeDetailPage() {
               user_id: userId,
               media_id: resolvedMediaId,
               episode_number: e,
-            }))
+            })),
           );
         }
         setWatchedEpisodes((prev) => {
@@ -348,7 +452,7 @@ export default function AnimeDetailPage() {
       (e) =>
         !e.node.coverImage?.extraLarge &&
         !e.node.coverImage?.large &&
-        !e.node.coverImage?.medium
+        !e.node.coverImage?.medium,
     );
     if (!needsCovers) return;
 
@@ -381,7 +485,7 @@ export default function AnimeDetailPage() {
 
       if (updated) {
         setAnime((prev) =>
-          prev ? { ...prev, relations: { edges: newEdges } } : prev
+          prev ? { ...prev, relations: { edges: newEdges } } : prev,
         );
       }
 
@@ -398,7 +502,7 @@ export default function AnimeDetailPage() {
 
   useEffect(() => {
     const layoutEl = document.querySelector(
-      "[data-dashboard-layout]"
+      "[data-dashboard-layout]",
     ) as HTMLElement | null;
     if (layoutEl) layoutEl.style.background = "transparent";
     return () => {
@@ -568,13 +672,21 @@ export default function AnimeDetailPage() {
             {streamingLinks.map((link) => (
               <StreamButton key={link.name} name={link.name} href={link.url} />
             ))}
-            <StreamButton name="9Anime" href={watchUrls?.url9anime} disabled={!watchUrls?.url9anime} />
-            <StreamButton name="Kickass Anime" href={watchUrls?.urlKickass} disabled={!watchUrls?.urlKickass} />
+            <StreamButton
+              name="9Anime"
+              href={watchUrls?.url9anime}
+              disabled={!watchUrls?.url9anime}
+            />
+            <StreamButton
+              name="Anikoto"
+              href={watchUrls?.urlKickass}
+              disabled={!watchUrls?.urlKickass}
+            />
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            * Streaming links are sourced from third-party databases and may
-            be outdated or region-restricted. If a link doesn&apos;t work,
-            please search for the title on the platform directly.
+            * Streaming links are sourced from third-party databases and may be
+            outdated or region-restricted. If a link doesn&apos;t work, please
+            search for the title on the platform directly.
           </p>
         </div>
 
