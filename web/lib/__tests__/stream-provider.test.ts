@@ -12,14 +12,14 @@ describe('getWatchUrl', () => {
       ok: true,
       json: async () => ({
         url9anime: 'https://9anime.org.lv/naruto',
-        urlAnikoto: 'https://anikoto.cz/naruto',
+        urlKickass: 'https://anikoto.cz/naruto',
       }),
     });
 
     const result = await getWatchUrl('Naruto');
     expect(result).toEqual({
       url9anime: 'https://9anime.org.lv/naruto',
-      urlAnikoto: 'https://anikoto.cz/naruto',
+      urlKickass: 'https://anikoto.cz/naruto',
     });
     expect(global.fetch).toHaveBeenCalledWith('/api/stream?title=Naruto');
   });

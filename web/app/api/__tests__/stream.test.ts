@@ -34,7 +34,7 @@ describe('GET /api/stream', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.url9anime).toBe('https://9anime.org.lv/naruto');
-    expect(body.urlAnikoto).toBe('https://anikoto.cz/naruto');
+    expect(body.urlKickass).toBe('https://kickassanime.com.es/naruto');
   });
 
   it('returns 502 when both searches return no matches', async () => {
@@ -91,6 +91,6 @@ describe('GET /api/stream', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.url9anime).toBe('https://9anime.org.lv/naruto');
-    expect(body.urlAnikoto).toBeNull();
+    expect(body.urlKickass).toBeNull();
   });
 });

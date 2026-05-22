@@ -167,4 +167,49 @@ describe('AddToWatchlist', () => {
       expect(queryByText('Planned')).not.toBeInTheDocument();
     });
   });
+
+  it('falls back to id_mal lookup when media_id query returns empty', async () => {
+    const mediaWithMal = { ...testMedia, idMal: 999 };
+    (supabase.from as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce(mockSupabaseChain([]))
+      .mockReturnValueOnce(mockSupabaseChain([{ id: 'mal-doc', watch_status: 'Planned' }]));
+
+    const { getByText } = render(<AddToWatchlist media={mediaWithMal} />);
+
+    await waitFor(() => {
+      expect(getByText('Planned')).toBeInTheDocument();
+    });
+  });
+
+  it('shows default status when watch_status is undefined', async () => {
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockSupabaseChain([{ id: 'doc1', watch_status: undefined }])
+    );
+
+    const { getByText } = render(<AddToWatchlist media={testMedia} />);
+
+    await waitFor(() => {
+      expect(getByText('Watching')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error snackbar when insert fails', async () => {
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(mockSupabaseChain([]));
+
+    const { getByText } = render(<AddToWatchlist media={testMedia} />);
+
+    await waitFor(() => {
+      expect(getByText('+ Add')).toBeInTheDocument();
+    });
+
+    const errorChain = mockSupabaseChain([], { message: 'Insert failed', code: '23505' });
+    (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue(errorChain);
+
+    fireEvent.click(getByText('+ Add'));
+    fireEvent.click(getByText('Watching'));
+
+    await waitFor(() => {
+      expect(enqueueSnackbar).toHaveBeenCalledWith(expect.any(String), { variant: 'error' });
+    });
+  });
 });
