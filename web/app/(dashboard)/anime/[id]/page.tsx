@@ -677,7 +677,6 @@ export default function AnimeDetailPage() {
               href={watchUrls?.url9anime}
               disabled={!watchUrls?.url9anime}
             />
-            {console.info("watchUrls?.urlAnikoto", watchUrls?.urlAnikoto)}
             <StreamButton
               name="Anikoto"
               href={watchUrls?.urlAnikoto}
