@@ -100,7 +100,7 @@ export interface AnimeDetail {
 
 export interface WatchURLs {
   url9anime: string;
-  urlKickass: string;
+  urlAnikoto: string;
 }
 
 export type WatchStatus = "Watching" | "Planned" | "Completed" | "Dropped";

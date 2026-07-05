@@ -56,7 +56,9 @@ export default function AchievementSection() {
               <Image src={getBadgeUrl(a.asset_name)} alt={a.name} width={28} height={28} className="w-full h-full object-cover" unoptimized />
             </div>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0b0e14] border border-[#253040] rounded-full opacity-0 group-hover/ach:opacity-100 transition-opacity pointer-events-none z-20 flex items-stretch place-items-center w-max">
-              <Image src={getBadgeUrl(a.asset_name)} alt={a.name} width={80} height={80} className="p-2 h-20 object-cover flex-shrink-0" style={{ borderRadius: '11px 0 0 11px' }} unoptimized />
+              <div className='flex min-w-[80px] min-h-[80px] justify-center'>
+                <Image src={getBadgeUrl(a.asset_name)} alt={a.name} width={60} height={80} className="p-2 h-20 object-cover flex-shrink-0 w-max" style={{ borderRadius: '11px 0 0 11px' }} unoptimized />
+              </div>
               <div className="pr-3 py-2.5 flex flex-col justify-center w-36">
                 <p className="text-[11px] font-semibold text-gray-200 leading-tight">{a.name}</p>
                 <p className="text-[10px] text-gray-400 mt-1 leading-snug overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{a.description}</p>

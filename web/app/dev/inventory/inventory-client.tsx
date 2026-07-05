@@ -802,11 +802,10 @@ function InventoryContent() {
               {['Watch Order', 'Related', 'Details'].map((tab, i) => (
                 <button
                   key={tab}
-                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px inline-flex items-center ${
-                    i === 0
+                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px inline-flex items-center ${i === 0
                       ? `border-${theme.accent}-500 ${theme.btnText}`
                       : 'border-transparent text-gray-500 hover:text-gray-300'
-                  }`}
+                    }`}
                 >
                   {tab}
                 </button>
@@ -852,7 +851,9 @@ function InventoryContent() {
               </div>
               <Label>Badge slot (w-7 h-7)</Label>
               <div className="bg-[#0b0e14] border border-[#253040] rounded-full flex items-stretch place-items-center w-max">
-                <Image src="/badges/founding_member.png" alt="Founding Member" width={80} height={80} className="p-2 h-20 object-cover flex-shrink-0" style={{ borderRadius: '11px 0 0 11px' }} unoptimized />
+                <div className='flex min-w-[80px] min-h-[80px] justify-center'>
+                  <Image src="/badges/founding_member.png" alt="Founding Member" width={60} height={80} className="p-2 h-20 object-cover flex-shrink-0 w-max" style={{ borderRadius: '11px 0 0 11px' }} unoptimized />
+                </div>
                 <div className="pr-3 py-2.5 flex flex-col justify-center w-36">
                   <p className="text-[11px] font-semibold text-amber-300 leading-tight">Founding Member</p>
                   <p className="text-[10px] text-gray-400 mt-1 leading-snug">Joined during early access</p>
