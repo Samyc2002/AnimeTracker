@@ -677,10 +677,11 @@ export default function AnimeDetailPage() {
               href={watchUrls?.url9anime}
               disabled={!watchUrls?.url9anime}
             />
+            {console.info("watchUrls?.urlAnikoto", watchUrls?.urlAnikoto)}
             <StreamButton
               name="Anikoto"
-              href={watchUrls?.urlKickass}
-              disabled={!watchUrls?.urlKickass}
+              href={watchUrls?.urlAnikoto}
+              disabled={!watchUrls?.urlAnikoto}
             />
           </div>
           <p className="text-xs text-gray-400 mt-2">

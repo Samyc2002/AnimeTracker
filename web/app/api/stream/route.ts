@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 const _9ANIME_BASE = "https://9anime.org.lv";
 const KICKASS_BASE = "https://kickassanime.com.es";
+const ANIKOTO_BASE = "https://anikoto.cz";
 
 const AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0";
@@ -42,6 +43,24 @@ async function fetchKickass(title: string): Promise<string> {
   return `${KICKASS_BASE}/${matches[1][1]}`;
 }
 
+async function fetchAnikoto(title: string): Promise<string> {
+  const searchUrl = `${ANIKOTO_BASE}/filter?keyword=${encodeURIComponent(title)}`;
+  const res = await fetch(searchUrl, {
+    headers: { "User-Agent": AGENT, Referer: ANIKOTO_BASE },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("Anikoto search failed");
+  const html = await res.text();
+  const matches = [
+    ...html.matchAll(
+      /href="(?:https?:\/\/[^"]*?)?\/watch\/([^"\/]*)\/?(?:[^"]*)"/g,
+    ),
+  ];
+  if (matches.length < 2) throw new Error("Anikoto: no results");
+  return `${ANIKOTO_BASE}/watch/${matches[1][1]}`;
+}
+
+
 export async function GET(req: NextRequest) {
   const title = req.nextUrl.searchParams.get("title");
 
@@ -49,17 +68,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing title" }, { status: 400 });
   }
 
-  const [res9anime, resKickass] = await Promise.allSettled([
+  const [res9anime, resAnikoto] = await Promise.allSettled([
     fetch9anime(title),
-    fetchKickass(title),
+    fetchAnikoto(title),
   ]);
 
   const url9anime = res9anime.status === "fulfilled" ? res9anime.value : null;
-  const urlKickass = resKickass.status === "fulfilled" ? resKickass.value : null;
+  const urlAnikoto = resAnikoto.status === "fulfilled" ? resAnikoto.value : null;
 
-  if (!url9anime && !urlKickass) {
+  if (!url9anime && !urlAnikoto) {
     return NextResponse.json({ error: "No streaming links found" }, { status: 502 });
   }
 
-  return NextResponse.json({ url9anime, urlKickass });
+  return NextResponse.json({ url9anime, urlAnikoto });
 }

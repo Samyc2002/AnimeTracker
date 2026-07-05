@@ -7,7 +7,7 @@ export async function getWatchUrl(title: string): Promise<WatchURLs | null> {
     const data = await res.json();
     return {
       url9anime: data.url9anime,
-      urlKickass: data.urlKickass,
+      urlAnikoto: data.urlAnikoto,
     };
   } catch {
     return null;
