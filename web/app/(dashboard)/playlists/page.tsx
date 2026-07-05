@@ -14,6 +14,7 @@ import type { AniListMedia, AnimeDetail } from "@/lib/types";
 import { fireClientAchievementEvent } from "@/lib/achievements/fire-event";
 import { DashboardInput } from "@/components/ui/DashboardInput";
 import { getRandomQuote } from "@/lib/loading-quotes";
+import Link from "next/link";
 
 interface PlaylistDoc {
   id: string;
@@ -466,7 +467,8 @@ function PlaylistEditor({
                 ? detail.title.english || detail.title.romaji
                 : `Anime #${id}`;
               return (
-                <div
+                <Link
+                  href={`/anime/${id}`}
                   key={id}
                   className={`bg-[#141925] rounded-lg overflow-hidden group relative ${detail?.isAdult ? "border border-red-500/40" : ""}`}
                 >
@@ -491,7 +493,11 @@ function PlaylistEditor({
                       </div>
                     )}
                     <button
-                      onClick={() => removeAnime(id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeAnime(id);
+                      }}
                       className="absolute top-1 right-1 w-6 h-6 bg-red-600/80 hover:bg-red-600 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       &times;
@@ -505,7 +511,7 @@ function PlaylistEditor({
                       {detailTitle}
                     </p>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
